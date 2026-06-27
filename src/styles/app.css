@@ -1,0 +1,57 @@
+.app-shell {
+  min-height: 100vh;
+  background: #0b132b;
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  padding: 20px;
+  background: #111c3d;
+  border-bottom: 2px solid #ffd700;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.app-header p {
+  margin: 4px 0 0;
+  color: #ffd700;
+}
+
+.app-main {
+  flex: 1;
+  padding: 20px;
+}
+
+.page-card {
+  background: #16213e;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 65px;
+  background: #050914;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border-top: 2px solid #ffd700;
+}
+
+.bottom-nav a {
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.bottom-nav a.active {
+  color: #ffd700;
+}
