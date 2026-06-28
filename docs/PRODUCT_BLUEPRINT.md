@@ -15,7 +15,7 @@ Weekly NFL Pick'em league, not fantasy football.
 - Tie = 1 point.
 - Loss = 0 points.
 - No tiebreaker.
-- Picks due Thursday at 6:00 PM.
+- Each game pick locks 5 minutes before that game's scheduled kickoff.
 - Missed deadline triggers Picker Clicker picks.
 - Auto Picker Clicker weeks do not count toward eligible season correct picks.
 

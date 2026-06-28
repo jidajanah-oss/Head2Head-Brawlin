@@ -1,5 +1,8 @@
+import PlayerManager from "../features/players/PlayerManager";
+import "../styles/players.css";
+
 function Players() {
-  return <section className="page-card"><h2>Players</h2></section>;
+    return <PlayerManager />;
 }
 
 export default Players;
