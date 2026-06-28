@@ -1,0 +1,39 @@
+.playoff-picture {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: white;
+}
+
+.playoff-lock-card,
+.conference-card {
+  background: #0f172a;
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.seed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.seed-row {
+  display: grid;
+  grid-template-columns: 50px 1fr 60px 90px;
+  gap: 8px;
+  align-items: center;
+  background: #1e293b;
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.seed-number,
+.seed-label {
+  color: #22c55e;
+  font-weight: 800;
+}
+
+.seed-team {
+  color: #cbd5e1;
+}

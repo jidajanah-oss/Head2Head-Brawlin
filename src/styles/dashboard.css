@@ -1,0 +1,37 @@
+.dashboard{
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+}
+
+.dashboard-stats{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+}
+
+.dashboard-actions{
+    display:grid;
+    gap:14px;
+}
+
+@media(max-width:700px){
+
+.dashboard-stats{
+    grid-template-columns:1fr;
+}
+
+}
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.league-logo {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  border-radius: 10px;
+}

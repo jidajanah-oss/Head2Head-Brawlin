@@ -1,0 +1,41 @@
+.page-header {
+  background: linear-gradient(135deg, #16213e, #0b132b);
+  border: 2px solid #ffd700;
+  border-radius: 18px;
+  padding: 24px;
+}
+
+.page-header h2 {
+  font-size: 32px;
+  margin: 8px 0;
+}
+
+.stat-card,
+.action-card {
+  background: #16213e;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.stat-card span,
+.action-card p {
+  color: #cbd5e1;
+}
+
+.stat-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 26px;
+  color: #ffd700;
+}
+
+.action-card {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.action-icon {
+  font-size: 30px;
+}

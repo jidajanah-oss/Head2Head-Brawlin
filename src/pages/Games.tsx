@@ -1,5 +1,9 @@
-function Games() {
-  return <section className="page-card"><h2>Games</h2></section>;
-}
+import GameCenter from "../features/games/GameCenter";
 
-export default Games;
+export default function Games() {
+  return (
+    <div>
+      <GameCenter />
+    </div>
+  );
+}

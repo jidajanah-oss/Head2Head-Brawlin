@@ -1,0 +1,71 @@
+.standings {
+  padding: 20px;
+  color: white;
+}
+
+/* HEADER */
+.standings-header {
+  background: #0f172a;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.standings-header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.standings-header p {
+  margin: 4px 0 0;
+  color: #94a3b8;
+}
+
+/* LIST */
+.standings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ROW */
+.standing-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 14px;
+  background: #1e293b;
+  border-radius: 12px;
+
+  transition: 0.2s ease;
+}
+
+.standing-row:hover {
+  transform: translateY(-2px);
+  background: #273449;
+}
+
+/* TOP 3 */
+.standing-row.top {
+  border: 1px solid #22c55e;
+  background: #0f172a;
+}
+
+/* RANK */
+.rank {
+  width: 60px;
+  font-size: 18px;
+}
+
+/* NAME */
+.name {
+  flex: 1;
+  font-weight: 600;
+}
+
+/* POINTS */
+.points {
+  font-weight: bold;
+  color: #22c55e;
+}

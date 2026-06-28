@@ -6,17 +6,47 @@ type PlayerCardProps = {
 };
 
 function PlayerCard({ player, onDelete }: PlayerCardProps) {
+  const getRoleBadge = () => {
+    switch (player.role) {
+      case "commissioner":
+        return (
+          <span className="role-badge commissioner">
+            👑 Commissioner
+          </span>
+        );
+
+      case "backup_commissioner":
+        return (
+          <span className="role-badge backup">
+            🛡️ Backup Commish
+          </span>
+        );
+
+      default:
+        return (
+          <span className="role-badge player">
+            👤 Player
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="player-card">
+
       <div>
         <h3>{player.name}</h3>
         <p>{player.nflTeam}</p>
       </div>
 
       <div className="player-actions">
-        <span className="status active">Active</span>
-        <button onClick={() => onDelete(player.id)}>Delete</button>
+        {getRoleBadge()}
+
+        <button onClick={() => onDelete(player.id)}>
+          Delete
+        </button>
       </div>
+
     </div>
   );
 }

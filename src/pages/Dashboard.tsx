@@ -1,10 +1,5 @@
-function Dashboard() {
-  return (
-    <section className="page-card">
-      <h2>Dashboard</h2>
-      <p>Welcome to Head2Head Brawlin.</p>
-    </section>
-  );
-}
+import HomeDashboard from "../features/dashboard/HomeDashboard";
 
-export default Dashboard;
+export default function Dashboard() {
+  return <HomeDashboard />;
+}

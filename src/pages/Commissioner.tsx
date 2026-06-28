@@ -1,5 +1,6 @@
-function Commissioner() {
-  return <section className="page-card"><h2>Commissioner</h2></section>;
-}
+import SetupWizard from "../features/setup/SetupWizard";
+import "../styles/setup.css";
 
-export default Commissioner;
+export default function Commissioner() {
+  return <SetupWizard />;
+}

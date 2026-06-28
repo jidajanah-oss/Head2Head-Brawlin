@@ -1,5 +1,6 @@
-function Picks() {
-  return <section className="page-card"><h2>Picks</h2></section>;
-}
+import PickSheet from "../features/picks/PickSheet";
+import "../styles/picks.css";
 
-export default Picks;
+export default function Picks() {
+  return <PickSheet />;
+}

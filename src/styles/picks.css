@@ -1,0 +1,70 @@
+.pick-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: white;
+}
+
+.pick-sheet-header,
+.pick-card {
+  background: #0f172a;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.pick-sheet-header h2 {
+  margin: 0;
+}
+
+.pick-sheet-header p {
+  margin: 4px 0 0;
+  color: #94a3b8;
+}
+
+.pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pick-matchup {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.pick-matchup span {
+  color: #94a3b8;
+  margin: 0 6px;
+}
+
+.pick-options {
+  display: flex;
+  gap: 10px;
+}
+
+.pick-options button {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: #1f2937;
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pick-options button.selected {
+  background: #22c55e;
+  color: #111827;
+}
+
+.pick-options button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pick-status {
+  margin-top: 10px;
+  color: #cbd5e1;
+}

@@ -1,0 +1,40 @@
+.commissioner-center {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.commissioner-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.commissioner-card {
+  background: #16213e;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.commissioner-card-icon {
+  font-size: 30px;
+}
+
+.commissioner-card h3 {
+  margin: 0;
+}
+
+.commissioner-card p {
+  margin: 4px 0 0;
+  color: #cbd5e1;
+}
+
+@media (min-width: 800px) {
+  .commissioner-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
