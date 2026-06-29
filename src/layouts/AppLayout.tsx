@@ -13,9 +13,14 @@ function AppLayout() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div>
-          <h1>🏈 Head2Head Brawlin'</h1>
-          <p>2026 Pick&apos;em League</p>
+        <div className="brand-lockup">
+          <div className="brand-mark">H2H</div>
+
+          <div>
+            <p className="brand-kicker">Steel Edition</p>
+            <h1>Head2Head Brawlin&apos;</h1>
+            <p className="brand-subtitle">2026 Pick&apos;em League</p>
+          </div>
         </div>
       </header>
 

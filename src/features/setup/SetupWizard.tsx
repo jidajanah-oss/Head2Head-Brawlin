@@ -1,6 +1,15 @@
 import { useState } from "react";
+
 import FranchiseAssignmentBoard from "../franchise/FranchiseAssignmentBoard";
-import SetupPlayersStep from "./SetupPlayersStep";
+import SetupLeagueStep from "./SetupLeagueStep";
+import SetupPlayerManager from "./SetupPlayerManager";
+import SetupReviewStep from "./SetupReviewStep";
+import StartSeasonStep from "./StartSeasonStep";
+
+import {
+  defaultLeagueSetup,
+  type LeagueSetupState,
+} from "./setupTypes";
 
 import "../../styles/setup.css";
 import "../../styles/franchise.css";
@@ -15,17 +24,17 @@ const steps = [
 
 export default function SetupWizard() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [setup, setSetup] =
+    useState<LeagueSetupState>(defaultLeagueSetup);
 
   const nextStep = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
+    setCurrentStep((step) =>
+      Math.min(step + 1, steps.length - 1)
+    );
   };
 
   const previousStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
+    setCurrentStep((step) => Math.max(step - 1, 0));
   };
 
   return (
@@ -33,7 +42,6 @@ export default function SetupWizard() {
       <h1>🏈 Head2Head Brawlin'</h1>
       <h2>Commissioner Setup Wizard</h2>
 
-      {/* Progress Bar */}
       <div className="setup-progress">
         {steps.map((step, index) => (
           <div
@@ -53,121 +61,34 @@ export default function SetupWizard() {
       </div>
 
       <div className="setup-card">
-
-        {/* STEP 1 */}
         {currentStep === 0 && (
-          <>
-            <h3>League Information</h3>
-
-            <label>League Name</label>
-            <input
-              type="text"
-              defaultValue="Head2Head Brawlin'"
-            />
-
-            <label>Season</label>
-            <input
-              type="number"
-              defaultValue={2026}
-            />
-
-            <label>Commissioner</label>
-            <input
-              type="text"
-              placeholder="Commissioner Name"
-            />
-          </>
+          <SetupLeagueStep setup={setup} onChange={setSetup} />
         )}
 
-        {/* STEP 2 */}
-        {currentStep === 1 && <SetupPlayersStep />}
+        {currentStep === 1 && (
+          <SetupPlayerManager setup={setup} onChange={setSetup} />
+        )}
 
-        {/* STEP 3 */}
         {currentStep === 2 && (
           <>
             <h3>Franchise Assignment</h3>
-
+            <p>Assign each league owner to one NFL franchise.</p>
             <p>
-              Assign each league owner to one NFL franchise.
+              Your custom franchise logos will automatically appear here once
+              they are uploaded.
             </p>
 
-            <p>
-              Your custom franchise logos will automatically
-              appear here once they are uploaded.
-            </p>
-
-            <FranchiseAssignmentBoard />
+            <FranchiseAssignmentBoard setup={setup} onChange={setSetup} />
           </>
         )}
 
-        {/* STEP 4 */}
-        {currentStep === 3 && (
-          <>
-            <h3>League Validation</h3>
+        {currentStep === 3 && <SetupReviewStep setup={setup} />}
 
-            <div
-              style={{
-                background: "#1e293b",
-                padding: 20,
-                borderRadius: 12,
-              }}
-            >
-              <h4>Validation Checklist</h4>
-
-              <ul>
-                <li>✅ 32 Players Added</li>
-                <li>✅ 32 Unique NFL Teams</li>
-                <li>✅ All AFC Teams Assigned</li>
-                <li>✅ All NFC Teams Assigned</li>
-                <li>✅ Every Division Complete</li>
-                <li>✅ Ready To Start Season</li>
-              </ul>
-            </div>
-          </>
-        )}
-
-        {/* STEP 5 */}
-        {currentStep === 4 && (
-          <>
-            <h3>🏆 Ready To Start</h3>
-
-            <p>
-              Starting the season will automatically generate:
-            </p>
-
-            <ul>
-              <li>Week 1 Pick Sheets</li>
-              <li>NFL Schedule</li>
-              <li>Player Matchups</li>
-              <li>Bye Weeks</li>
-              <li>Division Standings</li>
-              <li>Conference Standings</li>
-              <li>Playoff Picture</li>
-              <li>Awards Tracking</li>
-              <li>Payout Tracking</li>
-            </ul>
-
-            <button
-              style={{
-                width: "100%",
-                padding: "16px",
-                fontSize: "18px",
-                fontWeight: "bold",
-              }}
-            >
-              🏈 Start Season
-            </button>
-          </>
-        )}
-
+        {currentStep === 4 && <StartSeasonStep setup={setup} />}
       </div>
 
-      {/* Navigation */}
       <div className="wizard-buttons">
-        <button
-          onClick={previousStep}
-          disabled={currentStep === 0}
-        >
+        <button onClick={previousStep} disabled={currentStep === 0}>
           ◀ Previous
         </button>
 
