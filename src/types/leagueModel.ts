@@ -14,33 +14,51 @@ export interface LeaguePlayer {
   id: string;
   name: string;
 
-  /** Assigned NFL franchise */
   nflTeam: string;
 
   conference: Conference;
   division: Division;
 
-  /** Season record */
   wins: number;
   losses: number;
   ties: number;
 
-  /** 3 / 1 / 0 scoring */
   leaguePoints: number;
 
-  /** Total correct picks this season */
   correctPicks: number;
 
-  /** Used as the 2nd tiebreaker */
   headToHeadWins: number;
 
-  /** NFL bye week */
   byeWeek: number;
+}
+
+export interface PlayerSeason {
+  playerId: string;
+  season: number;
+
+  nflTeam: string;
+  conference: Conference;
+  division: Division;
+
+  wins: number;
+  losses: number;
+  ties: number;
+
+  leaguePoints: number;
+
+  correctPicks: number;
+  weeklyCorrectPicks: number;
+  seasonEligibleCorrectPicks: number;
+
+  headToHeadWins: number;
+
+  byeWeek: number;
+
+  firstLossWeek?: number;
 }
 
 export interface NFLGame {
   id: string;
-
   week: number;
 
   homeTeam: string;
@@ -57,11 +75,9 @@ export interface WeeklyMatchup {
   week: number;
 
   homePlayerId: string;
-
   awayPlayerId: string;
 
   homeCorrect: number;
-
   awayCorrect: number;
 
   winnerId?: string;
@@ -73,19 +89,16 @@ export interface WeeklyMatchup {
 
 export interface WeeklyPick {
   gameId: string;
-
   selectedTeam: string;
 }
 
 export interface WeeklyPickSheet {
   playerId: string;
-
   week: number;
 
   picks: WeeklyPick[];
 
   submitted: boolean;
-
   submittedAt?: string;
 }
 
@@ -95,21 +108,15 @@ export interface PlayoffSeed {
   playerId: string;
 
   divisionWinner: boolean;
-
   wildCard: boolean;
-
   bye: boolean;
 }
 
 export interface LeagueSettings {
   leagueName: string;
-
   season: number;
-
   currentWeek: number;
-
   commissioner: string;
-
   picksLockMinutesBeforeKickoff: number;
 }
 
@@ -117,6 +124,8 @@ export interface LeagueState {
   settings: LeagueSettings;
 
   players: LeaguePlayer[];
+
+  playerSeasons: PlayerSeason[];
 
   schedule: NFLGame[];
 

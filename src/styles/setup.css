@@ -55,10 +55,27 @@
 }
 
 .wizard-buttons {
+  position: sticky;
+  bottom: 0;
   display: flex;
   justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
   margin-top: 24px;
+  background: #0f172a;
+  border-top: 1px solid #334155;
+  z-index: 100;
 }
+
+.wizard-buttons button {
+  min-width: 140px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .setup-player-form {
   display: flex;
   gap: 10px;
@@ -88,4 +105,102 @@
   background: #1e293b;
   padding: 10px;
   border-radius: 8px;
+}
+.setup-player-toolbar{
+display:flex;
+gap:10px;
+margin-bottom:16px;
+}
+
+.setup-player-toolbar input{
+flex:1;
+}
+
+.setup-progress-label{
+margin:12px 0;
+font-weight:bold;
+color:#22c55e;
+}
+
+.setup-error{
+color:#ef4444;
+font-weight:bold;
+margin-bottom:10px;
+}
+
+.player-table{
+margin-top:20px;
+display:flex;
+flex-direction:column;
+gap:8px;
+}
+
+.player-table-header,
+.player-row{
+display:grid;
+grid-template-columns:2fr 1fr auto;
+gap:12px;
+align-items:center;
+padding:12px;
+background:#1e293b;
+border-radius:8px;
+}
+
+.player-table-header{
+font-weight:bold;
+background:#0f172a;
+}
+.start-season-btn {
+  width: 100%;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 12px;
+  border: none;
+  background: #22c55e;
+  color: #111827;
+  cursor: pointer;
+}
+.validation-panel{
+margin-top:24px;
+padding:18px;
+background:#0f172a;
+border-radius:16px;
+color:white;
+}
+
+.validation-success{
+background:#064e3b;
+padding:12px;
+border-radius:10px;
+font-weight:bold;
+color:#bbf7d0;
+}
+
+.validation-errors{
+background:#7f1d1d;
+padding:12px;
+border-radius:10px;
+color:#fecaca;
+}
+
+.validation-errors ul{
+margin-top:10px;
+padding-left:20px;
+}
+
+.validation-stats{
+margin-top:18px;
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+gap:12px;
+}
+
+.validation-stats div{
+background:#1e293b;
+padding:12px;
+border-radius:10px;
+display:flex;
+justify-content:space-between;
+align-items:center;
 }

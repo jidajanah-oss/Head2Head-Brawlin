@@ -108,3 +108,60 @@
   color: #22c55e;
   font-weight: 700;
 }
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-chip.open {
+  background: #14532d;
+  color: #86efac;
+}
+
+.status-chip.locked {
+  background: #7c2d12;
+  color: #fdba74;
+}
+
+.status-chip.live {
+  background: #7f1d1d;
+  color: #fecaca;
+  animation: pulse 1.4s infinite;
+}
+
+.status-chip.final {
+  background: #1e293b;
+  color: #cbd5e1;
+}
+
+.status-chip.upcoming {
+  background: #1e3a8a;
+  color: #bfdbfe;
+}
+
+.kickoff-time {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin-top: 6px;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.55;
+  }
+}

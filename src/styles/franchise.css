@@ -1,8 +1,83 @@
+.assignment-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 18px;
+}
+
+.owner-panel {
+  background: #0f172a;
+  border-radius: 16px;
+  padding: 16px;
+  color: white;
+  align-self: start;
+  position: sticky;
+  top: 12px;
+}
+
+.owner-panel h3 {
+  margin: 0;
+}
+
+.owner-panel p {
+  color: #94a3b8;
+  margin: 6px 0 14px;
+}
+
+.owner-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.owner-chip {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #1e293b;
+  color: white;
+  cursor: pointer;
+  text-align: left;
+}
+
+.owner-chip small {
+  color: #94a3b8;
+}
+
+.owner-chip.selected {
+  border-color: #22c55e;
+  background: #064e3b;
+}
+
+.assignment-complete {
+  margin-top: 14px;
+  background: #064e3b;
+  color: #bbf7d0;
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 800;
+}
+
+.franchise-board-section {
+  min-width: 0;
+}
+
+.assignment-helper {
+  background: #0f172a;
+  color: white;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
 .franchise-board {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 16px;
-  margin-top: 20px;
 }
 
 .franchise-card {
@@ -13,11 +88,16 @@
   text-align: center;
   transition: all 0.2s ease;
   cursor: pointer;
+  color: white;
 }
 
 .franchise-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.franchise-card.assigned {
+  opacity: 0.85;
 }
 
 .franchise-logo {
@@ -47,4 +127,25 @@
   color: #22c55e;
   font-weight: 700;
   font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.franchise-status button {
+  border: none;
+  border-radius: 8px;
+  padding: 7px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+@media (max-width: 800px) {
+  .assignment-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .owner-panel {
+    position: static;
+  }
 }

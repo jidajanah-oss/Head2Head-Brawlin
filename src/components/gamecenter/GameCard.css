@@ -1,0 +1,143 @@
+.game-card-pro {
+  background: #18233b;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 18px;
+  color: white;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  transition: .2s ease;
+}
+
+.game-card-pro:hover {
+  transform: translateY(-2px);
+}
+
+.game-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.game-label {
+  color: #94a3b8;
+  font-size: .8rem;
+  margin: 0;
+}
+
+.game-card-top h3 {
+  margin: 4px 0 0;
+  font-size: 1.2rem;
+}
+
+.team-matchup {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 18px;
+  margin: 24px 0;
+}
+
+.team-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.team-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 700;
+  font-size: .95rem;
+  color: white;
+}
+
+.versus {
+  color: #94a3b8;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.game-meta {
+  display: flex;
+  justify-content: space-between;
+  color: #94a3b8;
+  margin-bottom: 18px;
+  font-size: .9rem;
+}
+
+.pick-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.pick-row button {
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: .2s;
+}
+
+.pick-row button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.pick-row button.selected {
+  background: #2563eb;
+  color: white;
+}
+
+.pick-row button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.current-pick {
+  margin-top: 16px;
+  color: #cbd5e1;
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.status-badge-open {
+  background: #14532d;
+  color: #86efac;
+}
+
+.status-badge-locked {
+  background: #7c2d12;
+  color: #fdba74;
+}
+
+.status-badge-live {
+  background: #991b1b;
+  color: white;
+}
+
+.status-badge-final {
+  background: #334155;
+  color: white;
+}
+
+.status-badge-upcoming {
+  background: #1d4ed8;
+  color: white;
+}
+
+.countdown-timer {
+  font-weight: 600;
+}
