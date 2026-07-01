@@ -1,7 +1,10 @@
 import type { LeagueSetupState } from "./setupTypes";
 import {
-  hasAllPlayers,
   hasAllFranchises,
+  hasAllPlayers,
+  hasBackupCommissioner,
+  hasCommissioner,
+  hasValidCommissionerTeam,
 } from "./setupTypes";
 import SetupValidationPanel from "./SetupValidationPanel";
 
@@ -28,16 +31,20 @@ export default function SetupReviewStep({ setup }: Props) {
           {setup.commissioner || "Not Entered"}
         </p>
 
+        <p>
+          <strong>Backup Commissioner:</strong>{" "}
+          {setup.backupCommissioner || "Not Entered"}
+        </p>
+
         <hr />
 
         <p>
-          <strong>Players:</strong>{" "}
-          {setup.players.length}/32
+          <strong>Players:</strong> {setup.players.length}/32
         </p>
 
         <p>
           <strong>Franchises:</strong>{" "}
-          {setup.players.filter((p) => p.franchiseId).length}/32
+          {setup.players.filter((player) => player.franchiseId).length}/32
         </p>
 
         <hr />
@@ -45,6 +52,24 @@ export default function SetupReviewStep({ setup }: Props) {
         <h4>Status</h4>
 
         <ul>
+          <li>
+            {hasCommissioner(setup)
+              ? "✅ Commissioner Entered"
+              : "❌ Commissioner Required"}
+          </li>
+
+          <li>
+            {hasBackupCommissioner(setup)
+              ? "✅ Backup Commissioner Entered"
+              : "❌ Backup Commissioner Required"}
+          </li>
+
+          <li>
+            {hasValidCommissionerTeam(setup)
+              ? "✅ Commissioner Team Valid"
+              : "❌ Commissioner and Backup Must Be Different"}
+          </li>
+
           <li>
             {hasAllPlayers(setup)
               ? "✅ 32 Players"

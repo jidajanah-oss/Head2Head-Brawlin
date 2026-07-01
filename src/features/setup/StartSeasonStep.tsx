@@ -27,9 +27,7 @@ export default function StartSeasonStep({ setup }: Props) {
       setStarted(true);
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to start season."
+        err instanceof Error ? err.message : "Failed to start season."
       );
     }
   }
@@ -42,6 +40,8 @@ export default function StartSeasonStep({ setup }: Props) {
 
       <ul>
         <li>League settings</li>
+        <li>Main commissioner</li>
+        <li>Backup commissioner</li>
         <li>32 league players</li>
         <li>Week 1 pick sheets</li>
         <li>Empty standings</li>
@@ -63,7 +63,8 @@ export default function StartSeasonStep({ setup }: Props) {
 
       {started && (
         <div className="validation-success">
-          ✅ Season generated successfully. Check the browser console for the LeagueState.
+          ✅ Season generated successfully. Check the browser console for the
+          LeagueState.
         </div>
       )}
 

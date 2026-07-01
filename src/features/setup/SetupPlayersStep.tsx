@@ -1,57 +1,134 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { LeagueSetupState } from "./setupTypes";
 
-export default function SetupPlayersStep() {
-  const [players, setPlayers] = useState<string[]>([]);
-  const [name, setName] = useState("");
+interface Props {
+  setup: LeagueSetupState;
+  onChange: (setup: LeagueSetupState) => void;
+}
 
-  const addPlayer = () => {
-    const trimmed = name.trim();
+function normalizeName(name: string) {
+  return name.trim().toLowerCase();
+}
 
-    if (!trimmed) return;
-    if (players.length >= 32) return;
-    if (players.includes(trimmed)) return;
+function getPlayerRoleLabel(playerName: string, setup: LeagueSetupState) {
+  const name = normalizeName(playerName);
+  const commissioner = normalizeName(setup.commissioner);
+  const backupCommissioner = normalizeName(setup.backupCommissioner);
 
-    setPlayers([...players, trimmed]);
-    setName("");
-  };
+  if (commissioner && name === commissioner) {
+    return "Commissioner";
+  }
 
-  const removePlayer = (playerName: string) => {
-    setPlayers(players.filter((player) => player !== playerName));
-  };
+  if (backupCommissioner && name === backupCommissioner) {
+    return "Backup Commish";
+  }
+
+  return "Player";
+}
+
+export default function SetupPlayerManager({ setup, onChange }: Props) {
+  const [newPlayer, setNewPlayer] = useState("");
+  const [search, setSearch] = useState("");
+
+  const duplicate = useMemo(() => {
+    return setup.players.some(
+      (player) => normalizeName(player.name) === normalizeName(newPlayer)
+    );
+  }, [newPlayer, setup.players]);
+
+  function addPlayer() {
+    const name = newPlayer.trim();
+
+    if (!name) return;
+    if (duplicate) return;
+    if (setup.players.length >= 32) return;
+
+    onChange({
+      ...setup,
+      players: [
+        ...setup.players,
+        {
+          id: crypto.randomUUID(),
+          name,
+        },
+      ],
+    });
+
+    setNewPlayer("");
+  }
+
+  function removePlayer(id: string) {
+    onChange({
+      ...setup,
+      players: setup.players.filter((player) => player.id !== id),
+    });
+  }
+
+  const filteredPlayers = setup.players.filter((player) =>
+    player.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="setup-players-step">
+    <>
       <h3>League Players</h3>
 
-      <p>Add all 32 league owners before assigning NFL franchises.</p>
+      <p>Add the 32 owners participating this season.</p>
 
-      <div className="setup-player-form">
+      <div className="setup-player-toolbar">
         <input
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Owner name"
+          placeholder="Owner name..."
+          value={newPlayer}
+          onChange={(event) => setNewPlayer(event.target.value)}
         />
 
-        <button onClick={addPlayer} disabled={players.length >= 32}>
-          Add Player
+        <button
+          onClick={addPlayer}
+          disabled={duplicate || setup.players.length >= 32}
+        >
+          Add
         </button>
       </div>
 
-      <div className="setup-player-count">
-        {players.length} / 32 Players
+      {duplicate && (
+        <p className="setup-error">
+          That owner already exists.
+        </p>
+      )}
+
+      <div className="setup-progress-label">
+        {setup.players.length} / 32 Players
       </div>
 
-      <div className="setup-player-list">
-        {players.map((player) => (
-          <div key={player} className="setup-player-row">
-            <span>{player}</span>
+      <input
+        placeholder="Search owners..."
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+      />
 
-            <button onClick={() => removePlayer(player)}>
+      <div className="player-table">
+        <div className="player-table-header">
+          <span>Owner</span>
+          <span>Role</span>
+          <span>Status</span>
+          <span></span>
+        </div>
+
+        {filteredPlayers.map((player) => (
+          <div key={player.id} className="player-row">
+            <span>{player.name}</span>
+
+            <span>{getPlayerRoleLabel(player.name, setup)}</span>
+
+            <span>
+              {player.franchiseId ? "Assigned" : "Unassigned"}
+            </span>
+
+            <button onClick={() => removePlayer(player.id)}>
               Remove
             </button>
           </div>
         ))}
       </div>
-    </div>
+    </>
   );
 }

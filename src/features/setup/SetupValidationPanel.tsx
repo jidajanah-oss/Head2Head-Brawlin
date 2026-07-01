@@ -5,9 +5,7 @@ interface Props {
   setup: LeagueSetupState;
 }
 
-export default function SetupValidationPanel({
-  setup,
-}: Props) {
+export default function SetupValidationPanel({ setup }: Props) {
   const result = validateLeague(setup);
 
   return (
@@ -39,7 +37,7 @@ export default function SetupValidationPanel({
         <div>
           <strong>Assigned Franchises</strong>
           <span>
-            {setup.players.filter((p) => p.franchiseId).length} / 32
+            {setup.players.filter((player) => player.franchiseId).length} / 32
           </span>
         </div>
 
@@ -50,9 +48,12 @@ export default function SetupValidationPanel({
 
         <div>
           <strong>Commissioner</strong>
-          <span>
-            {setup.commissioner || "Not Entered"}
-          </span>
+          <span>{setup.commissioner || "Not Entered"}</span>
+        </div>
+
+        <div>
+          <strong>Backup Commish</strong>
+          <span>{setup.backupCommissioner || "Not Entered"}</span>
         </div>
       </div>
     </div>
