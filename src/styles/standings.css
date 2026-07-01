@@ -1,71 +1,207 @@
 .standings {
-  padding: 20px;
-  color: white;
-}
-
-/* HEADER */
-.standings-header {
-  background: #0f172a;
-  padding: 16px;
-  border-radius: 12px;
-  margin-bottom: 16px;
-}
-
-.standings-header h2 {
-  margin: 0;
-  font-size: 22px;
-}
-
-.standings-header p {
-  margin: 4px 0 0;
-  color: #94a3b8;
-}
-
-/* LIST */
-.standings-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 18px;
+  color: #ffffff;
 }
 
-/* ROW */
-.standing-row {
-  display: flex;
-  justify-content: space-between;
+.standings-v2 {
+  color: #ffffff;
+}
+
+.standings-hero-panel {
+  display: grid;
+  gap: 5px;
+  min-width: 180px;
+  padding: 16px;
+  border: 1px solid rgba(255, 215, 0, 0.24);
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(16px);
+}
+
+.standings-hero-panel span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.standings-hero-panel strong {
+  color: #f5c542;
+  font-size: 1.35rem;
+}
+
+.standings-hero-panel small,
+.standings-muted {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.standings-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.standings-podium-card {
+  padding: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 215, 0, 0.16), transparent 34%),
+    linear-gradient(135deg, #121212, #070707);
+}
+
+.standings-podium-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.standings-podium-item {
+  display: grid;
+  gap: 7px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.standings-podium-item span {
+  font-size: 1.8rem;
+}
+
+.standings-podium-item strong {
+  color: #ffffff;
+  font-size: 1.05rem;
+}
+
+.standings-podium-item small {
+  color: #f5c542;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.standings-podium-item--1 {
+  border-color: rgba(255, 215, 0, 0.45);
+  background:
+    radial-gradient(circle at top right, rgba(255, 215, 0, 0.16), transparent 45%),
+    rgba(255, 255, 255, 0.06);
+}
+
+.standings-board-section {
+  display: grid;
+  gap: 14px;
+}
+
+.standings-list,
+.standings-list-v2 {
+  display: grid;
+  gap: 12px;
+}
+
+.standing-row,
+.standing-row-v2 {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
   align-items: center;
-
-  padding: 14px;
-  background: #1e293b;
-  border-radius: 12px;
-
-  transition: 0.2s ease;
+  padding: 16px;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
-.standing-row:hover {
+.standing-row-v2:hover {
   transform: translateY(-2px);
-  background: #273449;
+  border-color: rgba(255, 215, 0, 0.36);
 }
 
-/* TOP 3 */
-.standing-row.top {
-  border: 1px solid #22c55e;
-  background: #0f172a;
+.standing-row-v2.top {
+  border-color: rgba(255, 215, 0, 0.38);
+  background:
+    radial-gradient(circle at top left, rgba(255, 215, 0, 0.12), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+    #111111;
 }
 
-/* RANK */
-.rank {
-  width: 60px;
-  font-size: 18px;
+.standing-row-v2.is-active-player {
+  border-color: rgba(92, 180, 255, 0.38);
 }
 
-/* NAME */
-.name {
-  flex: 1;
-  font-weight: 600;
+.rank,
+.standings-rank {
+  display: grid;
+  gap: 4px;
+  min-width: 68px;
 }
 
-/* POINTS */
-.points {
-  font-weight: bold;
-  color: #22c55e;
+.standings-rank span {
+  color: #f5c542;
+  font-size: 1.4rem;
+  font-weight: 950;
+}
+
+.standings-rank small,
+.standings-player small,
+.standings-points small {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.name,
+.standings-player {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.standings-player strong {
+  color: #ffffff;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.points,
+.standings-points {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  grid-column: 1 / -1;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.standings-points strong {
+  color: #f5c542;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+@media (min-width: 700px) {
+  .standings-stat-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .standings-podium-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .standing-row,
+  .standing-row-v2 {
+    grid-template-columns: 86px 1fr 120px auto;
+  }
+
+  .points,
+  .standings-points {
+    grid-column: auto;
+    justify-items: end;
+    background: transparent;
+    padding: 0;
+  }
 }

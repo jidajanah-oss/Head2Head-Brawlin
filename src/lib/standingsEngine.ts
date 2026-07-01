@@ -5,6 +5,15 @@ export type Player = {
   name: string;
 };
 
+export type StandingRow = {
+  id: string;
+  name: string;
+  points: number;
+  wins: number;
+  losses: number;
+  ties: number;
+};
+
 /**
  * 🧠 Compare two players and determine match result
  */
@@ -45,45 +54,57 @@ export function buildHeadToHeadStandings(
   players: Player[],
   allPicks: Record<string, Picks>,
   gameWinners: Record<string, string>
-) {
-  const standings: Record<
-    string,
-    { id: string; name: string; points: number }
-  > = {};
+): StandingRow[] {
+  const standings: Record<string, StandingRow> = {};
 
-  // init
-  for (const p of players) {
-    standings[p.id] = {
-      id: p.id,
-      name: p.name,
+  for (const player of players) {
+    standings[player.id] = {
+      id: player.id,
+      name: player.name,
       points: 0,
+      wins: 0,
+      losses: 0,
+      ties: 0,
     };
   }
 
-  // compare everyone vs everyone (round robin)
-  for (let i = 0; i < players.length; i++) {
-    for (let j = i + 1; j < players.length; j++) {
-      const a = players[i];
-      const b = players[j];
+  for (let i = 0; i < players.length; i += 1) {
+    for (let j = i + 1; j < players.length; j += 1) {
+      const playerA = players[i];
+      const playerB = players[j];
 
       const result = getMatchResult(
-        allPicks[a.id] || {},
-        allPicks[b.id] || {},
+        allPicks[playerA.id] || {},
+        allPicks[playerB.id] || {},
         gameWinners
       );
 
       if (result === "A") {
-        standings[a.id].points += 3;
+        standings[playerA.id].points += 3;
+        standings[playerA.id].wins += 1;
+        standings[playerB.id].losses += 1;
       } else if (result === "B") {
-        standings[b.id].points += 3;
+        standings[playerB.id].points += 3;
+        standings[playerB.id].wins += 1;
+        standings[playerA.id].losses += 1;
       } else {
-        standings[a.id].points += 1;
-        standings[b.id].points += 1;
+        standings[playerA.id].points += 1;
+        standings[playerB.id].points += 1;
+        standings[playerA.id].ties += 1;
+        standings[playerB.id].ties += 1;
       }
     }
   }
 
-  return Object.values(standings).sort(
-    (x, y) => y.points - x.points
-  );
+  return Object.values(standings).sort((playerA, playerB) => {
+    if (playerB.points !== playerA.points) {
+      return playerB.points - playerA.points;
+    }
+
+    if (playerB.wins !== playerA.wins) {
+      return playerB.wins - playerA.wins;
+    }
+
+    return playerA.name.localeCompare(playerB.name);
+  });
 }
