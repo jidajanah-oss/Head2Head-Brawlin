@@ -1,41 +1,69 @@
-import { LiveGameStatusEngine } from "../../engine";
-import type { WeekGame } from "../../engine";
+type GameLike = {
+  status?: string;
+  kickoff?: string | Date;
+  kickoffTime?: string | Date;
+  completed?: boolean;
+  winner?: string | null;
+};
 
-export function getGameCenterStatus(game: WeekGame) {
-  return LiveGameStatusEngine.getStatus({
-    kickoffTime: game.kickoff,
-    isFinal: game.final ?? false,
-  });
+function getKickoffValue(gameKickoff: GameLike["kickoff"], gameKickoffTime: GameLike["kickoffTime"]) {
+  return gameKickoff ?? gameKickoffTime;
 }
 
-export function getStatusLabel(game: WeekGame): string {
-  const status = getGameCenterStatus(game);
+export function formatKickoff(kickoff: string | Date | undefined) {
+  if (!kickoff) {
+    return "Kickoff TBD";
+  }
 
-  if (status === "final") return "FINAL";
-  if (status === "in_progress") return "LIVE";
-  if (status === "locked") return "LOCKED";
-  if (status === "open") return "OPEN";
+  const date = kickoff instanceof Date ? kickoff : new Date(kickoff);
 
-  return "UPCOMING";
-}
+  if (Number.isNaN(date.getTime())) {
+    return "Kickoff TBD";
+  }
 
-export function getStatusEmoji(game: WeekGame): string {
-  const status = getGameCenterStatus(game);
-
-  if (status === "final") return "✅";
-  if (status === "in_progress") return "🔴";
-  if (status === "locked") return "🔒";
-  if (status === "open") return "🟢";
-
-  return "⏳";
-}
-
-export function formatKickoff(kickoff: string): string {
-  return new Date(kickoff).toLocaleString([], {
+  return date.toLocaleString(undefined, {
     weekday: "short",
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+export function getStatusLabel(game: GameLike) {
+  const status = String(game.status ?? "").toLowerCase();
+
+  if (game.completed || game.winner || status.includes("final") || status.includes("complete")) {
+    return "FINAL";
+  }
+
+  if (status.includes("live") || status.includes("in_progress") || status.includes("in-progress")) {
+    return "LIVE";
+  }
+
+  if (status.includes("locked")) {
+    return "LOCKED";
+  }
+
+  const kickoff = getKickoffValue(game.kickoff, game.kickoffTime);
+
+  if (kickoff) {
+    const kickoffDate = kickoff instanceof Date ? kickoff : new Date(kickoff);
+
+    if (!Number.isNaN(kickoffDate.getTime()) && new Date() >= kickoffDate) {
+      return "LOCKED";
+    }
+  }
+
+  return "OPEN";
+}
+
+export function getStatusEmoji(game: GameLike) {
+  const label = getStatusLabel(game);
+
+  if (label === "LIVE") return "🟢";
+  if (label === "FINAL") return "🏁";
+  if (label === "LOCKED") return "🔒";
+
+  return "🟡";
 }
