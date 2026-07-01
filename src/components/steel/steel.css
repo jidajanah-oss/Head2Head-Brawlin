@@ -1,0 +1,214 @@
+.steel-ui-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+    #111111;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.26);
+}
+
+.steel-ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-weight: 900;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.steel-ui-button--sm { min-height: 36px; padding: 0 14px; }
+.steel-ui-button--md { min-height: 44px; padding: 0 18px; }
+.steel-ui-button--lg { min-height: 50px; padding: 0 22px; }
+
+.steel-ui-button--primary {
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  background: linear-gradient(135deg, #ffd95a, #b8860b);
+  color: #111111;
+}
+
+.steel-ui-button--secondary {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.steel-ui-button--ghost {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #ffffff;
+}
+
+.steel-ui-button--danger {
+  border: 1px solid rgba(255, 80, 80, 0.35);
+  background: rgba(255, 80, 80, 0.16);
+  color: #ffb4b4;
+}
+
+.steel-ui-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.steel-ui-badge--gold {
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  background: rgba(255, 215, 0, 0.11);
+  color: #f5c542;
+}
+
+.steel-ui-badge--neutral {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.steel-ui-badge--success {
+  border: 1px solid rgba(58, 255, 146, 0.28);
+  background: rgba(58, 255, 146, 0.1);
+  color: #8affbd;
+}
+
+.steel-ui-badge--danger {
+  border: 1px solid rgba(255, 80, 80, 0.28);
+  background: rgba(255, 80, 80, 0.1);
+  color: #ffb4b4;
+}
+
+.steel-ui-badge--info {
+  border: 1px solid rgba(92, 180, 255, 0.28);
+  background: rgba(92, 180, 255, 0.1);
+  color: #9ed3ff;
+}
+
+.steel-ui-eyebrow {
+  margin: 0 0 8px;
+  color: #f5c542;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.steel-ui-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.steel-ui-section-header h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.35rem;
+}
+
+.steel-ui-section-header p:not(.steel-ui-eyebrow) {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.steel-ui-stat-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+}
+
+.steel-ui-stat-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.steel-ui-stat-top span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.steel-ui-stat-icon {
+  color: #f5c542;
+}
+
+.steel-ui-stat-card strong {
+  color: #ffffff;
+  font-size: 1.8rem;
+}
+
+.steel-ui-stat-card small {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.steel-ui-hero {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 22px;
+  padding: 28px 22px;
+  border: 1px solid rgba(255, 215, 0, 0.26);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 215, 0, 0.28), transparent 34%),
+    linear-gradient(135deg, #050505 0%, #151515 45%, #242424 100%);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+}
+
+.steel-ui-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.08) 45%, transparent 70%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.04) 0,
+      rgba(255, 255, 255, 0.04) 1px,
+      transparent 1px,
+      transparent 12px
+    );
+}
+
+.steel-ui-hero-left,
+.steel-ui-hero-right {
+  position: relative;
+  z-index: 1;
+}
+
+.steel-ui-hero h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(2.25rem, 12vw, 4.6rem);
+  font-weight: 950;
+  line-height: 0.88;
+  letter-spacing: -0.08em;
+  text-transform: uppercase;
+}
+
+.steel-ui-hero-subtitle {
+  max-width: 560px;
+  margin: 14px 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.5;
+}
+
+.steel-ui-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+@media (min-width: 700px) {
+  .steel-ui-hero {
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    padding: 36px;
+  }
+}

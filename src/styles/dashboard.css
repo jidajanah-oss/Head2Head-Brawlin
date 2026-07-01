@@ -1,37 +1,167 @@
-.dashboard{
-    display:flex;
-    flex-direction:column;
-    gap:20px;
-}
-
-.dashboard-stats{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:14px;
-}
-
-.dashboard-actions{
-    display:grid;
-    gap:14px;
-}
-
-@media(max-width:700px){
-
-.dashboard-stats{
-    grid-template-columns:1fr;
-}
-
-}
-.dashboard-header {
+.dashboard {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
+  flex-direction: column;
+  gap: 22px;
 }
 
-.league-logo {
-  width: 70px;
-  height: 70px;
-  object-fit: contain;
-  border-radius: 10px;
+.dashboard-v2 {
+  color: #ffffff;
+}
+
+.dashboard-week-card {
+  display: grid;
+  gap: 5px;
+  min-width: 180px;
+  padding: 16px;
+  border: 1px solid rgba(255, 215, 0, 0.24);
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(16px);
+}
+
+.dashboard-week-card span,
+.dashboard-snapshot-grid span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.dashboard-week-card strong,
+.dashboard-snapshot-grid strong {
+  color: #f5c542;
+  font-size: 1.45rem;
+}
+
+.dashboard-week-card small,
+.dashboard-muted {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.dashboard-stat-grid,
+.dashboard-action-grid,
+.dashboard-snapshot-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.dashboard-featured-game,
+.dashboard-command-card,
+.dashboard-snapshot {
+  padding: 20px;
+}
+
+.dashboard-matchup {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.dashboard-matchup div,
+.dashboard-snapshot-grid div {
+  display: grid;
+  gap: 7px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dashboard-matchup div:last-child {
+  text-align: right;
+}
+
+.dashboard-matchup small {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.dashboard-matchup strong {
+  color: #ffffff;
+  font-size: 1.1rem;
+}
+
+.dashboard-matchup > span {
+  color: #f5c542;
+  font-weight: 950;
+}
+
+.dashboard-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.dashboard-command-card {
+  display: grid;
+  gap: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 215, 0, 0.18), transparent 32%),
+    linear-gradient(135deg, #121212, #070707);
+}
+
+.dashboard-command-card h2 {
+  margin: 0 0 8px;
+  color: #ffffff;
+}
+
+.dashboard-command-card p:not(.steel-ui-eyebrow) {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.dashboard-section {
+  display: grid;
+  gap: 14px;
+}
+
+.dashboard-action-card {
+  overflow: hidden;
+}
+
+.dashboard-action-card a {
+  display: grid;
+  gap: 8px;
+  height: 100%;
+  padding: 18px;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.dashboard-action-card span {
+  font-size: 1.65rem;
+}
+
+.dashboard-action-card strong {
+  font-size: 1.05rem;
+}
+
+.dashboard-action-card small {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.dashboard-action-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 215, 0, 0.42);
+}
+
+@media (min-width: 700px) {
+  .dashboard-stat-grid,
+  .dashboard-action-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .dashboard-snapshot-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .dashboard-command-card {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
 }
