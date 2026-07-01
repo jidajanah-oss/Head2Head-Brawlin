@@ -6,6 +6,7 @@
   color: var(--steel-text);
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 /* HEADER */
@@ -14,7 +15,7 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  padding: 18px 26px;
+  padding: 16px 26px;
   background: rgba(10, 10, 10, 0.94);
   backdrop-filter: blur(18px);
   border-bottom: 1px solid rgba(255, 182, 18, 0.28);
@@ -30,13 +31,12 @@
 }
 
 .brand-mark {
-  width: 58px;
-  height: 58px;
+  width: 56px;
+  height: 56px;
   border-radius: 18px;
   display: grid;
   place-items: center;
-  background:
-    linear-gradient(145deg, #ffb612, #c99700);
+  background: linear-gradient(145deg, #ffb612, #c99700);
   color: #111111;
   font-weight: 1000;
   letter-spacing: -0.06em;
@@ -56,17 +56,17 @@
 
 .app-header h1 {
   margin: 0;
-  font-size: clamp(1.45rem, 3vw, 2.15rem);
+  font-size: clamp(1.35rem, 3vw, 2.05rem);
   font-weight: 1000;
   letter-spacing: -0.04em;
   color: #ffffff;
-  line-height: 1;
+  line-height: 1.08;
 }
 
 .brand-subtitle {
-  margin: 5px 0 0;
+  margin: 4px 0 0;
   color: #bfc3c7;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 700;
 }
 
@@ -76,7 +76,7 @@
   flex: 1;
   width: min(1400px, 100%);
   margin: 0 auto;
-  padding: 28px 24px 112px;
+  padding: 34px 24px calc(128px + env(safe-area-inset-bottom));
 }
 
 /* CARDS */
@@ -93,7 +93,7 @@
 
 .bottom-nav {
   position: fixed;
-  bottom: 18px;
+  bottom: calc(18px + env(safe-area-inset-bottom));
   left: 50%;
   z-index: 120;
   transform: translateX(-50%);
@@ -107,22 +107,35 @@
   display: flex;
   justify-content: space-evenly;
   align-items: center;
+  padding: 0 10px;
 }
 
 .bottom-nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 16px;
   color: #bdbdbd;
   text-decoration: none;
   font-size: 0.82rem;
   font-weight: 900;
-  transition: 180ms ease;
+  transition:
+    color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
 }
 
 .bottom-nav a:hover {
   color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .bottom-nav a.active {
   color: var(--steel-gold);
+  background: rgba(255, 182, 18, 0.11);
   transform: translateY(-2px);
 }
 
@@ -130,26 +143,47 @@
 
 @media (max-width: 768px) {
   .app-header {
-    padding: 14px 16px;
+    padding: 12px 14px;
+  }
+
+  .brand-lockup {
+    gap: 12px;
   }
 
   .brand-mark {
-    width: 48px;
-    height: 48px;
+    width: 46px;
+    height: 46px;
     border-radius: 15px;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
+  }
+
+  .brand-kicker {
+    font-size: 0.64rem;
   }
 
   .brand-subtitle {
-    font-size: 0.76rem;
+    font-size: 0.74rem;
+  }
+
+  .app-header h1 {
+    font-size: 1.2rem;
   }
 
   .app-main {
-    padding: 20px 14px 108px;
+    padding: 24px 14px calc(116px + env(safe-area-inset-bottom));
   }
 
   .bottom-nav {
+    width: min(720px, 96vw);
     height: 66px;
-    bottom: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    border-radius: 22px;
+  }
+
+  .bottom-nav a {
+    min-width: auto;
+    flex: 1;
+    padding: 0 4px;
+    font-size: 0.72rem;
   }
 }
