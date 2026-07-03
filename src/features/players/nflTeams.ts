@@ -1,6 +1,3 @@
-export const nflTeams = [
-  "ARI","ATL","BAL","BUF","CAR","CHI","CIN","CLE",
-  "DAL","DEN","DET","GB","HOU","IND","JAX","KC",
-  "LV","LAC","LAR","MIA","MIN","NE","NO","NYG",
-  "NYJ","PHI","PIT","SEA","SF","TB","TEN","WAS"
-];
+import { NFL_TEAM_DATA } from "../../engine";
+
+export const nflTeams = NFL_TEAM_DATA.map((team) => team.abbreviation);

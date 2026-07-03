@@ -8,7 +8,12 @@ import {
   SteelStatCard,
 } from "../../components/steel";
 import { useLeague } from "../../context/LeagueContext";
-import { buildHeadToHeadStandings } from "../../lib/standingsEngine";
+import {
+  buildHeadToHeadMatchupResults,
+  buildHeadToHeadStandings,
+  formatHeadToHeadRecord,
+  formatWeeklyResultLabel,
+} from "../../engine";
 
 function getRankDisplay(index: number) {
   if (index === 0) return "🥇";
@@ -25,21 +30,50 @@ function getRankLabel(index: number) {
   return "Chasing";
 }
 
+function getResultBadgeVariant(result: string) {
+  if (result === "win") return "success";
+  if (result === "loss") return "danger";
+  if (result === "tie") return "gold";
+  if (result === "bye") return "neutral";
+
+  return "neutral";
+}
+
 function StandingsBoard() {
   const { league, picks, gameResults, activePlayerId } = useLeague();
 
   const allPicks = useMemo(
     () =>
-      league.players.reduce((acc: any, player: any) => {
-        acc[player.id] = picks[player.id] || {};
-        return acc;
-      }, {}),
+      league.players.reduce<Record<string, Record<string, string>>>(
+        (playerPicks, player) => {
+          playerPicks[player.id] = picks[player.id] || {};
+          return playerPicks;
+        },
+        {}
+      ),
     [league.players, picks]
   );
 
   const standings = useMemo(
-    () => buildHeadToHeadStandings(league.players, allPicks, gameResults),
-    [league.players, allPicks, gameResults]
+    () =>
+      buildHeadToHeadStandings(
+        league.players,
+        allPicks,
+        gameResults,
+        league.currentWeek
+      ),
+    [league.players, allPicks, gameResults, league.currentWeek]
+  );
+
+  const weeklyMatchups = useMemo(
+    () =>
+      buildHeadToHeadMatchupResults(
+        league.players,
+        allPicks,
+        gameResults,
+        league.currentWeek
+      ),
+    [league.players, allPicks, gameResults, league.currentWeek]
   );
 
   const leader = standings[0];
@@ -48,16 +82,19 @@ function StandingsBoard() {
   );
 
   const completedGames = Object.keys(gameResults).length;
-  const totalPoints = standings.reduce((sum, player) => sum + player.points, 0);
-  const averagePoints =
-    standings.length > 0 ? Math.round(totalPoints / standings.length) : 0;
+  const totalPickPoints = standings.reduce(
+    (sum, player) => sum + player.pickPoints,
+    0
+  );
+  const averagePickPoints =
+    standings.length > 0 ? Math.round(totalPickPoints / standings.length) : 0;
 
   return (
     <main className="standings standings-v2">
       <SteelHero
-        eyebrow="Championship Race"
+        eyebrow="Head-To-Head Race"
         title="Standings"
-        subtitle={`Week ${league.currentWeek} rankings for Head2Head Brawlin' – Steel Edition.`}
+        subtitle={`Week ${league.currentWeek} matchup standings for Head2Head Brawlin' – Steel Edition.`}
         primaryLabel="Make Picks"
         primaryHref="/picks"
         secondaryLabel="Game Center"
@@ -66,7 +103,11 @@ function StandingsBoard() {
           <div className="standings-hero-panel">
             <span>Current Leader</span>
             <strong>{leader ? leader.name : "—"}</strong>
-            <small>{leader ? `${leader.points} points` : "No results yet"}</small>
+            <small>
+              {leader
+                ? `${formatHeadToHeadRecord(leader)} • ${leader.leaguePoints} pts`
+                : "No results yet"}
+            </small>
           </div>
         }
       />
@@ -75,20 +116,22 @@ function StandingsBoard() {
         <SteelStatCard
           label="Players"
           value={league.players.length}
-          helper="In the league"
+          helper="Active league roster"
           icon="👥"
         />
 
         <SteelStatCard
           label="Leader"
-          value={leader ? leader.points : "—"}
-          helper={leader ? leader.name : "Waiting on results"}
+          value={leader ? formatHeadToHeadRecord(leader) : "—"}
+          helper={leader ? `${leader.leaguePoints} league points` : "Waiting"}
           icon="🏆"
         />
 
         <SteelStatCard
-          label="Your Points"
-          value={activePlayerStanding ? activePlayerStanding.points : "—"}
+          label="Your Record"
+          value={
+            activePlayerStanding ? formatHeadToHeadRecord(activePlayerStanding) : "—"
+          }
           helper={activePlayerStanding ? activePlayerStanding.name : "Select player"}
           icon="⭐"
         />
@@ -96,16 +139,59 @@ function StandingsBoard() {
         <SteelStatCard
           label="Games Scored"
           value={completedGames}
-          helper={`Average score: ${averagePoints}`}
+          helper={`Average picks: ${averagePickPoints}`}
           icon="📊"
         />
       </section>
+
+      <SteelCard className="standings-matchups-card" as="section">
+        <SteelSectionHeader
+          eyebrow="This Week"
+          title={`Week ${league.currentWeek} Head-To-Head Matchups`}
+          description="Each player is matched against one opponent for the weekly brawl."
+        />
+
+        <div className="standings-matchups-grid">
+          {weeklyMatchups.map((matchup) => (
+            <div className="standings-matchup-item" key={matchup.id}>
+              <div className="standings-matchup-player">
+                <strong>{matchup.playerA.name}</strong>
+                <span>{matchup.playerAScore}</span>
+              </div>
+
+              <div className="standings-matchup-center">
+                <small>{matchup.playerB ? "vs" : "bye"}</small>
+                <SteelBadge
+                  variant={
+                    matchup.status === "final"
+                      ? "gold"
+                      : matchup.status === "bye"
+                        ? "neutral"
+                        : "neutral"
+                  }
+                >
+                  {matchup.resultLabel}
+                </SteelBadge>
+              </div>
+
+              <div className="standings-matchup-player is-right">
+                <strong>{matchup.playerB?.name ?? "Bye Week"}</strong>
+                <span>{matchup.playerB ? matchup.playerBScore : "—"}</span>
+              </div>
+            </div>
+          ))}
+
+          {weeklyMatchups.length === 0 ? (
+            <p className="standings-muted">No weekly matchups available yet.</p>
+          ) : null}
+        </div>
+      </SteelCard>
 
       <SteelCard className="standings-podium-card" as="section">
         <SteelSectionHeader
           eyebrow="Top Three"
           title="Podium Watch"
-          description="The current championship leaders based on scored results."
+          description="The current leaders based on head-to-head league points."
         />
 
         <div className="standings-podium-grid">
@@ -116,7 +202,9 @@ function StandingsBoard() {
             >
               <span>{getRankDisplay(index)}</span>
               <strong>{player.name}</strong>
-              <small>{player.points} pts</small>
+              <small>
+                {formatHeadToHeadRecord(player)} • {player.leaguePoints} pts
+              </small>
             </div>
           ))}
 
@@ -130,7 +218,7 @@ function StandingsBoard() {
         <SteelSectionHeader
           eyebrow="League Board"
           title={`Week ${league.currentWeek} Rankings`}
-          description="Live leaderboard based on available game results."
+          description="True head-to-head rankings based on weekly matchups."
           action={
             <SteelButton href="/picks" size="sm" variant="secondary">
               Make Picks
@@ -158,16 +246,31 @@ function StandingsBoard() {
 
                 <div className="name standings-player">
                   <strong>{player.name}</strong>
-                  <small>{isActivePlayer ? "Active player" : "League player"}</small>
+                  <small>
+                    vs {player.weeklyOpponentName} •{" "}
+                    {formatWeeklyResultLabel(player.weeklyResult)}
+                  </small>
+                </div>
+
+                <div className="standings-record">
+                  <strong>{formatHeadToHeadRecord(player)}</strong>
+                  <small>Record</small>
                 </div>
 
                 <div className="points standings-points">
-                  <strong>{player.points}</strong>
-                  <small>points</small>
+                  <strong>{player.leaguePoints}</strong>
+                  <small>League pts</small>
                 </div>
 
-                <SteelBadge variant={isTop3 ? "gold" : "neutral"}>
-                  {isTop3 ? "Top 3" : "Ranked"}
+                <div className="standings-pick-score">
+                  <strong>
+                    {player.pickPoints}/{player.possiblePoints}
+                  </strong>
+                  <small>Pick score</small>
+                </div>
+
+                <SteelBadge variant={getResultBadgeVariant(player.weeklyResult)}>
+                  {formatWeeklyResultLabel(player.weeklyResult)}
                 </SteelBadge>
               </SteelCard>
             );

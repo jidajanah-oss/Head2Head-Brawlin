@@ -8,8 +8,15 @@ import {
   SteelStatCard,
 } from "../../components/steel";
 import { useLeague } from "../../context/LeagueContext";
+import {
+  getAvailableNFLTeams,
+  getLeagueOwnershipSummary,
+  getNFLTeamDisplayName,
+  getNFLTeamInfo,
+  groupPlayersByNFLDivision,
+  validateNFLTeamOwnership,
+} from "../../engine";
 import type { Player } from "../../types/player";
-import { nflTeams } from "./nflTeams";
 
 type PlayerFilter = "all" | "active" | "commissioners" | "players";
 
@@ -46,16 +53,27 @@ function PlayerManager() {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<PlayerFilter>("all");
 
-  const availableTeams = useMemo(() => {
-    const used = new Set(players.map((player) => player.nflTeam));
-    return nflTeams.filter((team) => !used.has(team));
-  }, [players]);
+  const availableTeams = useMemo(() => getAvailableNFLTeams(players), [players]);
 
-  const selectedTeam = availableTeams.includes(nflTeam)
-    ? nflTeam
-    : availableTeams[0] ?? "";
+  const selectedTeam =
+    availableTeams.some((team) => team.abbreviation === nflTeam)
+      ? nflTeam
+      : availableTeams[0]?.abbreviation ?? "";
+
+  const selectedTeamInfo = selectedTeam ? getNFLTeamInfo(selectedTeam) : null;
+
+  const ownershipSummary = useMemo(
+    () => getLeagueOwnershipSummary(players),
+    [players]
+  );
+
+  const divisionGroups = useMemo(
+    () => groupPlayersByNFLDivision(players),
+    [players]
+  );
 
   const activePlayers = players.filter((player) => player.status === "active");
+
   const commissioners = players.filter(
     (player) =>
       player.role === "commissioner" ||
@@ -65,9 +83,15 @@ function PlayerManager() {
   const activePlayer = players.find((player) => player.id === activePlayerId);
 
   const filteredPlayers = players.filter((player) => {
+    const teamInfo = getNFLTeamInfo(player.nflTeam);
+
     const matchesSearch =
       player.name.toLowerCase().includes(search.toLowerCase()) ||
-      player.nflTeam.toLowerCase().includes(search.toLowerCase());
+      player.nflTeam.toLowerCase().includes(search.toLowerCase()) ||
+      getNFLTeamDisplayName(player.nflTeam)
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      (teamInfo?.division.toLowerCase().includes(search.toLowerCase()) ?? false);
 
     if (!matchesSearch) return false;
 
@@ -83,10 +107,12 @@ function PlayerManager() {
     return true;
   });
 
+  const ownershipValidation = validateNFLTeamOwnership(players, selectedTeam);
+
   const isAddDisabled =
     players.length >= league.settings.maxPlayers ||
     !name.trim() ||
-    !selectedTeam;
+    !ownershipValidation.valid;
 
   const filters: Array<{ id: PlayerFilter; label: string; count: number }> = [
     { id: "all", label: "All", count: players.length },
@@ -112,17 +138,21 @@ function PlayerManager() {
 
     addPlayer(newPlayer);
 
+    const nextTeam =
+      availableTeams.find((team) => team.abbreviation !== selectedTeam)
+        ?.abbreviation ?? "";
+
     setName("");
     setRole("player");
-    setNflTeam(availableTeams.find((team) => team !== selectedTeam) ?? "");
+    setNflTeam(nextTeam);
   };
 
   return (
     <main className="player-manager players-v2">
       <SteelHero
-        eyebrow="Player Profile"
+        eyebrow="Franchise Ownership"
         title="Me"
-        subtitle="Manage your active player card, league roster, and franchise identity."
+        subtitle="Manage your active player card, league roster, and NFL-style franchise ownership."
         primaryLabel="Make Picks"
         primaryHref="/picks"
         secondaryLabel="Standings"
@@ -131,7 +161,13 @@ function PlayerManager() {
           <div className="players-hero-panel">
             <span>Active Player</span>
             <strong>{activePlayer ? activePlayer.name : "None"}</strong>
-            <small>{activePlayer ? activePlayer.nflTeam : "Select below"}</small>
+            <small>
+              {activePlayer
+                ? `${activePlayer.nflTeam} • ${
+                    getNFLTeamInfo(activePlayer.nflTeam)?.division ?? "No Division"
+                  }`
+                : "Select below"}
+            </small>
           </div>
         }
       />
@@ -145,24 +181,24 @@ function PlayerManager() {
         />
 
         <SteelStatCard
-          label="Active"
-          value={activePlayers.length}
-          helper="Eligible players"
-          icon="✅"
-        />
-
-        <SteelStatCard
-          label="Commish Team"
-          value={commissioners.length}
-          helper="League operators"
-          icon="🛡️"
+          label="Teams Claimed"
+          value={`${ownershipSummary.claimedCount}/${ownershipSummary.totalTeams}`}
+          helper="One player per NFL team"
+          icon="🏈"
         />
 
         <SteelStatCard
           label="Teams Open"
-          value={availableTeams.length}
+          value={ownershipSummary.openCount}
           helper="Available franchises"
-          icon="🏈"
+          icon="✅"
+        />
+
+        <SteelStatCard
+          label="Divisions"
+          value="8"
+          helper="NFL-style structure"
+          icon="🏟️"
         />
       </section>
 
@@ -172,7 +208,9 @@ function PlayerManager() {
           title={activePlayer ? activePlayer.name : "No active player selected"}
           description={
             activePlayer
-              ? `${getRoleLabel(activePlayer.role)} • ${activePlayer.nflTeam}`
+              ? `${getRoleLabel(activePlayer.role)} • ${getNFLTeamDisplayName(
+                  activePlayer.nflTeam
+                )}`
               : "Choose a player card below to activate the Me experience."
           }
           action={
@@ -194,17 +232,21 @@ function PlayerManager() {
 
             <div>
               <span>Franchise</span>
-              <strong>{activePlayer.nflTeam}</strong>
+              <strong>{getNFLTeamDisplayName(activePlayer.nflTeam)}</strong>
             </div>
 
             <div>
-              <span>Status</span>
-              <strong>{activePlayer.status}</strong>
+              <span>Division</span>
+              <strong>
+                {getNFLTeamInfo(activePlayer.nflTeam)?.division ?? "—"}
+              </strong>
             </div>
 
             <div>
-              <span>Role</span>
-              <strong>{getRoleLabel(activePlayer.role)}</strong>
+              <span>Conference</span>
+              <strong>
+                {getNFLTeamInfo(activePlayer.nflTeam)?.conference ?? "—"}
+              </strong>
             </div>
           </div>
         ) : null}
@@ -214,7 +256,7 @@ function PlayerManager() {
         <SteelSectionHeader
           eyebrow="Roster Tools"
           title="Add League Player"
-          description="Create a player profile and assign an available NFL franchise."
+          description="Create a player profile and assign an available NFL franchise. Each NFL team can only be claimed once."
         />
 
         <div className="players-add-form">
@@ -235,8 +277,8 @@ function PlayerManager() {
               disabled={availableTeams.length === 0}
             >
               {availableTeams.map((team) => (
-                <option key={team} value={team}>
-                  {team}
+                <option key={team.abbreviation} value={team.abbreviation}>
+                  {team.abbreviation} — {team.displayName}
                 </option>
               ))}
             </select>
@@ -263,6 +305,73 @@ function PlayerManager() {
             Add Player
           </SteelButton>
         </div>
+
+        <div className="players-team-preview">
+          <div className="players-franchise-mark">
+            {selectedTeam ? getTeamInitials(selectedTeam) : "—"}
+          </div>
+
+          <div>
+            <span>Selected Franchise</span>
+            <strong>
+              {selectedTeamInfo ? selectedTeamInfo.displayName : "No teams open"}
+            </strong>
+            <small>
+              {selectedTeamInfo
+                ? `${selectedTeamInfo.conference} • ${selectedTeamInfo.division}`
+                : "All NFL franchises are claimed."}
+            </small>
+          </div>
+        </div>
+
+        {!ownershipValidation.valid ? (
+          <p className="players-form-warning">{ownershipValidation.reason}</p>
+        ) : null}
+      </SteelCard>
+
+      <SteelCard className="players-division-card" as="section">
+        <SteelSectionHeader
+          eyebrow="NFL Structure"
+          title="Franchise Ownership Board"
+          description="Players are grouped by the real NFL division of their selected franchise."
+        />
+
+        <div className="players-division-grid">
+          {divisionGroups.map((division) => (
+            <div className="players-division-item" key={division.division}>
+              <div className="players-division-heading">
+                <div>
+                  <span>{division.conference}</span>
+                  <strong>{division.division}</strong>
+                </div>
+
+                <small>
+                  {division.claimedCount}/4 claimed
+                </small>
+              </div>
+
+              <div className="players-division-teams">
+                {division.teams.map((team) => {
+                  const owner = division.players.find(
+                    (player) => player.nflTeam === team.abbreviation
+                  );
+
+                  return (
+                    <div
+                      className={`players-division-team ${
+                        owner ? "is-claimed" : ""
+                      }`}
+                      key={team.abbreviation}
+                    >
+                      <span>{team.abbreviation}</span>
+                      <strong>{owner ? owner.name : "Open"}</strong>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       </SteelCard>
 
       <section className="players-board-section">
@@ -274,7 +383,7 @@ function PlayerManager() {
 
         <div className="players-toolbar">
           <input
-            placeholder="Search players or teams..."
+            placeholder="Search players, teams, or divisions..."
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
@@ -299,6 +408,7 @@ function PlayerManager() {
         <div className="player-list players-card-grid">
           {filteredPlayers.map((player) => {
             const isActive = player.id === activePlayerId;
+            const teamInfo = getNFLTeamInfo(player.nflTeam);
 
             return (
               <SteelCard
@@ -318,18 +428,23 @@ function PlayerManager() {
 
                 <div className="players-card-body">
                   <h3>{player.name}</h3>
-                  <p>{player.nflTeam} Franchise</p>
+                  <p>{getNFLTeamDisplayName(player.nflTeam)}</p>
                 </div>
 
                 <div className="players-card-meta">
                   <div>
-                    <span>Status</span>
-                    <strong>{player.status}</strong>
+                    <span>Division</span>
+                    <strong>{teamInfo?.division ?? "—"}</strong>
                   </div>
 
                   <div>
-                    <span>Player ID</span>
-                    <strong>{player.id.slice(0, 8)}</strong>
+                    <span>Conference</span>
+                    <strong>{teamInfo?.conference ?? "—"}</strong>
+                  </div>
+
+                  <div>
+                    <span>Status</span>
+                    <strong>{player.status}</strong>
                   </div>
                 </div>
 
