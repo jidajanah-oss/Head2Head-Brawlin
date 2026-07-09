@@ -5,10 +5,7 @@ interface Props {
   onChange: (setup: LeagueSetupState) => void;
 }
 
-export default function SetupLeagueStep({
-  setup,
-  onChange,
-}: Props) {
+export default function SetupLeagueStep({ setup, onChange }: Props) {
   return (
     <>
       <h3>League Information</h3>
@@ -16,38 +13,54 @@ export default function SetupLeagueStep({
       <label>League Name</label>
       <input
         value={setup.leagueName}
-        onChange={(e) =>
+        onChange={(event) =>
           onChange({
             ...setup,
-            leagueName: e.target.value,
+            leagueName: event.target.value,
           })
         }
       />
 
       <label>Season</label>
-
       <input
         type="number"
         value={setup.season}
-        onChange={(e) =>
+        onChange={(event) =>
           onChange({
             ...setup,
-            season: Number(e.target.value),
+            season: Number(event.target.value),
           })
         }
       />
 
       <label>Commissioner</label>
-
       <input
+        placeholder="Main commissioner name..."
         value={setup.commissioner}
-        onChange={(e) =>
+        onChange={(event) =>
           onChange({
             ...setup,
-            commissioner: e.target.value,
+            commissioner: event.target.value,
           })
         }
       />
+
+      <label>Backup Commissioner</label>
+      <input
+        placeholder="Backup commissioner name..."
+        value={setup.backupCommissioner}
+        onChange={(event) =>
+          onChange({
+            ...setup,
+            backupCommissioner: event.target.value,
+          })
+        }
+      />
+
+      <p className="commissioner-step-note">
+        The backup commissioner can help manage the league if the main
+        commissioner is unavailable.
+      </p>
     </>
   );
 }

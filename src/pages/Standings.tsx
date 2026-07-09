@@ -1,5 +1,8 @@
+import StandingsBoard from "../features/standings/StandingsBoard";
+import "../styles/standings.css";
+
 function Standings() {
-  return <section className="page-card"><h2>Standings</h2></section>;
+  return <StandingsBoard />;
 }
 
 export default Standings;

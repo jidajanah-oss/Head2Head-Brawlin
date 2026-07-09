@@ -15,3 +15,4 @@ export type Player = {
   customLogo?: string;
   status: PlayerStatus;
   role: PlayerRole;
+};

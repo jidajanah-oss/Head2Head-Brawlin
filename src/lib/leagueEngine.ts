@@ -17,7 +17,36 @@ export const initialLeagueState: LeagueState & {
     pickLockMinutesBeforeKickoff: 5,
   },
 
-  players: [],
+  players: [
+    {
+      id: "player-1",
+      name: "Player 1",
+      nflTeam: "PIT",
+      status: "active",
+      role: "commissioner",
+    },
+    {
+      id: "player-2",
+      name: "Player 2",
+      nflTeam: "DAL",
+      status: "active",
+      role: "player",
+    },
+    {
+      id: "player-3",
+      name: "Player 3",
+      nflTeam: "PHI",
+      status: "active",
+      role: "player",
+    },
+    {
+      id: "player-4",
+      name: "Player 4",
+      nflTeam: "BUF",
+      status: "active",
+      role: "player",
+    },
+  ],
 
   currentWeek: 1,
 
@@ -72,9 +101,7 @@ export function getPickStatusLabel(league: typeof initialLeagueState) {
 export function isPickLocked(game: Game, now = new Date()) {
   const kickoff = new Date(game.kickoffTime);
 
-  const lockTime = new Date(
-    kickoff.getTime() - 5 * 60 * 1000
-  );
+  const lockTime = new Date(kickoff.getTime() - 5 * 60 * 1000);
 
   return now >= lockTime;
 }

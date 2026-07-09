@@ -1,60 +1,327 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  SteelBadge,
+  SteelCard,
+  SteelHero,
+  SteelSectionHeader,
+  SteelStatCard,
+} from "../../components/steel";
 import { useLeague } from "../../context/LeagueContext";
-import { getGamesForWeek, isPickLocked } from "../../lib/gameEngine";
+import { useNFL } from "../../context/NFLContext";
+import { PickLockEngine } from "../../engine";
+import {
+  formatKickoff,
+  getStatusEmoji,
+  getStatusLabel,
+} from "../games/gameCenterUtils";
 import PlayerSelector from "../players/PlayerSelector";
+
+type PickFilter = "all" | "open" | "picked" | "missing" | "locked";
+
+type TeamPickOptionProps = {
+  team: string;
+  side: "away" | "home";
+  selected: boolean;
+  disabled: boolean;
+  onSelect: () => void;
+};
+
+function getTeamInitials(team: string) {
+  return team
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 3)
+    .toUpperCase();
+}
+
+function getPickBadgeVariant(locked: boolean, selected?: string) {
+  if (locked) return "danger";
+  if (selected) return "success";
+  return "gold";
+}
+
+function getPickBadgeLabel(locked: boolean, selected?: string) {
+  if (locked) return "Locked";
+  if (selected) return "Picked";
+  return "Open";
+}
+
+function TeamPickOption({
+  team,
+  side,
+  selected,
+  disabled,
+  onSelect,
+}: TeamPickOptionProps) {
+  return (
+    <button
+      className={`pick-option-v2 ${selected ? "is-selected" : ""}`}
+      disabled={disabled}
+      onClick={onSelect}
+      type="button"
+    >
+      <span className="pick-option-side">{side}</span>
+      <span className="pick-option-logo">{getTeamInitials(team)}</span>
+      <strong>{team}</strong>
+      <small>{selected ? "Selected" : disabled ? "Locked" : "Tap to pick"}</small>
+    </button>
+  );
+}
 
 function PickSheet() {
   const { league, picks, setPick, activePlayerId } = useLeague();
+  const { week, setWeek, snapshot, loading, error } = useNFL();
+  const [activeFilter, setActiveFilter] = useState<PickFilter>("all");
 
-  const games = getGamesForWeek(league.currentWeek);
+  useEffect(() => {
+    if (week !== league.currentWeek) {
+      setWeek(league.currentWeek);
+    }
+  }, [league.currentWeek, setWeek, week]);
+
+  const games = snapshot?.weekGames ?? [];
   const activePicks = picks[activePlayerId] || {};
 
+  const pickRows = useMemo(
+    () =>
+      games.map((game) => {
+        const locked = PickLockEngine.isPickLocked(game);
+        const selected = activePicks[game.id];
+
+        return {
+          game,
+          locked,
+          selected,
+          statusLabel: getStatusLabel(game),
+        };
+      }),
+    [activePicks, games]
+  );
+
+  const totalGames = pickRows.length;
+  const pickedCount = pickRows.filter((row) => row.selected).length;
+  const lockedCount = pickRows.filter((row) => row.locked).length;
+  const openCount = pickRows.filter((row) => !row.locked).length;
+  const missingCount = pickRows.filter((row) => !row.locked && !row.selected).length;
+
+  const filteredRows = pickRows.filter((row) => {
+    if (activeFilter === "all") return true;
+    if (activeFilter === "open") return !row.locked;
+    if (activeFilter === "picked") return Boolean(row.selected);
+    if (activeFilter === "missing") return !row.locked && !row.selected;
+    if (activeFilter === "locked") return row.locked;
+
+    return true;
+  });
+
+  const filters: Array<{ id: PickFilter; label: string; count: number }> = [
+    { id: "all", label: "All", count: totalGames },
+    { id: "open", label: "Open", count: openCount },
+    { id: "picked", label: "Picked", count: pickedCount },
+    { id: "missing", label: "Missing", count: missingCount },
+    { id: "locked", label: "Locked", count: lockedCount },
+  ];
+
   return (
-    <div className="pick-sheet">
-      <div className="pick-sheet-header">
-        <h2>✅ Pick Sheet</h2>
-        <p>Week {league.currentWeek}</p>
-      </div>
+    <main className="pick-sheet picks-v2">
+      <SteelHero
+        eyebrow="Weekly Pick Card"
+        title="Make Picks"
+        subtitle={`Week ${league.currentWeek} selections for Head2Head Brawlin' – Steel Edition.`}
+        primaryLabel="Game Center"
+        primaryHref="/games"
+        secondaryLabel="Standings"
+        secondaryHref="/standings"
+        rightContent={
+          <div className="picks-hero-panel">
+            <span>Pick Progress</span>
+            <strong>
+              {pickedCount}/{totalGames || 0}
+            </strong>
+            <small>{missingCount > 0 ? `${missingCount} still open` : "Card complete"}</small>
+          </div>
+        }
+      />
 
-      <PlayerSelector />
+      <section className="picks-player-panel">
+        <SteelSectionHeader
+          eyebrow="Active Player"
+          title="Select your pick card"
+          description="Choose the player before making weekly selections."
+        />
 
-      <div className="pick-list">
-        {games.map((game) => {
-          const locked = isPickLocked(game);
-          const selected = activePicks[game.id];
+        <PlayerSelector />
+      </section>
 
-          return (
-            <div key={game.id} className="pick-card">
-              <div className="pick-matchup">
-                {game.awayTeam} <span>@</span> {game.homeTeam}
-              </div>
+      <section className="picks-stat-grid">
+        <SteelStatCard
+          label="Games"
+          value={loading ? "..." : totalGames}
+          helper={`Week ${league.currentWeek} schedule`}
+          icon="🏈"
+        />
 
-              <div className="pick-options">
-                <button
-                  disabled={locked || !activePlayerId}
-                  className={selected === game.awayTeam ? "selected" : ""}
-                  onClick={() => setPick(activePlayerId, game.id, game.awayTeam)}
-                >
-                  {game.awayTeam}
-                </button>
+        <SteelStatCard
+          label="Picked"
+          value={loading ? "..." : pickedCount}
+          helper="Selections made"
+          icon="✅"
+        />
 
-                <button
-                  disabled={locked || !activePlayerId}
-                  className={selected === game.homeTeam ? "selected" : ""}
-                  onClick={() => setPick(activePlayerId, game.id, game.homeTeam)}
-                >
-                  {game.homeTeam}
-                </button>
-              </div>
+        <SteelStatCard
+          label="Missing"
+          value={loading ? "..." : missingCount}
+          helper="Still available"
+          icon="⚠️"
+        />
 
-              <div className="pick-status">
-                {locked ? "🔒 Locked" : "🟢 Open"}
-                {selected && <strong> Pick: {selected}</strong>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+        <SteelStatCard
+          label="Locked"
+          value={loading ? "..." : lockedCount}
+          helper="Kickoff closed"
+          icon="🔒"
+        />
+      </section>
+
+      <section className="picks-toolbar">
+        <div className="picks-filter-row">
+          {filters.map((filter) => (
+            <button
+              className={`picks-filter ${
+                activeFilter === filter.id ? "is-active" : ""
+              }`}
+              key={filter.id}
+              onClick={() => setActiveFilter(filter.id)}
+              type="button"
+            >
+              <span>{filter.label}</span>
+              <strong>{filter.count}</strong>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {loading ? (
+        <SteelCard className="picks-state-card" as="section">
+          <SteelSectionHeader
+            eyebrow="Loading"
+            title="Loading pick sheet..."
+            description="Pulling this week's schedule and lock status."
+          />
+        </SteelCard>
+      ) : null}
+
+      {error ? (
+        <SteelCard className="picks-state-card is-error" as="section">
+          <SteelSectionHeader
+            eyebrow="NFL Data Error"
+            title="Unable to load pick sheet"
+            description={error}
+          />
+        </SteelCard>
+      ) : null}
+
+      {!loading && totalGames === 0 ? (
+        <SteelCard className="picks-state-card" as="section">
+          <SteelSectionHeader
+            eyebrow="No Games"
+            title="No games available for this week."
+            description="Check the Game Center or reload NFL data."
+          />
+        </SteelCard>
+      ) : null}
+
+      <section className="pick-list picks-list-v2">
+        <SteelSectionHeader
+          eyebrow="Pick Board"
+          title={`Week ${league.currentWeek} Matchups`}
+          description={
+            activePlayerId
+              ? `Making picks for ${activePlayerId}.`
+              : "Select a player to activate the pick card."
+          }
+        />
+
+        <div className="picks-card-grid">
+          {filteredRows.map(({ game, locked, selected, statusLabel }) => {
+            const disabled = locked || !activePlayerId;
+
+            return (
+              <SteelCard
+                as="article"
+                className={`pick-card picks-card-v2 ${
+                  selected ? "has-selection" : ""
+                } ${locked ? "is-locked" : ""}`}
+                key={game.id}
+              >
+                <div className="picks-card-top">
+                  <SteelBadge variant={getPickBadgeVariant(locked, selected)}>
+                    {getPickBadgeLabel(locked, selected)}
+                  </SteelBadge>
+
+                  <SteelBadge variant="neutral">
+                    {getStatusEmoji(game)} {statusLabel}
+                  </SteelBadge>
+                </div>
+
+                <div className="picks-matchup-v2">
+                  <TeamPickOption
+                    disabled={disabled}
+                    onSelect={() => {
+                      if (!activePlayerId || locked) return;
+                      setPick(activePlayerId, game.id, game.awayTeam);
+                    }}
+                    selected={selected === game.awayTeam}
+                    side="away"
+                    team={game.awayTeam}
+                  />
+
+                  <div className="picks-at">@</div>
+
+                  <TeamPickOption
+                    disabled={disabled}
+                    onSelect={() => {
+                      if (!activePlayerId || locked) return;
+                      setPick(activePlayerId, game.id, game.homeTeam);
+                    }}
+                    selected={selected === game.homeTeam}
+                    side="home"
+                    team={game.homeTeam}
+                  />
+                </div>
+
+                <div className="picks-card-details">
+                  <div>
+                    <span>Kickoff</span>
+                    <strong>{formatKickoff(game.kickoff)}</strong>
+                  </div>
+
+                  <div>
+                    <span>Pick Status</span>
+                    <strong>{locked ? "Locked" : "Open"}</strong>
+                  </div>
+
+                  <div>
+                    <span>Your Pick</span>
+                    <strong>{selected ?? "—"}</strong>
+                  </div>
+                </div>
+
+                <p className="pick-status picks-status-v2">
+                  {locked ? "🔒 Locked" : "🟢 Open"}
+                  {selected ? (
+                    <strong> Pick: {selected}</strong>
+                  ) : (
+                    <span> No pick selected</span>
+                  )}
+                </p>
+              </SteelCard>
+            );
+          })}
+        </div>
+      </section>
+    </main>
   );
 }
 
