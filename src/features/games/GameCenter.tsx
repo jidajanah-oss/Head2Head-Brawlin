@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+
+import FranchiseLogo from "../../components/franchise/FranchiseLogo";
 import {
   SteelBadge,
   SteelButton,
@@ -8,7 +10,7 @@ import {
 } from "../../components/steel";
 import { useLeague } from "../../context/LeagueContext";
 import { useNFL } from "../../context/NFLContext";
-import { PickLockEngine } from "../../engine";
+import { getNFLTeamDisplayName, PickLockEngine } from "../../engine";
 import {
   formatKickoff,
   getStatusEmoji,
@@ -39,16 +41,12 @@ function getBadgeVariant(status: FilterId) {
   if (status === "live") return "success";
   if (status === "final") return "neutral";
   if (status === "locked") return "danger";
+
   return "gold";
 }
 
-function getTeamInitials(team: string) {
-  return team
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 3)
-    .toUpperCase();
+function getTeamDisplayName(team: string) {
+  return getNFLTeamDisplayName(team);
 }
 
 function getKickoffWindow(kickoff: unknown) {
@@ -70,6 +68,14 @@ function getKickoffWindow(kickoff: unknown) {
   return `${day} Games`;
 }
 
+function formatSelectedPick(selected?: string) {
+  if (!selected) {
+    return "—";
+  }
+
+  return `${selected} • ${getTeamDisplayName(selected)}`;
+}
+
 function TeamPickButton({
   team,
   side,
@@ -77,6 +83,8 @@ function TeamPickButton({
   disabled,
   onPick,
 }: TeamPickButtonProps) {
+  const displayName = getTeamDisplayName(team);
+
   return (
     <button
       className={`game-center-team-pick ${selected ? "is-selected" : ""}`}
@@ -85,8 +93,16 @@ function TeamPickButton({
       type="button"
     >
       <span className="game-center-team-side">{side}</span>
-      <span className="game-center-team-logo">{getTeamInitials(team)}</span>
-      <strong>{team}</strong>
+
+      <FranchiseLogo
+        className="game-center-team-logo"
+        displayName={displayName}
+        nflTeam={team}
+        size="md"
+      />
+
+      <strong>{displayName}</strong>
+
       <small>{selected ? "Selected" : disabled ? "Locked" : "Pick"}</small>
     </button>
   );
@@ -95,6 +111,7 @@ function TeamPickButton({
 function GameCenter() {
   const { league, picks, setPick, activePlayerId, setGameResults } = useLeague();
   const { week, setWeek, snapshot, loading, error, refresh } = useNFL();
+
   const [activeFilter, setActiveFilter] = useState<FilterId>("all");
 
   useEffect(() => {
@@ -128,12 +145,14 @@ function GameCenter() {
 
   const filteredGames = enhancedGames.filter((item) => {
     if (activeFilter === "all") return true;
+
     return item.status === activeFilter;
   });
 
   const groupedGames = filteredGames.reduce<Record<string, typeof filteredGames>>(
     (groups, item) => {
       const currentGroup = groups[item.window] ?? [];
+
       return {
         ...groups,
         [item.window]: [...currentGroup, item],
@@ -143,12 +162,15 @@ function GameCenter() {
   );
 
   const liveCount = enhancedGames.filter((item) => item.status === "live").length;
+
   const upcomingCount = enhancedGames.filter(
     (item) => item.status === "upcoming"
   ).length;
+
   const lockedCount = enhancedGames.filter(
     (item) => item.status === "locked"
   ).length;
+
   const finalCount = enhancedGames.filter((item) => item.status === "final").length;
 
   const filterItems: Array<{ id: FilterId; label: string; count: number }> = [
@@ -163,6 +185,14 @@ function GameCenter() {
     setGameResults({
       "2026-W1-G1": "PHI",
     });
+  };
+
+  const handlePick = (gameId: string, team: string, locked: boolean) => {
+    if (!activePlayerId || locked) {
+      return;
+    }
+
+    setPick(activePlayerId, gameId, team);
   };
 
   return (
@@ -278,10 +308,8 @@ function GameCenter() {
 
                   <div className="game-center-matchup">
                     <TeamPickButton
-                      disabled={locked}
-                      onPick={() =>
-                        setPick(activePlayerId, game.id, game.awayTeam)
-                      }
+                      disabled={locked || !activePlayerId}
+                      onPick={() => handlePick(game.id, game.awayTeam, locked)}
                       selected={selected === game.awayTeam}
                       side="away"
                       team={game.awayTeam}
@@ -290,10 +318,8 @@ function GameCenter() {
                     <div className="game-center-at">@</div>
 
                     <TeamPickButton
-                      disabled={locked}
-                      onPick={() =>
-                        setPick(activePlayerId, game.id, game.homeTeam)
-                      }
+                      disabled={locked || !activePlayerId}
+                      onPick={() => handlePick(game.id, game.homeTeam, locked)}
                       selected={selected === game.homeTeam}
                       side="home"
                       team={game.homeTeam}
@@ -313,13 +339,13 @@ function GameCenter() {
 
                     <div>
                       <span>Your Pick</span>
-                      <strong>{selected ?? "—"}</strong>
+                      <strong>{formatSelectedPick(selected)}</strong>
                     </div>
                   </div>
 
                   {activePlayerId && selected ? (
                     <p className="game-center-selection-note">
-                      {activePlayerId}&apos;s pick: <strong>{selected}</strong>
+                      Selected pick: <strong>{formatSelectedPick(selected)}</strong>
                     </p>
                   ) : null}
                 </SteelCard>

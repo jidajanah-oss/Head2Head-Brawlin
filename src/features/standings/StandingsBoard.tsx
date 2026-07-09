@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import FranchiseLogo from "../../components/franchise/FranchiseLogo";
 import {
   SteelBadge,
   SteelButton,
@@ -27,11 +28,12 @@ import {
   type NFLStyleDivisionStandingRow,
 } from "../../engine";
 
+type BadgeVariant = "gold" | "success" | "danger" | "info" | "neutral";
+
 function getRankDisplay(index: number) {
   if (index === 0) return "🥇";
   if (index === 1) return "🥈";
   if (index === 2) return "🥉";
-
   return `#${index + 1}`;
 }
 
@@ -42,13 +44,12 @@ function getRankLabel(index: number) {
   return "Chasing";
 }
 
-function getResultBadgeVariant(result: string) {
+function getResultBadgeVariant(result: string): BadgeVariant {
   if (result === "win") return "success";
   if (result === "loss") return "danger";
   if (result === "tie") return "gold";
   if (result === "bye") return "neutral";
   if (result === "open") return "neutral";
-
   return "neutral";
 }
 
@@ -58,11 +59,10 @@ function getSeedBadgeLabel(player: NFLStyleDivisionStandingRow) {
   return `#${player.divisionRank} Division`;
 }
 
-function getPlayoffBadgeVariant(status: string) {
+function getPlayoffBadgeVariant(status: string): BadgeVariant {
   if (status === "division-leader") return "gold";
   if (status === "wildcard") return "success";
   if (status === "bubble") return "neutral";
-
   return "neutral";
 }
 
@@ -92,6 +92,10 @@ function getMatchupPlayerATeam(matchup: HeadToHeadMatchupResult) {
   return matchup.playerATeamAbbreviation ?? matchup.playerA.nflTeam;
 }
 
+function getMatchupPlayerADisplayName(matchup: HeadToHeadMatchupResult) {
+  return matchup.playerATeamDisplayName ?? getMatchupPlayerATeam(matchup);
+}
+
 function getMatchupPlayerBTeam(matchup: HeadToHeadMatchupResult) {
   if (matchup.playerB) {
     return matchup.playerBTeamAbbreviation ?? matchup.playerB.nflTeam;
@@ -102,6 +106,18 @@ function getMatchupPlayerBTeam(matchup: HeadToHeadMatchupResult) {
   }
 
   return "BYE";
+}
+
+function getMatchupPlayerBDisplayName(matchup: HeadToHeadMatchupResult) {
+  if (matchup.playerB) {
+    return matchup.playerBTeamDisplayName ?? getMatchupPlayerBTeam(matchup);
+  }
+
+  if (matchup.matchupType === "open-opponent") {
+    return matchup.openOpponentTeamDisplayName ?? "Open Team";
+  }
+
+  return "Bye Week";
 }
 
 function getMatchupOpponentName(matchup: HeadToHeadMatchupResult) {
@@ -136,6 +152,11 @@ function PlayoffSeedCard({ seed }: { seed: NFLPlayoffSeedRow }) {
   return (
     <article className="standings-playoff-seed-card">
       <div className="standings-playoff-seed-number">
+        <FranchiseLogo
+          nflTeam={seed.row.nflTeamAbbreviation}
+          displayName={seed.row.nflTeamDisplayName}
+          size="sm"
+        />
         <strong>{seed.seed}</strong>
         <small>Seed</small>
       </div>
@@ -161,6 +182,11 @@ function PlayoffBubbleCard({ bubble }: { bubble: NFLPlayoffBubbleRow }) {
   return (
     <article className="standings-playoff-bubble-card">
       <div className="standings-playoff-bubble-rank">
+        <FranchiseLogo
+          nflTeam={bubble.row.nflTeamAbbreviation}
+          displayName={bubble.row.nflTeamDisplayName}
+          size="sm"
+        />
         <strong>{bubble.bubbleRank}</strong>
         <small>Bubble</small>
       </div>
@@ -186,11 +212,11 @@ function PlayoffConferenceCard({
   conference: NFLConferencePlayoffPicture;
 }) {
   return (
-    <SteelCard className="standings-playoff-card" as="section">
+    <SteelCard className="standings-playoff-card">
       <SteelSectionHeader
         eyebrow={`${conference.conference} Playoff Picture`}
         title={`${conference.conference} Seeds`}
-        description="Top 4 are division leaders. Seeds 5–7 are wildcard spots. Top seed earns the first-round bye."
+        description="NFL-style format: four division leaders plus three wildcards."
       />
 
       <div className="standings-playoff-summary">
@@ -274,10 +300,16 @@ function BracketSlotCard({ slot }: { slot: NFLPlayoffBracketSlot }) {
   return (
     <div
       className={`standings-bracket-slot ${
-        slot.isPlaceholder ? "is-placeholder" : ""
-      } ${slot.isBye ? "is-bye" : ""}`}
+        slot.isBye ? "is-bye" : slot.isPlaceholder ? "is-placeholder" : ""
+      }`.trim()}
     >
       <div className="standings-bracket-slot-seed">
+        <FranchiseLogo
+          nflTeam={slot.row?.nflTeamAbbreviation}
+          displayName={slot.row?.nflTeamDisplayName ?? slot.label}
+          size="xs"
+          variant={slot.row ? "badge" : "ghost"}
+        />
         <strong>{slot.seed ? `#${slot.seed}` : "—"}</strong>
         <small>{slot.isBye ? "Bye" : "Seed"}</small>
       </div>
@@ -286,7 +318,9 @@ function BracketSlotCard({ slot }: { slot: NFLPlayoffBracketSlot }) {
         <strong>{slot.label}</strong>
         <small>
           {slot.row
-            ? `${slot.row.division} • ${formatHeadToHeadRecord(slot.row)} • ${slot.row.leaguePoints} pts`
+            ? `${slot.row.division} • ${formatHeadToHeadRecord(slot.row)} • ${
+                slot.row.leaguePoints
+              } pts`
             : slot.isBye
               ? "First-round bye"
               : "Pending winner"}
@@ -327,11 +361,11 @@ function ConferenceBracketCard({
   bracket: NFLConferenceBracketShell;
 }) {
   return (
-    <SteelCard className="standings-bracket-card" as="section">
+    <SteelCard className="standings-bracket-card">
       <SteelSectionHeader
         eyebrow={`${bracket.conference} Bracket`}
-        title={`${bracket.conference} Playoff Bracket Shell`}
-        description="Bracket layout only. Winners, reseeding, and scoring logic will be wired in later."
+        title={`${bracket.conference} Playoff Shell`}
+        description="Wildcard, divisional, and championship path."
       />
 
       <div className="standings-bracket-bye-card">
@@ -348,7 +382,7 @@ function ConferenceBracketCard({
 
           <div className="standings-bracket-matchup-list">
             {bracket.wildcardMatchups.map((matchup) => (
-              <BracketMatchupCard matchup={matchup} key={matchup.id} />
+              <BracketMatchupCard key={matchup.id} matchup={matchup} />
             ))}
           </div>
         </div>
@@ -361,7 +395,7 @@ function ConferenceBracketCard({
 
           <div className="standings-bracket-matchup-list">
             {bracket.divisionalMatchups.map((matchup) => (
-              <BracketMatchupCard matchup={matchup} key={matchup.id} />
+              <BracketMatchupCard key={matchup.id} matchup={matchup} />
             ))}
           </div>
         </div>
@@ -372,9 +406,7 @@ function ConferenceBracketCard({
             <strong>Championship</strong>
           </div>
 
-          <div className="standings-bracket-matchup-list">
-            <BracketMatchupCard matchup={bracket.conferenceChampionship} />
-          </div>
+          <BracketMatchupCard matchup={bracket.conferenceChampionship} />
         </div>
       </div>
     </SteelCard>
@@ -387,11 +419,11 @@ function SuperBowlBracketCard({
   matchup: NFLPlayoffBracketMatchup;
 }) {
   return (
-    <SteelCard className="standings-super-bowl-card" as="section">
+    <SteelCard className="standings-super-bowl-card">
       <SteelSectionHeader
-        eyebrow="Championship"
-        title="Super Bowl Shell"
-        description="AFC Champion vs NFC Champion placeholder. Final wiring comes after playoff result logic."
+        eyebrow="Final"
+        title="Super Bowl"
+        description="Conference champions meet for the league title."
       />
 
       <div className="standings-super-bowl-matchup">
@@ -399,8 +431,8 @@ function SuperBowlBracketCard({
 
         <div className="standings-super-bowl-center">
           <span>🏆</span>
-          <strong>Super Bowl</strong>
-          <small>{matchup.matchupLabel}</small>
+          <strong>{matchup.matchupLabel}</strong>
+          <small>{matchup.title}</small>
         </div>
 
         <BracketSlotCard slot={matchup.teamB} />
@@ -413,6 +445,7 @@ function SuperBowlBracketCard({
 
 function StandingsBoard() {
   const { league, picks, gameResults, activePlayerId } = useLeague();
+
   const {
     snapshot,
     loading: nflLoading,
@@ -471,6 +504,7 @@ function StandingsBoard() {
   );
 
   const leader = standings[0];
+
   const activePlayerStanding = standings.find(
     (player) => player.id === activePlayerId
   );
@@ -480,6 +514,7 @@ function StandingsBoard() {
     .find((seed) => seed.row.id === activePlayerId);
 
   const usingNFLSchedule = nflGames.length > 0;
+
   const scheduleHelper = nflError
     ? "NFL schedule unavailable"
     : usingNFLSchedule
@@ -489,151 +524,164 @@ function StandingsBoard() {
         : "Using rotation fallback";
 
   return (
-    <main className="standings standings-v2">
+    <div className="standings standings-v2">
       <SteelHero
-        eyebrow="NFL-Style Race"
-        title="Division Standings"
-        subtitle={`Week ${league.currentWeek} playoff-ready standings for Head2Head Brawlin' – Steel Edition.`}
-        primaryLabel="Make Picks"
-        primaryHref="/picks"
-        secondaryLabel="Game Center"
-        secondaryHref="/games"
+        eyebrow={`Week ${nflWeek ?? league.currentWeek} Standings`}
+        title="NFL-Style League Standings"
+        subtitle="Division standings, playoff picture, bracket shell, and weekly head-to-head matchups."
         rightContent={
           <div className="standings-hero-panel">
             <span>Current Top Seed</span>
-            <strong>
-              {leader
-                ? `${leader.nflTeamAbbreviation} • ${leader.name}`
-                : "—"}
-            </strong>
-            <small>
-              {leader
-                ? `${leader.division} • ${formatHeadToHeadRecord(
-                    leader
-                  )} • ${leader.leaguePoints} pts`
-                : "No results yet"}
-            </small>
+
+            <div className="standings-logo-shell">
+              <FranchiseLogo
+                nflTeam={leader?.nflTeamAbbreviation}
+                displayName={leader?.nflTeamDisplayName}
+                size="md"
+                variant="tile"
+              />
+
+              <div>
+                <strong>
+                  {leader ? `${leader.nflTeamAbbreviation} • ${leader.name}` : "—"}
+                </strong>
+                <small>
+                  {leader
+                    ? `${leader.division} • ${formatHeadToHeadRecord(
+                        leader
+                      )} • ${leader.leaguePoints} pts`
+                    : "No results yet"}
+                </small>
+              </div>
+            </div>
           </div>
         }
       />
 
-      <section className="standings-stat-grid">
+      <div className="standings-stat-grid">
         <SteelStatCard
-          label="Franchises"
+          label="Claimed Teams"
           value={`${divisionStandings.claimedTeamCount}/${divisionStandings.totalTeamCount}`}
-          helper={`${divisionStandings.openTeamCount} teams open`}
-          icon="🏟️"
+          helper={`${divisionStandings.openTeamCount} open franchises`}
+          icon="🏈"
         />
 
         <SteelStatCard
-          label="NFL Schedule"
-          value={usingNFLSchedule ? `Week ${nflWeek}` : "Fallback"}
+          label="Occupied Divisions"
+          value={`${divisionStandings.occupiedDivisionCount}/8`}
+          helper="NFL division groups"
+          icon="🧱"
+        />
+
+        <SteelStatCard
+          label="Schedule"
+          value={usingNFLSchedule ? "NFL" : "Fallback"}
           helper={scheduleHelper}
           icon="📅"
         />
 
         <SteelStatCard
-          label="Playoff Seeds"
-          value={`${playoffPicture.totalPlayoffSeeds}/14`}
-          helper={`${playoffPicture.totalBubbleTeams} bubble teams`}
-          icon="🏆"
-        />
-
-        <SteelStatCard
-          label="Your Seed"
+          label="Active Seed"
           value={activePlayoffSeed ? `#${activePlayoffSeed.seed}` : "—"}
           helper={
-            activePlayoffSeed
-              ? activePlayoffSeed.seedLabel
-              : activePlayerStanding
-                ? "Outside playoff line"
-                : "Select player"
+            activePlayerStanding
+              ? `${activePlayerStanding.nflTeamAbbreviation} • ${activePlayerStanding.name}`
+              : "No active player standing"
           }
           icon="⭐"
         />
-      </section>
+      </div>
 
-      <section className="standings-playoff-stack">
+      <div className="standings-playoff-stack">
         {playoffPicture.conferences.map((conference) => (
           <PlayoffConferenceCard
-            conference={conference}
             key={conference.conference}
+            conference={conference}
           />
         ))}
-      </section>
+      </div>
 
-      <section className="standings-bracket-stack">
+      <div className="standings-bracket-stack">
         {bracketShell.conferences.map((bracket) => (
-          <ConferenceBracketCard bracket={bracket} key={bracket.conference} />
+          <ConferenceBracketCard key={bracket.conference} bracket={bracket} />
         ))}
 
         <SuperBowlBracketCard matchup={bracketShell.superBowl} />
-      </section>
+      </div>
 
-      <SteelCard className="standings-matchups-card" as="section">
+      <SteelCard className="standings-matchups-card">
         <SteelSectionHeader
-          eyebrow="This Week"
-          title={`Week ${league.currentWeek} Head-To-Head Matchups`}
-          description={
-            usingNFLSchedule
-              ? "Matchups now mirror the loaded NFL schedule. Open NFL teams show as open opponents."
-              : "NFL schedule not loaded yet. Rotation fallback is being used."
-          }
+          eyebrow="Weekly Head-To-Head"
+          title={`Week ${league.currentWeek} Matchups`}
+          description="Matchups mirror the real NFL schedule when NFL games are loaded."
         />
 
         <div className="standings-matchups-grid">
           {weeklyMatchups.map((matchup) => (
-            <div className="standings-matchup-item" key={matchup.id}>
+            <article className="standings-matchup-item" key={matchup.id}>
               <div className="standings-matchup-player">
-                <div>
-                  <small>{getMatchupPlayerATeam(matchup)}</small>
-                  <strong>{matchup.playerA.name}</strong>
+                <div className="franchise-logo-line">
+                  <FranchiseLogo
+                    nflTeam={getMatchupPlayerATeam(matchup)}
+                    customLogo={matchup.playerA.customLogo}
+                    displayName={getMatchupPlayerADisplayName(matchup)}
+                    size="sm"
+                  />
+
+                  <div className="franchise-logo-line__text">
+                    <small>{getMatchupPlayerATeam(matchup)}</small>
+                    <strong>{matchup.playerA.name}</strong>
+                  </div>
                 </div>
+
                 <span>{matchup.playerAScore}</span>
               </div>
 
               <div className="standings-matchup-center">
                 <small>{getMatchupSourceLabel(matchup)}</small>
-                <SteelBadge
-                  variant={
-                    matchup.status === "final"
-                      ? "gold"
-                      : matchup.status === "bye"
-                        ? "neutral"
-                        : "neutral"
-                  }
-                >
+                <SteelBadge variant={getResultBadgeVariant(matchup.matchupType ?? "")}>
                   {matchup.resultLabel}
                 </SteelBadge>
               </div>
 
               <div className="standings-matchup-player is-right">
-                <div>
-                  <small>{getMatchupPlayerBTeam(matchup)}</small>
-                  <strong>{getMatchupOpponentName(matchup)}</strong>
+                <div className="franchise-logo-line">
+                  <FranchiseLogo
+                    nflTeam={getMatchupPlayerBTeam(matchup)}
+                    customLogo={matchup.playerB?.customLogo}
+                    displayName={getMatchupPlayerBDisplayName(matchup)}
+                    size="sm"
+                  />
+
+                  <div className="franchise-logo-line__text">
+                    <small>{getMatchupPlayerBTeam(matchup)}</small>
+                    <strong>{getMatchupOpponentName(matchup)}</strong>
+                  </div>
                 </div>
+
                 <span>{matchup.playerB ? matchup.playerBScore : "—"}</span>
               </div>
-            </div>
+            </article>
           ))}
 
           {weeklyMatchups.length === 0 ? (
-            <p className="standings-muted">No weekly matchups available yet.</p>
+            <SteelCard className="standings-empty-card">
+              No weekly matchups available yet.
+            </SteelCard>
           ) : null}
         </div>
       </SteelCard>
 
-      <section className="standings-conference-stack">
+      <div className="standings-conference-stack">
         {divisionStandings.conferences.map((conference) => (
           <SteelCard
             className="standings-conference-card"
-            as="section"
             key={conference.conference}
           >
             <SteelSectionHeader
               eyebrow={`${conference.conference} Conference`}
-              title={`${conference.conference} Division Race`}
-              description="Division leaders sit on top. Wildcard-ready tracking is built in for the playoff picture."
+              title={`${conference.conference} Divisions`}
+              description="Division leaders and wildcard contenders are calculated from league points."
             />
 
             <div className="standings-division-grid">
@@ -641,10 +689,7 @@ function StandingsBoard() {
                 const openTeams = getOpenTeamAbbreviations(division);
 
                 return (
-                  <article
-                    className="standings-division-card"
-                    key={division.division}
-                  >
+                  <div className="standings-division-card" key={division.division}>
                     <div className="standings-division-topline">
                       <div>
                         <span>{division.division}</span>
@@ -656,7 +701,7 @@ function StandingsBoard() {
                       </div>
 
                       <SteelBadge
-                        variant={division.leader ? "gold" : "neutral"}
+                        variant={division.claimedCount === 4 ? "success" : "neutral"}
                       >
                         {division.claimedCount}/4 Claimed
                       </SteelBadge>
@@ -666,13 +711,16 @@ function StandingsBoard() {
                       {division.rows.map((player) => (
                         <div
                           className={`standings-division-row ${
-                            player.id === activePlayerId
-                              ? "is-active-player"
-                              : ""
-                          }`}
+                            player.id === activePlayerId ? "is-active-player" : ""
+                          }`.trim()}
                           key={player.id}
                         >
                           <div className="standings-division-rank">
+                            <FranchiseLogo
+                              nflTeam={player.nflTeamAbbreviation}
+                              displayName={player.nflTeamDisplayName}
+                              size="sm"
+                            />
                             <strong>{player.divisionRank}</strong>
                             <small>{player.nflTeamAbbreviation}</small>
                           </div>
@@ -694,7 +742,11 @@ function StandingsBoard() {
 
                           <SteelBadge
                             variant={
-                              player.isDivisionLeader ? "gold" : "neutral"
+                              player.isDivisionLeader
+                                ? "gold"
+                                : player.isWildcardSeed
+                                  ? "success"
+                                  : "neutral"
                             }
                           >
                             {getSeedBadgeLabel(player)}
@@ -703,9 +755,9 @@ function StandingsBoard() {
                       ))}
 
                       {division.rows.length === 0 ? (
-                        <p className="standings-muted">
+                        <SteelCard className="standings-empty-card">
                           No franchise owner in this division yet.
-                        </p>
+                        </SteelCard>
                       ) : null}
                     </div>
 
@@ -715,29 +767,35 @@ function StandingsBoard() {
                         <strong>{openTeams.join(" • ")}</strong>
                       </div>
                     ) : null}
-                  </article>
+                  </div>
                 );
               })}
             </div>
           </SteelCard>
         ))}
-      </section>
+      </div>
 
-      <SteelCard className="standings-podium-card" as="section">
+      <SteelCard className="standings-podium-card">
         <SteelSectionHeader
-          eyebrow="Top Three"
-          title="League Seed Watch"
-          description="The current top seeds based on head-to-head league points."
+          eyebrow="League Leaders"
+          title="Top 3"
+          description="Current top records by league points."
         />
 
         <div className="standings-podium-grid">
           {standings.slice(0, 3).map((player, index) => (
-            <div
+            <article
               className={`standings-podium-item standings-podium-item--${
                 index + 1
               }`}
               key={player.id}
             >
+              <FranchiseLogo
+                nflTeam={player.nflTeamAbbreviation}
+                displayName={player.nflTeamDisplayName}
+                size="lg"
+                variant="tile"
+              />
               <span>{getRankDisplay(index)}</span>
               <strong>
                 {player.nflTeamAbbreviation} • {player.name}
@@ -746,20 +804,22 @@ function StandingsBoard() {
                 {player.division} • {formatHeadToHeadRecord(player)} •{" "}
                 {player.leaguePoints} pts
               </small>
-            </div>
+            </article>
           ))}
 
           {standings.length === 0 ? (
-            <p className="standings-muted">No standings available yet.</p>
+            <SteelCard className="standings-empty-card">
+              No standings available yet.
+            </SteelCard>
           ) : null}
         </div>
       </SteelCard>
 
-      <section className="standings-board-section">
+      <div className="standings-board-section">
         <SteelSectionHeader
-          eyebrow="League Board"
-          title={`Week ${league.currentWeek} Overall Rankings`}
-          description="Overall head-to-head rankings with each player’s owned NFL franchise."
+          eyebrow="Full Board"
+          title="League Standings"
+          description="All active franchise owners ranked by record and league points."
           action={
             <SteelButton href="/picks" size="sm" variant="secondary">
               Make Picks
@@ -767,25 +827,29 @@ function StandingsBoard() {
           }
         />
 
-        <div className="standings-list standings-list-v2">
+        <div className="standings-list-v2">
           {standings.map((player, index) => {
             const isTop3 = index < 3;
             const isActivePlayer = player.id === activePlayerId;
 
             return (
               <SteelCard
-                as="article"
-                className={`standing-row standing-row-v2 ${
-                  isTop3 ? "top" : ""
-                } ${isActivePlayer ? "is-active-player" : ""}`}
+                className={`standing-row-v2 ${isTop3 ? "top" : ""} ${
+                  isActivePlayer ? "is-active-player" : ""
+                }`.trim()}
                 key={player.id}
               >
-                <div className="rank standings-rank">
+                <div className="standings-rank">
+                  <FranchiseLogo
+                    nflTeam={player.nflTeamAbbreviation}
+                    displayName={player.nflTeamDisplayName}
+                    size="sm"
+                  />
                   <span>{getRankDisplay(index)}</span>
                   <small>{getRankLabel(index)}</small>
                 </div>
 
-                <div className="name standings-player">
+                <div className="standings-player">
                   <strong>
                     {player.nflTeamAbbreviation} • {player.name}
                   </strong>
@@ -800,7 +864,7 @@ function StandingsBoard() {
                   <small>Record</small>
                 </div>
 
-                <div className="points standings-points">
+                <div className="standings-points">
                   <strong>{player.leaguePoints}</strong>
                   <small>League pts</small>
                 </div>
@@ -821,14 +885,12 @@ function StandingsBoard() {
 
           {standings.length === 0 ? (
             <SteelCard className="standings-empty-card">
-              <p className="standings-muted">
-                Add franchise owners to build the NFL-style standings board.
-              </p>
+              Add franchise owners to build the NFL-style standings board.
             </SteelCard>
           ) : null}
         </div>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }
 

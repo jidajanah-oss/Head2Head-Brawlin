@@ -1,3 +1,6 @@
+import { useMemo } from "react";
+
+import FranchiseLogo from "../../components/franchise/FranchiseLogo";
 import {
   SteelBadge,
   SteelButton,
@@ -9,16 +12,29 @@ import {
 import { useLeague } from "../../context/LeagueContext";
 import { useNFL } from "../../context/NFLContext";
 import {
+  buildNFLStyleDivisionStandings,
+  formatHeadToHeadRecord,
+  getNFLTeamDisplayName,
+  PickLockEngine,
+} from "../../engine";
+import {
   formatKickoff,
   getStatusEmoji,
   getStatusLabel,
 } from "../games/gameCenterUtils";
 
+function getTeamDisplayName(team?: string) {
+  if (!team) return "Pending";
+
+  return getNFLTeamDisplayName(team);
+}
+
 function HomeDashboard() {
-  const { league } = useLeague();
+  const { league, picks, gameResults, activePlayerId } = useLeague();
   const { snapshot, loading } = useNFL();
 
   const weekGames = snapshot?.weekGames ?? [];
+  const nflGames = snapshot?.nflGames ?? [];
   const featuredGame = weekGames[0];
 
   const liveGames = weekGames.filter((game) =>
@@ -31,8 +47,51 @@ function HomeDashboard() {
 
   const upcomingGames = weekGames.filter((game) => {
     const label = getStatusLabel(game).toLowerCase();
+
     return !label.includes("live") && !label.includes("final");
   });
+
+  const lockedGames = weekGames.filter((game) => PickLockEngine.isPickLocked(game));
+
+  const allPicks = useMemo(
+    () =>
+      league.players.reduce<Record<string, Record<string, string>>>(
+        (playerPicks, player) => {
+          playerPicks[player.id] = picks[player.id] || {};
+          return playerPicks;
+        },
+        {}
+      ),
+    [league.players, picks]
+  );
+
+  const divisionStandings = useMemo(
+    () =>
+      buildNFLStyleDivisionStandings(
+        league.players,
+        allPicks,
+        gameResults,
+        league.currentWeek,
+        nflGames
+      ),
+    [league.players, allPicks, gameResults, league.currentWeek, nflGames]
+  );
+
+  const standings = divisionStandings.allRows;
+  const leader = standings[0];
+
+  const activePlayerRankIndex = standings.findIndex(
+    (player) => player.id === activePlayerId
+  );
+
+  const activePlayerRank =
+    activePlayerRankIndex >= 0 ? activePlayerRankIndex + 1 : null;
+
+  const activePlayer = league.players.find((player) => player.id === activePlayerId);
+
+  const selectedPickCount = activePlayerId
+    ? Object.values(picks[activePlayerId] ?? {}).filter(Boolean).length
+    : 0;
 
   return (
     <main className="dashboard dashboard-v2">
@@ -54,23 +113,31 @@ function HomeDashboard() {
       />
 
       <section className="dashboard-stat-grid">
-        <SteelStatCard label="Players" value="32" helper="Registered competitors" icon="👥" />
+        <SteelStatCard
+          label="Players"
+          value={league.players.length}
+          helper={`${league.settings.maxPlayers} max competitors`}
+          icon="🏈"
+        />
+
         <SteelStatCard
           label="Games Loaded"
           value={loading ? "..." : weekGames.length}
           helper={`Week ${league.currentWeek} schedule`}
-          icon="🏈"
+          icon="📅"
         />
+
         <SteelStatCard
           label="Live Games"
           value={loading ? "..." : liveGames.length}
           helper="Real-time status board"
-          icon="📡"
+          icon="⚡"
         />
+
         <SteelStatCard
-          label="Final Games"
-          value={loading ? "..." : finalGames.length}
-          helper="Pick window closed"
+          label="Locked"
+          value={loading ? "..." : lockedGames.length}
+          helper="Pick windows closed"
           icon="🔒"
         />
       </section>
@@ -88,17 +155,35 @@ function HomeDashboard() {
 
         {featuredGame ? (
           <>
-            <div className="dashboard-matchup">
-              <div>
+            <div className="dashboard-matchup dashboard-matchup--logos">
+              <div className="dashboard-matchup-team">
                 <small>Away</small>
+
+                <FranchiseLogo
+                  nflTeam={featuredGame.awayTeam}
+                  displayName={getTeamDisplayName(featuredGame.awayTeam)}
+                  size="lg"
+                  variant="tile"
+                />
+
                 <strong>{featuredGame.awayTeam}</strong>
+                <span>{getTeamDisplayName(featuredGame.awayTeam)}</span>
               </div>
 
-              <span>@</span>
+              <div className="dashboard-matchup-at">@</div>
 
-              <div>
+              <div className="dashboard-matchup-team is-home">
                 <small>Home</small>
+
+                <FranchiseLogo
+                  nflTeam={featuredGame.homeTeam}
+                  displayName={getTeamDisplayName(featuredGame.homeTeam)}
+                  size="lg"
+                  variant="tile"
+                />
+
                 <strong>{featuredGame.homeTeam}</strong>
+                <span>{getTeamDisplayName(featuredGame.homeTeam)}</span>
               </div>
             </div>
 
@@ -108,7 +193,7 @@ function HomeDashboard() {
               </SteelBadge>
 
               <SteelBadge variant="neutral">
-                🕒 {formatKickoff(featuredGame.kickoff)}
+                {formatKickoff(featuredGame.kickoff)}
               </SteelBadge>
             </div>
           </>
@@ -137,7 +222,7 @@ function HomeDashboard() {
         <div className="dashboard-action-grid">
           <SteelCard as="div" className="dashboard-action-card">
             <a href="/games">
-              <span>🏈</span>
+              <span>📺</span>
               <strong>Game Center</strong>
               <small>Live games, scores, and kickoff status</small>
             </a>
@@ -169,6 +254,67 @@ function HomeDashboard() {
         </div>
       </section>
 
+      <section className="dashboard-franchise-grid">
+        <SteelCard className="dashboard-franchise-card" as="article">
+          <SteelSectionHeader
+            eyebrow="Active Franchise"
+            title={activePlayer ? activePlayer.name : "No Active Player"}
+            description={
+              activePlayer
+                ? `${activePlayer.nflTeam} • ${getTeamDisplayName(activePlayer.nflTeam)}`
+                : "Select an active player from Player Manager."
+            }
+          />
+
+          <div className="dashboard-franchise-logo-row">
+            <FranchiseLogo
+              nflTeam={activePlayer?.nflTeam}
+              customLogo={activePlayer?.customLogo}
+              displayName={
+                activePlayer ? getTeamDisplayName(activePlayer.nflTeam) : "No team"
+              }
+              size="xl"
+              variant="tile"
+            />
+
+            <div>
+              <span>Pick Card</span>
+              <strong>
+                {selectedPickCount}/{weekGames.length || 0}
+              </strong>
+              <small>Week {league.currentWeek} selections</small>
+            </div>
+          </div>
+        </SteelCard>
+
+        <SteelCard className="dashboard-franchise-card" as="article">
+          <SteelSectionHeader
+            eyebrow="Top Seed"
+            title={leader ? leader.name : "No Leader Yet"}
+            description={
+              leader
+                ? `${leader.nflTeamAbbreviation} • ${leader.division}`
+                : "Standings will activate once players and results exist."
+            }
+          />
+
+          <div className="dashboard-franchise-logo-row">
+            <FranchiseLogo
+              nflTeam={leader?.nflTeamAbbreviation}
+              displayName={leader?.nflTeamDisplayName}
+              size="xl"
+              variant="tile"
+            />
+
+            <div>
+              <span>Record</span>
+              <strong>{leader ? formatHeadToHeadRecord(leader) : "—"}</strong>
+              <small>{leader ? `${leader.leaguePoints} league pts` : "Pending"}</small>
+            </div>
+          </div>
+        </SteelCard>
+      </section>
+
       <SteelCard className="dashboard-snapshot" as="section">
         <SteelSectionHeader
           eyebrow="League Snapshot"
@@ -182,13 +328,13 @@ function HomeDashboard() {
           </div>
 
           <div>
-            <span>Current Leader</span>
-            <strong>—</strong>
+            <span>Final Games</span>
+            <strong>{loading ? "..." : finalGames.length}</strong>
           </div>
 
           <div>
             <span>Your Rank</span>
-            <strong>—</strong>
+            <strong>{activePlayerRank ? `#${activePlayerRank}` : "—"}</strong>
           </div>
         </div>
       </SteelCard>
