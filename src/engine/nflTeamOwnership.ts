@@ -35,6 +35,19 @@ export type NFLTeamOwnershipValidation = {
   reason?: string;
 };
 
+export const NFL_CONFERENCE_ORDER: NFLConference[] = ["AFC", "NFC"];
+
+export const NFL_DIVISION_ORDER: NFLDivision[] = [
+  "AFC East",
+  "AFC North",
+  "AFC South",
+  "AFC West",
+  "NFC East",
+  "NFC North",
+  "NFC South",
+  "NFC West",
+];
+
 export const NFL_TEAM_DATA: NFLTeamInfo[] = [
   {
     abbreviation: "BUF",
@@ -294,27 +307,27 @@ export const NFL_TEAM_DATA: NFLTeamInfo[] = [
   },
 ];
 
-export const NFL_DIVISION_ORDER: NFLDivision[] = [
-  "AFC East",
-  "AFC North",
-  "AFC South",
-  "AFC West",
-  "NFC East",
-  "NFC North",
-  "NFC South",
-  "NFC West",
-];
-
 export function getNFLTeamInfo(teamAbbreviation: string) {
   return (
     NFL_TEAM_DATA.find(
-      (team) => team.abbreviation.toLowerCase() === teamAbbreviation.toLowerCase()
+      (team) =>
+        team.abbreviation.toLowerCase() === teamAbbreviation.toLowerCase()
     ) ?? null
   );
 }
 
 export function getNFLTeamDisplayName(teamAbbreviation: string) {
   return getNFLTeamInfo(teamAbbreviation)?.displayName ?? teamAbbreviation;
+}
+
+export function getNFLTeamsByDivision(division: NFLDivision) {
+  return NFL_TEAM_DATA.filter((team) => team.division === division);
+}
+
+export function getNFLDivisionsByConference(conference: NFLConference) {
+  return NFL_DIVISION_ORDER.filter((division) =>
+    division.startsWith(conference)
+  );
 }
 
 export function getClaimedNFLTeamSet(players: Player[]) {
@@ -338,7 +351,10 @@ export function isNFLTeamClaimed(
   );
 }
 
-export function getAvailableNFLTeams(players: Player[], ignorePlayerId?: string) {
+export function getAvailableNFLTeams(
+  players: Player[],
+  ignorePlayerId?: string
+) {
   return NFL_TEAM_DATA.filter(
     (team) => !isNFLTeamClaimed(players, team.abbreviation, ignorePlayerId)
   );
@@ -387,7 +403,7 @@ export function getPlayerConference(player: Player) {
 
 export function groupPlayersByNFLDivision(players: Player[]): NFLDivisionGroup[] {
   return NFL_DIVISION_ORDER.map((division) => {
-    const teams = NFL_TEAM_DATA.filter((team) => team.division === division);
+    const teams = getNFLTeamsByDivision(division);
     const divisionPlayers = players.filter((player) => {
       const teamInfo = getNFLTeamInfo(player.nflTeam);
       return teamInfo?.division === division;

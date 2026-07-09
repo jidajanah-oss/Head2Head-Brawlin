@@ -1,4 +1,14 @@
 import type { Player } from "../types/player";
+import {
+  NFL_CONFERENCE_ORDER,
+  NFL_DIVISION_ORDER,
+  NFL_TEAM_DATA,
+  getNFLTeamInfo,
+  getNFLTeamsByDivision,
+  type NFLConference,
+  type NFLDivision,
+  type NFLTeamInfo,
+} from "./nflTeamOwnership";
 
 export type HeadToHeadPicks = Record<string, Record<string, string>>;
 export type HeadToHeadGameResults = Record<string, string>;
@@ -45,6 +55,126 @@ export type HeadToHeadStandingRow = {
   hasBye: boolean;
 };
 
+export type NFLStyleDivisionStandingRow = HeadToHeadStandingRow & {
+  nflTeamAbbreviation: string;
+  nflTeamDisplayName: string;
+  conference: NFLConference;
+  division: NFLDivision;
+  conferenceRank: number;
+  divisionRank: number;
+  divisionPointsBack: number;
+  isDivisionLeader: boolean;
+  isWildcardSeed: boolean;
+};
+
+export type NFLStyleDivisionStandingGroup = {
+  conference: NFLConference;
+  division: NFLDivision;
+  teams: NFLTeamInfo[];
+  rows: NFLStyleDivisionStandingRow[];
+  leader: NFLStyleDivisionStandingRow | null;
+  claimedCount: number;
+  openCount: number;
+};
+
+export type NFLStyleConferenceStandingGroup = {
+  conference: NFLConference;
+  divisions: NFLStyleDivisionStandingGroup[];
+  rows: NFLStyleDivisionStandingRow[];
+  divisionLeaders: NFLStyleDivisionStandingRow[];
+  wildcardRows: NFLStyleDivisionStandingRow[];
+};
+
+export type NFLStyleDivisionStandings = {
+  allRows: NFLStyleDivisionStandingRow[];
+  unassignedRows: HeadToHeadStandingRow[];
+  divisions: NFLStyleDivisionStandingGroup[];
+  conferences: NFLStyleConferenceStandingGroup[];
+  claimedTeamCount: number;
+  openTeamCount: number;
+  totalTeamCount: number;
+  occupiedDivisionCount: number;
+};
+
+export type NFLPlayoffSeedStatus =
+  | "division-leader"
+  | "wildcard"
+  | "bubble"
+  | "outside";
+
+export type NFLPlayoffSeedRow = {
+  seed: number;
+  row: NFLStyleDivisionStandingRow;
+  status: NFLPlayoffSeedStatus;
+  seedLabel: string;
+};
+
+export type NFLPlayoffBubbleRow = {
+  row: NFLStyleDivisionStandingRow;
+  bubbleRank: number;
+  pointsBack: number;
+  status: NFLPlayoffSeedStatus;
+};
+
+export type NFLConferencePlayoffPicture = {
+  conference: NFLConference;
+  seeds: NFLPlayoffSeedRow[];
+  divisionSeeds: NFLPlayoffSeedRow[];
+  wildcardSeeds: NFLPlayoffSeedRow[];
+  bubbleRows: NFLPlayoffBubbleRow[];
+  firstRoundBye: NFLPlayoffSeedRow | null;
+  playoffTeamCount: number;
+  bubbleTeamCount: number;
+};
+
+export type NFLPlayoffPicture = {
+  conferences: NFLConferencePlayoffPicture[];
+  totalPlayoffSeeds: number;
+  totalBubbleTeams: number;
+};
+
+export type NFLPlayoffBracketRound =
+  | "wildcard"
+  | "divisional"
+  | "conference-championship"
+  | "super-bowl";
+
+export type NFLPlayoffBracketSlot = {
+  seed: number | null;
+  label: string;
+  row: NFLStyleDivisionStandingRow | null;
+  isBye: boolean;
+  isPlaceholder: boolean;
+};
+
+export type NFLPlayoffBracketMatchup = {
+  id: string;
+  conference: NFLConference | "NFL";
+  round: NFLPlayoffBracketRound;
+  title: string;
+  matchupLabel: string;
+  teamA: NFLPlayoffBracketSlot;
+  teamB: NFLPlayoffBracketSlot;
+  note: string;
+};
+
+export type NFLConferenceBracketShell = {
+  conference: NFLConference;
+  firstRoundBye: NFLPlayoffBracketSlot;
+  wildcardMatchups: NFLPlayoffBracketMatchup[];
+  divisionalMatchups: NFLPlayoffBracketMatchup[];
+  conferenceChampionship: NFLPlayoffBracketMatchup;
+};
+
+export type NFLPlayoffBracketShell = {
+  conferences: NFLConferenceBracketShell[];
+  superBowl: NFLPlayoffBracketMatchup;
+};
+
+const DIVISION_LEADER_SEED_COUNT = 4;
+const WILDCARD_SEED_COUNT = 3;
+const BUBBLE_ROW_COUNT = 3;
+
 function rotatePlayers(players: Player[], shift: number) {
   if (players.length <= 1) {
     return players;
@@ -52,10 +182,7 @@ function rotatePlayers(players: Player[], shift: number) {
 
   const normalizedShift = shift % players.length;
 
-  return [
-    ...players.slice(normalizedShift),
-    ...players.slice(0, normalizedShift),
-  ];
+  return [...players.slice(normalizedShift), ...players.slice(0, normalizedShift)];
 }
 
 function getActivePlayers(players: Player[]) {
@@ -68,8 +195,8 @@ function getPlayerPickScore(
   gameResults: HeadToHeadGameResults
 ) {
   const playerPicks = picks[playerId] ?? {};
-  const scoredGameIds = Object.keys(gameResults).filter(
-    (gameId) => Boolean(gameResults[gameId])
+  const scoredGameIds = Object.keys(gameResults).filter((gameId) =>
+    Boolean(gameResults[gameId])
   );
 
   let correct = 0;
@@ -93,6 +220,86 @@ function getPlayerPickScore(
     possible: scoredGameIds.length,
     missing,
   };
+}
+
+function getSeedLabel(seed: number, status: NFLPlayoffSeedStatus) {
+  if (status === "division-leader") {
+    return `#${seed} Division Leader`;
+  }
+
+  if (status === "wildcard") {
+    return `#${seed} Wildcard`;
+  }
+
+  if (status === "bubble") {
+    return "On The Bubble";
+  }
+
+  return "Outside Looking In";
+}
+
+function buildBracketSlot(
+  seed: NFLPlayoffSeedRow | null,
+  fallbackLabel: string,
+  isBye = false
+): NFLPlayoffBracketSlot {
+  if (!seed) {
+    return {
+      seed: null,
+      label: fallbackLabel,
+      row: null,
+      isBye,
+      isPlaceholder: true,
+    };
+  }
+
+  return {
+    seed: seed.seed,
+    label: `#${seed.seed} ${seed.row.nflTeamAbbreviation} • ${seed.row.name}`,
+    row: seed.row,
+    isBye,
+    isPlaceholder: false,
+  };
+}
+
+function buildPlaceholderSlot(label: string): NFLPlayoffBracketSlot {
+  return {
+    seed: null,
+    label,
+    row: null,
+    isBye: false,
+    isPlaceholder: true,
+  };
+}
+
+function getSeedByNumber(
+  conference: NFLConferencePlayoffPicture,
+  seedNumber: number
+) {
+  return conference.seeds.find((seed) => seed.seed === seedNumber) ?? null;
+}
+
+export function compareHeadToHeadStandingRows(
+  playerA: HeadToHeadStandingRow,
+  playerB: HeadToHeadStandingRow
+) {
+  if (playerB.leaguePoints !== playerA.leaguePoints) {
+    return playerB.leaguePoints - playerA.leaguePoints;
+  }
+
+  if (playerB.wins !== playerA.wins) {
+    return playerB.wins - playerA.wins;
+  }
+
+  if (playerB.pickPoints !== playerA.pickPoints) {
+    return playerB.pickPoints - playerA.pickPoints;
+  }
+
+  if (playerA.losses !== playerB.losses) {
+    return playerA.losses - playerB.losses;
+  }
+
+  return playerA.name.localeCompare(playerB.name);
 }
 
 export function buildWeeklyHeadToHeadMatchups(
@@ -323,25 +530,7 @@ export function buildHeadToHeadStandings(
   }
 
   return Object.values(rows)
-    .sort((playerA, playerB) => {
-      if (playerB.leaguePoints !== playerA.leaguePoints) {
-        return playerB.leaguePoints - playerA.leaguePoints;
-      }
-
-      if (playerB.wins !== playerA.wins) {
-        return playerB.wins - playerA.wins;
-      }
-
-      if (playerB.pickPoints !== playerA.pickPoints) {
-        return playerB.pickPoints - playerA.pickPoints;
-      }
-
-      if (playerA.losses !== playerB.losses) {
-        return playerA.losses - playerB.losses;
-      }
-
-      return playerA.name.localeCompare(playerB.name);
-    })
+    .sort(compareHeadToHeadStandingRows)
     .map((player, index) => ({
       ...player,
       rank: index + 1,
@@ -357,6 +546,323 @@ export function buildHeadToHeadMatchupResults(
   return buildWeeklyHeadToHeadMatchups(players, week).map((matchup) =>
     evaluateHeadToHeadMatchup(matchup, picks, gameResults)
   );
+}
+
+export function buildNFLStyleDivisionStandings(
+  players: Player[],
+  picks: HeadToHeadPicks,
+  gameResults: HeadToHeadGameResults,
+  week: number
+): NFLStyleDivisionStandings {
+  const baseStandings = buildHeadToHeadStandings(
+    players,
+    picks,
+    gameResults,
+    week
+  );
+
+  const assignedRows: NFLStyleDivisionStandingRow[] = [];
+  const unassignedRows: HeadToHeadStandingRow[] = [];
+
+  for (const row of baseStandings) {
+    const teamInfo = getNFLTeamInfo(row.nflTeam);
+
+    if (!teamInfo) {
+      unassignedRows.push(row);
+      continue;
+    }
+
+    assignedRows.push({
+      ...row,
+      nflTeamAbbreviation: teamInfo.abbreviation,
+      nflTeamDisplayName: teamInfo.displayName,
+      conference: teamInfo.conference,
+      division: teamInfo.division,
+      conferenceRank: 0,
+      divisionRank: 0,
+      divisionPointsBack: 0,
+      isDivisionLeader: false,
+      isWildcardSeed: false,
+    });
+  }
+
+  const divisions: NFLStyleDivisionStandingGroup[] = NFL_DIVISION_ORDER.map(
+    (division) => {
+      const teams = getNFLTeamsByDivision(division);
+      const rows = assignedRows
+        .filter((row) => row.division === division)
+        .sort(compareHeadToHeadStandingRows);
+
+      const leaderLeaguePoints = rows[0]?.leaguePoints ?? 0;
+
+      rows.forEach((row, index) => {
+        row.divisionRank = index + 1;
+        row.divisionPointsBack = Math.max(
+          leaderLeaguePoints - row.leaguePoints,
+          0
+        );
+        row.isDivisionLeader = index === 0;
+      });
+
+      return {
+        conference: division.startsWith("AFC") ? "AFC" : "NFC",
+        division,
+        teams,
+        rows,
+        leader: rows[0] ?? null,
+        claimedCount: rows.length,
+        openCount: teams.length - rows.length,
+      };
+    }
+  );
+
+  const conferences: NFLStyleConferenceStandingGroup[] =
+    NFL_CONFERENCE_ORDER.map((conference) => {
+      const conferenceDivisions = divisions.filter(
+        (division) => division.conference === conference
+      );
+
+      const rows = assignedRows
+        .filter((row) => row.conference === conference)
+        .sort(compareHeadToHeadStandingRows);
+
+      rows.forEach((row, index) => {
+        row.conferenceRank = index + 1;
+      });
+
+      const divisionLeaders = conferenceDivisions
+        .map((division) => division.leader)
+        .filter((row): row is NFLStyleDivisionStandingRow => Boolean(row))
+        .sort(compareHeadToHeadStandingRows);
+
+      const wildcardRows = rows
+        .filter((row) => !row.isDivisionLeader)
+        .sort(compareHeadToHeadStandingRows);
+
+      wildcardRows.forEach((row, index) => {
+        row.isWildcardSeed = index < WILDCARD_SEED_COUNT;
+      });
+
+      return {
+        conference,
+        divisions: conferenceDivisions,
+        rows,
+        divisionLeaders,
+        wildcardRows,
+      };
+    });
+
+  const allRows = [...assignedRows].sort(compareHeadToHeadStandingRows);
+
+  const claimedTeamCount = assignedRows.length;
+  const totalTeamCount = NFL_TEAM_DATA.length;
+  const openTeamCount = totalTeamCount - claimedTeamCount;
+  const occupiedDivisionCount = divisions.filter(
+    (division) => division.claimedCount > 0
+  ).length;
+
+  return {
+    allRows,
+    unassignedRows,
+    divisions,
+    conferences,
+    claimedTeamCount,
+    openTeamCount,
+    totalTeamCount,
+    occupiedDivisionCount,
+  };
+}
+
+export function buildNFLPlayoffPicture(
+  divisionStandings: NFLStyleDivisionStandings
+): NFLPlayoffPicture {
+  const conferences: NFLConferencePlayoffPicture[] =
+    divisionStandings.conferences.map((conference) => {
+      const divisionSeeds: NFLPlayoffSeedRow[] = conference.divisionLeaders
+        .slice(0, DIVISION_LEADER_SEED_COUNT)
+        .map((row, index) => {
+          const seed = index + 1;
+
+          return {
+            seed,
+            row,
+            status: "division-leader",
+            seedLabel: getSeedLabel(seed, "division-leader"),
+          };
+        });
+
+      const divisionSeedIds = new Set(
+        divisionSeeds.map((seedRow) => seedRow.row.id)
+      );
+
+      const wildcardEligibleRows = conference.rows
+        .filter((row) => !divisionSeedIds.has(row.id))
+        .sort(compareHeadToHeadStandingRows);
+
+      const wildcardSeeds: NFLPlayoffSeedRow[] = wildcardEligibleRows
+        .slice(0, WILDCARD_SEED_COUNT)
+        .map((row, index) => {
+          const seed = divisionSeeds.length + index + 1;
+
+          return {
+            seed,
+            row,
+            status: "wildcard",
+            seedLabel: getSeedLabel(seed, "wildcard"),
+          };
+        });
+
+      const lastWildcardPoints =
+        wildcardSeeds[wildcardSeeds.length - 1]?.row.leaguePoints ?? 0;
+
+      const bubbleRows: NFLPlayoffBubbleRow[] = wildcardEligibleRows
+        .slice(WILDCARD_SEED_COUNT, WILDCARD_SEED_COUNT + BUBBLE_ROW_COUNT)
+        .map((row, index) => ({
+          row,
+          bubbleRank: index + 1,
+          pointsBack: Math.max(lastWildcardPoints - row.leaguePoints, 0),
+          status: "bubble",
+        }));
+
+      const seeds = [...divisionSeeds, ...wildcardSeeds].sort(
+        (seedA, seedB) => seedA.seed - seedB.seed
+      );
+
+      return {
+        conference: conference.conference,
+        seeds,
+        divisionSeeds,
+        wildcardSeeds,
+        bubbleRows,
+        firstRoundBye: seeds[0] ?? null,
+        playoffTeamCount: seeds.length,
+        bubbleTeamCount: bubbleRows.length,
+      };
+    });
+
+  return {
+    conferences,
+    totalPlayoffSeeds: conferences.reduce(
+      (sum, conference) => sum + conference.playoffTeamCount,
+      0
+    ),
+    totalBubbleTeams: conferences.reduce(
+      (sum, conference) => sum + conference.bubbleTeamCount,
+      0
+    ),
+  };
+}
+
+export function buildNFLPlayoffBracketShell(
+  playoffPicture: NFLPlayoffPicture
+): NFLPlayoffBracketShell {
+  const conferences: NFLConferenceBracketShell[] =
+    playoffPicture.conferences.map((conference) => {
+      const seed1 = getSeedByNumber(conference, 1);
+      const seed2 = getSeedByNumber(conference, 2);
+      const seed3 = getSeedByNumber(conference, 3);
+      const seed4 = getSeedByNumber(conference, 4);
+      const seed5 = getSeedByNumber(conference, 5);
+      const seed6 = getSeedByNumber(conference, 6);
+      const seed7 = getSeedByNumber(conference, 7);
+
+      const firstRoundBye = buildBracketSlot(
+        seed1,
+        "#1 Seed TBD",
+        true
+      );
+
+      const wildcardMatchups: NFLPlayoffBracketMatchup[] = [
+        {
+          id: `${conference.conference.toLowerCase()}-wildcard-2-7`,
+          conference: conference.conference,
+          round: "wildcard",
+          title: "Wildcard Round",
+          matchupLabel: "#2 vs #7",
+          teamA: buildBracketSlot(seed2, "#2 Seed TBD"),
+          teamB: buildBracketSlot(seed7, "#7 Seed TBD"),
+          note: "Winner advances to the divisional round.",
+        },
+        {
+          id: `${conference.conference.toLowerCase()}-wildcard-3-6`,
+          conference: conference.conference,
+          round: "wildcard",
+          title: "Wildcard Round",
+          matchupLabel: "#3 vs #6",
+          teamA: buildBracketSlot(seed3, "#3 Seed TBD"),
+          teamB: buildBracketSlot(seed6, "#6 Seed TBD"),
+          note: "Winner advances to the divisional round.",
+        },
+        {
+          id: `${conference.conference.toLowerCase()}-wildcard-4-5`,
+          conference: conference.conference,
+          round: "wildcard",
+          title: "Wildcard Round",
+          matchupLabel: "#4 vs #5",
+          teamA: buildBracketSlot(seed4, "#4 Seed TBD"),
+          teamB: buildBracketSlot(seed5, "#5 Seed TBD"),
+          note: "Winner advances to the divisional round.",
+        },
+      ];
+
+      const divisionalMatchups: NFLPlayoffBracketMatchup[] = [
+        {
+          id: `${conference.conference.toLowerCase()}-divisional-1`,
+          conference: conference.conference,
+          round: "divisional",
+          title: "Divisional Round",
+          matchupLabel: "#1 Seed vs Lowest Remaining Seed",
+          teamA: firstRoundBye,
+          teamB: buildPlaceholderSlot("Lowest Remaining Wildcard Winner"),
+          note: "Placeholder shell. Reseeding logic comes later.",
+        },
+        {
+          id: `${conference.conference.toLowerCase()}-divisional-2`,
+          conference: conference.conference,
+          round: "divisional",
+          title: "Divisional Round",
+          matchupLabel: "Remaining Winners",
+          teamA: buildPlaceholderSlot("Highest Remaining Wildcard Winner"),
+          teamB: buildPlaceholderSlot("Second Remaining Wildcard Winner"),
+          note: "Placeholder shell. Winners will be wired in later.",
+        },
+      ];
+
+      const conferenceChampionship: NFLPlayoffBracketMatchup = {
+        id: `${conference.conference.toLowerCase()}-championship`,
+        conference: conference.conference,
+        round: "conference-championship",
+        title: `${conference.conference} Championship`,
+        matchupLabel: "Divisional Winners",
+        teamA: buildPlaceholderSlot("Divisional Winner"),
+        teamB: buildPlaceholderSlot("Divisional Winner"),
+        note: `${conference.conference} champion advances to the Super Bowl.`,
+      };
+
+      return {
+        conference: conference.conference,
+        firstRoundBye,
+        wildcardMatchups,
+        divisionalMatchups,
+        conferenceChampionship,
+      };
+    });
+
+  const superBowl: NFLPlayoffBracketMatchup = {
+    id: "super-bowl",
+    conference: "NFL",
+    round: "super-bowl",
+    title: "Super Bowl",
+    matchupLabel: "AFC Champion vs NFC Champion",
+    teamA: buildPlaceholderSlot("AFC Champion"),
+    teamB: buildPlaceholderSlot("NFC Champion"),
+    note: "Final championship matchup shell.",
+  };
+
+  return {
+    conferences,
+    superBowl,
+  };
 }
 
 export function formatHeadToHeadRecord(row: HeadToHeadStandingRow) {

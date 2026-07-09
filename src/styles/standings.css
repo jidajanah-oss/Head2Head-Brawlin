@@ -44,6 +44,359 @@
   gap: 14px;
 }
 
+.standings-playoff-stack,
+.standings-bracket-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.standings-playoff-card,
+.standings-bracket-card {
+  padding: 20px;
+  background:
+    radial-gradient(circle at top left, rgba(245, 197, 66, 0.16), transparent 34%),
+    linear-gradient(135deg, #121212, #070707);
+}
+
+.standings-playoff-summary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.standings-playoff-summary > div {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.26);
+}
+
+.standings-playoff-summary span,
+.standings-playoff-column-title span,
+.standings-bracket-round-title span,
+.standings-bracket-matchup-topline span,
+.standings-bracket-bye-card > span {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.standings-playoff-summary strong {
+  color: #f5c542;
+  font-size: 1rem;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.standings-playoff-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.standings-playoff-column {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025)),
+    rgba(0, 0, 0, 0.25);
+}
+
+.standings-playoff-column--bubble {
+  border-style: dashed;
+  border-color: rgba(245, 197, 66, 0.22);
+}
+
+.standings-playoff-column-title {
+  display: grid;
+  gap: 4px;
+}
+
+.standings-playoff-column-title strong {
+  color: #ffffff;
+  font-size: 0.96rem;
+  font-weight: 950;
+}
+
+.standings-playoff-seed-list {
+  display: grid;
+  gap: 10px;
+}
+
+.standings-playoff-seed-card,
+.standings-playoff-bubble-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.standings-playoff-seed-card:first-child {
+  border-color: rgba(255, 215, 0, 0.42);
+  background:
+    radial-gradient(circle at top left, rgba(255, 215, 0, 0.14), transparent 38%),
+    rgba(0, 0, 0, 0.28);
+}
+
+.standings-playoff-seed-number,
+.standings-playoff-bubble-rank,
+.standings-bracket-slot-seed {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 46px;
+  padding: 9px;
+  border: 1px solid rgba(245, 197, 66, 0.2);
+  border-radius: 14px;
+  background: rgba(245, 197, 66, 0.08);
+}
+
+.standings-playoff-seed-number strong,
+.standings-playoff-bubble-rank strong,
+.standings-bracket-slot-seed strong {
+  color: #f5c542;
+  font-size: 1.15rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.standings-playoff-seed-number small,
+.standings-playoff-bubble-rank small,
+.standings-playoff-seed-main small,
+.standings-playoff-bubble-main small,
+.standings-bracket-slot-seed small,
+.standings-bracket-slot-main small,
+.standings-super-bowl-center small {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.65rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.standings-playoff-seed-main,
+.standings-playoff-bubble-main,
+.standings-bracket-slot-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.standings-playoff-seed-main strong,
+.standings-playoff-bubble-main strong,
+.standings-bracket-slot-main strong {
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.standings-playoff-seed-main small,
+.standings-playoff-bubble-main small,
+.standings-bracket-slot-main small {
+  overflow-wrap: anywhere;
+}
+
+.standings-playoff-seed-card .steel-badge,
+.standings-playoff-bubble-card .steel-badge {
+  grid-column: 1 / -1;
+  justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+}
+
+.standings-bracket-card {
+  background:
+    radial-gradient(circle at top right, rgba(245, 197, 66, 0.14), transparent 34%),
+    linear-gradient(135deg, #121212, #070707);
+}
+
+.standings-bracket-bye-card {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid rgba(245, 197, 66, 0.2);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(245, 197, 66, 0.12), transparent 42%),
+    rgba(0, 0, 0, 0.28);
+}
+
+.standings-bracket-round-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.standings-bracket-round-column {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025)),
+    rgba(0, 0, 0, 0.25);
+}
+
+.standings-bracket-round-column--final {
+  border-color: rgba(245, 197, 66, 0.22);
+}
+
+.standings-bracket-round-title {
+  display: grid;
+  gap: 4px;
+}
+
+.standings-bracket-round-title strong {
+  color: #ffffff;
+  font-size: 0.96rem;
+  font-weight: 950;
+}
+
+.standings-bracket-matchup-list {
+  display: grid;
+  gap: 12px;
+}
+
+.standings-bracket-matchup-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.standings-bracket-matchup-topline {
+  display: grid;
+  gap: 4px;
+}
+
+.standings-bracket-matchup-topline strong {
+  color: #f5c542;
+  font-size: 0.96rem;
+  font-weight: 950;
+}
+
+.standings-bracket-slots {
+  display: grid;
+  gap: 10px;
+}
+
+.standings-bracket-slot {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.standings-bracket-slot.is-bye {
+  border-color: rgba(245, 197, 66, 0.26);
+  background: rgba(245, 197, 66, 0.08);
+}
+
+.standings-bracket-slot.is-placeholder {
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.standings-bracket-slot.is-placeholder .standings-bracket-slot-main strong {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.standings-bracket-versus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  width: 38px;
+  height: 28px;
+  border: 1px solid rgba(245, 197, 66, 0.2);
+  border-radius: 999px;
+  background: rgba(245, 197, 66, 0.08);
+  color: #f5c542;
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.standings-bracket-matchup-card p,
+.standings-super-bowl-card p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.standings-super-bowl-card {
+  padding: 20px;
+  border-color: rgba(255, 215, 0, 0.35);
+  background:
+    radial-gradient(circle at top, rgba(255, 215, 0, 0.18), transparent 34%),
+    linear-gradient(135deg, #141414, #070707);
+}
+
+.standings-super-bowl-matchup {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.standings-super-bowl-center {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 16px;
+  border: 1px solid rgba(245, 197, 66, 0.26);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top, rgba(245, 197, 66, 0.14), transparent 50%),
+    rgba(0, 0, 0, 0.28);
+  text-align: center;
+}
+
+.standings-super-bowl-center span {
+  font-size: 2rem;
+}
+
+.standings-super-bowl-center strong {
+  color: #f5c542;
+  font-size: 1.1rem;
+  font-weight: 950;
+}
+
 .standings-matchups-card {
   padding: 20px;
   background:
@@ -78,10 +431,21 @@
 }
 
 .standings-matchup-player strong {
+  display: block;
   color: #ffffff;
   font-size: 0.95rem;
   font-weight: 950;
   overflow-wrap: anywhere;
+}
+
+.standings-matchup-player small {
+  display: block;
+  margin-bottom: 4px;
+  color: #f5c542;
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .standings-matchup-player span {
@@ -114,6 +478,180 @@
   font-weight: 950;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.standings-conference-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.standings-conference-card {
+  padding: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(245, 197, 66, 0.12), transparent 34%),
+    linear-gradient(135deg, #121212, #070707);
+}
+
+.standings-division-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.standings-division-card {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.025)),
+    rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.standings-division-topline {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.standings-division-topline span {
+  display: block;
+  margin-bottom: 5px;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.standings-division-topline strong {
+  color: #f5c542;
+  font-size: 1.05rem;
+  font-weight: 950;
+}
+
+.standings-division-table {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.standings-division-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.standings-division-row.is-active-player {
+  border-color: rgba(92, 180, 255, 0.42);
+  background:
+    radial-gradient(circle at top left, rgba(92, 180, 255, 0.12), transparent 34%),
+    rgba(0, 0, 0, 0.22);
+}
+
+.standings-division-rank {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 44px;
+  padding: 8px;
+  border: 1px solid rgba(245, 197, 66, 0.18);
+  border-radius: 14px;
+  background: rgba(245, 197, 66, 0.08);
+}
+
+.standings-division-rank strong {
+  color: #f5c542;
+  font-size: 1.1rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.standings-division-rank small,
+.standings-division-player small,
+.standings-division-record small,
+.standings-division-points small,
+.standings-open-teams span {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.65rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.standings-division-player {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.standings-division-player strong {
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.standings-division-player small {
+  overflow-wrap: anywhere;
+}
+
+.standings-division-record,
+.standings-division-points {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.standings-division-record strong {
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.standings-division-points strong {
+  color: #f5c542;
+  font-size: 1.1rem;
+  font-weight: 950;
+}
+
+.standings-division-row .steel-badge {
+  grid-column: 1 / -1;
+  justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+}
+
+.standings-open-teams {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.standings-open-teams strong {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
 }
 
 .standings-podium-card {
@@ -266,9 +804,21 @@
   line-height: 1;
 }
 
+.standings-empty-card {
+  padding: 18px;
+}
+
 @media (min-width: 700px) {
   .standings-stat-grid {
     grid-template-columns: repeat(4, 1fr);
+  }
+
+  .standings-playoff-summary {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .standings-super-bowl-matchup {
+    grid-template-columns: 1fr auto 1fr;
   }
 
   .standings-matchups-grid {
@@ -291,6 +841,15 @@
     text-align: right;
   }
 
+  .standings-division-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .standings-division-topline {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
   .standings-podium-grid {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -308,5 +867,21 @@
     justify-items: end;
     background: transparent;
     padding: 0;
+  }
+}
+
+@media (min-width: 1100px) {
+  .standings-playoff-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .standings-bracket-round-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1500px) {
+  .standings-division-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
