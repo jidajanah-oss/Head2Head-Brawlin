@@ -8,6 +8,7 @@ import {
   SteelStatCard,
 } from "../../components/steel";
 import { useLeague } from "../../context/LeagueContext";
+import { useNFL } from "../../context/NFLContext";
 import {
   buildHeadToHeadMatchupResults,
   buildNFLPlayoffBracketShell,
@@ -15,6 +16,7 @@ import {
   buildNFLStyleDivisionStandings,
   formatHeadToHeadRecord,
   formatWeeklyResultLabel,
+  type HeadToHeadMatchupResult,
   type NFLConferenceBracketShell,
   type NFLConferencePlayoffPicture,
   type NFLPlayoffBracketMatchup,
@@ -45,6 +47,7 @@ function getResultBadgeVariant(result: string) {
   if (result === "loss") return "danger";
   if (result === "tie") return "gold";
   if (result === "bye") return "neutral";
+  if (result === "open") return "neutral";
 
   return "neutral";
 }
@@ -83,6 +86,50 @@ function formatBubblePointsBack(row: NFLPlayoffBubbleRow) {
   }
 
   return `${row.pointsBack} points back`;
+}
+
+function getMatchupPlayerATeam(matchup: HeadToHeadMatchupResult) {
+  return matchup.playerATeamAbbreviation ?? matchup.playerA.nflTeam;
+}
+
+function getMatchupPlayerBTeam(matchup: HeadToHeadMatchupResult) {
+  if (matchup.playerB) {
+    return matchup.playerBTeamAbbreviation ?? matchup.playerB.nflTeam;
+  }
+
+  if (matchup.matchupType === "open-opponent") {
+    return matchup.openOpponentTeamAbbreviation ?? "OPEN";
+  }
+
+  return "BYE";
+}
+
+function getMatchupOpponentName(matchup: HeadToHeadMatchupResult) {
+  if (matchup.playerB) {
+    return matchup.playerB.name;
+  }
+
+  if (matchup.matchupType === "open-opponent") {
+    return matchup.openOpponentTeamDisplayName ?? "Open Team";
+  }
+
+  return "Bye Week";
+}
+
+function getMatchupSourceLabel(matchup: HeadToHeadMatchupResult) {
+  if (matchup.source === "nfl-schedule") {
+    if (matchup.matchupType === "open-opponent") {
+      return "NFL schedule • open team";
+    }
+
+    if (matchup.matchupType === "bye") {
+      return "NFL schedule • bye";
+    }
+
+    return "NFL schedule";
+  }
+
+  return "Rotation fallback";
 }
 
 function PlayoffSeedCard({ seed }: { seed: NFLPlayoffSeedRow }) {
@@ -366,6 +413,14 @@ function SuperBowlBracketCard({
 
 function StandingsBoard() {
   const { league, picks, gameResults, activePlayerId } = useLeague();
+  const {
+    snapshot,
+    loading: nflLoading,
+    error: nflError,
+    week: nflWeek,
+  } = useNFL();
+
+  const nflGames = useMemo(() => snapshot?.nflGames ?? [], [snapshot]);
 
   const allPicks = useMemo(
     () =>
@@ -385,9 +440,10 @@ function StandingsBoard() {
         league.players,
         allPicks,
         gameResults,
-        league.currentWeek
+        league.currentWeek,
+        nflGames
       ),
-    [league.players, allPicks, gameResults, league.currentWeek]
+    [league.players, allPicks, gameResults, league.currentWeek, nflGames]
   );
 
   const playoffPicture = useMemo(
@@ -408,9 +464,10 @@ function StandingsBoard() {
         league.players,
         allPicks,
         gameResults,
-        league.currentWeek
+        league.currentWeek,
+        nflGames
       ),
-    [league.players, allPicks, gameResults, league.currentWeek]
+    [league.players, allPicks, gameResults, league.currentWeek, nflGames]
   );
 
   const leader = standings[0];
@@ -421,6 +478,15 @@ function StandingsBoard() {
   const activePlayoffSeed = playoffPicture.conferences
     .flatMap((conference) => conference.seeds)
     .find((seed) => seed.row.id === activePlayerId);
+
+  const usingNFLSchedule = nflGames.length > 0;
+  const scheduleHelper = nflError
+    ? "NFL schedule unavailable"
+    : usingNFLSchedule
+      ? `${nflGames.length} NFL games loaded`
+      : nflLoading
+        ? "Loading NFL schedule"
+        : "Using rotation fallback";
 
   return (
     <main className="standings standings-v2">
@@ -460,10 +526,10 @@ function StandingsBoard() {
         />
 
         <SteelStatCard
-          label="Divisions"
-          value={`${divisionStandings.occupiedDivisionCount}/8`}
-          helper="NFL division board"
-          icon="🛡️"
+          label="NFL Schedule"
+          value={usingNFLSchedule ? `Week ${nflWeek}` : "Fallback"}
+          helper={scheduleHelper}
+          icon="📅"
         />
 
         <SteelStatCard
@@ -508,7 +574,11 @@ function StandingsBoard() {
         <SteelSectionHeader
           eyebrow="This Week"
           title={`Week ${league.currentWeek} Head-To-Head Matchups`}
-          description="Each franchise owner is matched against one opponent for the weekly brawl."
+          description={
+            usingNFLSchedule
+              ? "Matchups now mirror the loaded NFL schedule. Open NFL teams show as open opponents."
+              : "NFL schedule not loaded yet. Rotation fallback is being used."
+          }
         />
 
         <div className="standings-matchups-grid">
@@ -516,14 +586,14 @@ function StandingsBoard() {
             <div className="standings-matchup-item" key={matchup.id}>
               <div className="standings-matchup-player">
                 <div>
-                  <small>{matchup.playerA.nflTeam}</small>
+                  <small>{getMatchupPlayerATeam(matchup)}</small>
                   <strong>{matchup.playerA.name}</strong>
                 </div>
                 <span>{matchup.playerAScore}</span>
               </div>
 
               <div className="standings-matchup-center">
-                <small>{matchup.playerB ? "vs" : "bye"}</small>
+                <small>{getMatchupSourceLabel(matchup)}</small>
                 <SteelBadge
                   variant={
                     matchup.status === "final"
@@ -539,8 +609,8 @@ function StandingsBoard() {
 
               <div className="standings-matchup-player is-right">
                 <div>
-                  <small>{matchup.playerB?.nflTeam ?? "BYE"}</small>
-                  <strong>{matchup.playerB?.name ?? "Bye Week"}</strong>
+                  <small>{getMatchupPlayerBTeam(matchup)}</small>
+                  <strong>{getMatchupOpponentName(matchup)}</strong>
                 </div>
                 <span>{matchup.playerB ? matchup.playerBScore : "—"}</span>
               </div>

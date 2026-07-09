@@ -9,6 +9,12 @@ import {
   type NFLDivision,
   type NFLTeamInfo,
 } from "./nflTeamOwnership";
+import type { NFLGame } from "./nfl/NFLTypes";
+import {
+  resolveNFLScheduleHeadToHeadMatchups,
+  type ResolvedHeadToHeadMatchupSource,
+  type ResolvedHeadToHeadMatchupType,
+} from "./gameWeek/resolveWeeklyMatchups";
 
 export type HeadToHeadPicks = Record<string, Record<string, string>>;
 export type HeadToHeadGameResults = Record<string, string>;
@@ -18,13 +24,24 @@ export type HeadToHeadWeeklyResult =
   | "win"
   | "loss"
   | "tie"
-  | "bye";
+  | "bye"
+  | "open";
 
 export type HeadToHeadMatchup = {
   id: string;
   week: number;
   playerA: Player;
   playerB: Player | null;
+  source?: ResolvedHeadToHeadMatchupSource;
+  matchupType?: ResolvedHeadToHeadMatchupType;
+  sourceGameId?: string;
+  kickoff?: string;
+  playerATeamAbbreviation?: string;
+  playerATeamDisplayName?: string;
+  playerBTeamAbbreviation?: string;
+  playerBTeamDisplayName?: string;
+  openOpponentTeamAbbreviation?: string;
+  openOpponentTeamDisplayName?: string;
 };
 
 export type HeadToHeadMatchupResult = HeadToHeadMatchup & {
@@ -279,6 +296,13 @@ function getSeedByNumber(
   return conference.seeds.find((seed) => seed.seed === seedNumber) ?? null;
 }
 
+function getOpenOpponentLabel(matchup: HeadToHeadMatchup) {
+  const abbreviation = matchup.openOpponentTeamAbbreviation ?? "OPEN";
+  const displayName = matchup.openOpponentTeamDisplayName ?? "Open Team";
+
+  return `${abbreviation} • ${displayName}`;
+}
+
 export function compareHeadToHeadStandingRows(
   playerA: HeadToHeadStandingRow,
   playerB: HeadToHeadStandingRow
@@ -304,12 +328,25 @@ export function compareHeadToHeadStandingRows(
 
 export function buildWeeklyHeadToHeadMatchups(
   players: Player[],
-  week: number
+  week: number,
+  nflGames: NFLGame[] = []
 ): HeadToHeadMatchup[] {
   const activePlayers = getActivePlayers(players);
 
   if (activePlayers.length === 0) {
     return [];
+  }
+
+  if (nflGames.length > 0) {
+    const nflScheduleMatchups = resolveNFLScheduleHeadToHeadMatchups({
+      players: activePlayers,
+      nflGames,
+      week,
+    });
+
+    if (nflScheduleMatchups.length > 0) {
+      return nflScheduleMatchups;
+    }
   }
 
   if (activePlayers.length === 1) {
@@ -319,6 +356,10 @@ export function buildWeeklyHeadToHeadMatchups(
         week,
         playerA: activePlayers[0],
         playerB: null,
+        source: "rotation",
+        matchupType: "bye",
+        playerATeamAbbreviation: activePlayers[0].nflTeam,
+        playerATeamDisplayName: activePlayers[0].nflTeam,
       },
     ];
   }
@@ -341,6 +382,12 @@ export function buildWeeklyHeadToHeadMatchups(
       week,
       playerA,
       playerB,
+      source: "rotation",
+      matchupType: playerB ? "owned-opponent" : "bye",
+      playerATeamAbbreviation: playerA.nflTeam,
+      playerATeamDisplayName: playerA.nflTeam,
+      playerBTeamAbbreviation: playerB?.nflTeam,
+      playerBTeamDisplayName: playerB?.nflTeam,
     });
   }
 
@@ -359,6 +406,18 @@ export function evaluateHeadToHeadMatchup(
   );
 
   if (!matchup.playerB) {
+    if (matchup.matchupType === "open-opponent") {
+      return {
+        ...matchup,
+        playerAScore: playerAScore.correct,
+        playerBScore: 0,
+        possiblePoints: playerAScore.possible,
+        winnerId: null,
+        resultLabel: `Open Opponent: ${getOpenOpponentLabel(matchup)}`,
+        status: "bye",
+      };
+    }
+
     return {
       ...matchup,
       playerAScore: playerAScore.correct,
@@ -429,10 +488,11 @@ export function buildHeadToHeadStandings(
   players: Player[],
   picks: HeadToHeadPicks,
   gameResults: HeadToHeadGameResults,
-  week: number
+  week: number,
+  nflGames: NFLGame[] = []
 ): HeadToHeadStandingRow[] {
   const activePlayers = getActivePlayers(players);
-  const matchups = buildWeeklyHeadToHeadMatchups(activePlayers, week);
+  const matchups = buildWeeklyHeadToHeadMatchups(activePlayers, week, nflGames);
   const evaluatedMatchups = matchups.map((matchup) =>
     evaluateHeadToHeadMatchup(matchup, picks, gameResults)
   );
@@ -474,6 +534,17 @@ export function buildHeadToHeadStandings(
 
     if (!matchup.playerB) {
       playerA.weeklyOpponentId = null;
+
+      if (matchup.matchupType === "open-opponent") {
+        playerA.weeklyOpponentName = `Open: ${
+          matchup.openOpponentTeamAbbreviation ?? "Team"
+        }`;
+        playerA.weeklyResult = "open";
+        playerA.weeklyScoreLabel = `${matchup.playerAScore}-Open`;
+        playerA.hasBye = false;
+        continue;
+      }
+
       playerA.weeklyOpponentName = "Bye Week";
       playerA.weeklyResult = "bye";
       playerA.weeklyScoreLabel = `${matchup.playerAScore}-0`;
@@ -541,9 +612,10 @@ export function buildHeadToHeadMatchupResults(
   players: Player[],
   picks: HeadToHeadPicks,
   gameResults: HeadToHeadGameResults,
-  week: number
+  week: number,
+  nflGames: NFLGame[] = []
 ): HeadToHeadMatchupResult[] {
-  return buildWeeklyHeadToHeadMatchups(players, week).map((matchup) =>
+  return buildWeeklyHeadToHeadMatchups(players, week, nflGames).map((matchup) =>
     evaluateHeadToHeadMatchup(matchup, picks, gameResults)
   );
 }
@@ -552,13 +624,15 @@ export function buildNFLStyleDivisionStandings(
   players: Player[],
   picks: HeadToHeadPicks,
   gameResults: HeadToHeadGameResults,
-  week: number
+  week: number,
+  nflGames: NFLGame[] = []
 ): NFLStyleDivisionStandings {
   const baseStandings = buildHeadToHeadStandings(
     players,
     picks,
     gameResults,
-    week
+    week,
+    nflGames
   );
 
   const assignedRows: NFLStyleDivisionStandingRow[] = [];
@@ -874,5 +948,6 @@ export function formatWeeklyResultLabel(result: HeadToHeadWeeklyResult) {
   if (result === "loss") return "Loss";
   if (result === "tie") return "Tie";
   if (result === "bye") return "Bye";
+  if (result === "open") return "Open Opponent";
   return "Pending";
 }
