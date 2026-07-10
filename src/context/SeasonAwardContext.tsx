@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import { useSeasonCloseout } from "./SeasonCloseoutContext";
 
 import { useLeague } from "./LeagueContext";
 import { useNFL } from "./NFLContext";
@@ -227,6 +228,9 @@ export function SeasonAwardProvider({
 
   const { season } = useNFL();
 
+  const { isAreaLocked } =
+    useSeasonCloseout();
+
   const [
     coinFlipHistory,
     setCoinFlipHistory,
@@ -297,6 +301,15 @@ export function SeasonAwardProvider({
     category: SeasonAwardCategory,
     winnerPlayerId: string,
   ) => {
+    if (
+      isAreaLocked(
+        season,
+        "season-awards",
+      )
+    ) {
+      return;
+    }
+
     const result =
       baseResults[category];
 
@@ -317,6 +330,15 @@ export function SeasonAwardProvider({
   const clearCoinFlipResolution = (
     category: SeasonAwardCategory,
   ) => {
+    if (
+      isAreaLocked(
+        season,
+        "season-awards",
+      )
+    ) {
+      return;
+    }
+
     const resolutionId =
       getSeasonAwardCoinFlipId(
         season,

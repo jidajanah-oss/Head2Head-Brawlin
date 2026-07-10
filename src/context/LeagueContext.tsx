@@ -5,6 +5,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import { useSeasonCloseout } from "./SeasonCloseoutContext";
 import {
   clearPersistedLeagueState,
   loadPersistedLeagueState,
@@ -221,11 +222,31 @@ function normalizeLeagueWeek(
   };
 }
 
+
+function getLeagueSeasonNumber(
+  league: LeagueState,
+): number {
+  const seasonValue = Number.parseInt(
+    String(league.settings.season),
+    10,
+  );
+
+  return Number.isInteger(seasonValue) &&
+    seasonValue > 0
+    ? seasonValue
+    : new Date().getFullYear();
+}
+
 export function LeagueProvider({
   children,
 }: {
   children: ReactNode;
 }) {
+  const {
+    isSeasonClosed,
+    isAreaLocked,
+  } = useSeasonCloseout();
+
   const [persistedStartState] = useState(() =>
     loadPersistedLeagueState(
       initialLeagueState,
@@ -461,6 +482,15 @@ export function LeagueProvider({
   const addFinalizedWeeklyScoringRecord = (
     record: FinalizedWeeklyScoringRecord,
   ) => {
+    if (
+      isAreaLocked(
+        record.season,
+        "scoring",
+      )
+    ) {
+      return;
+    }
+
     setScoringHistory(
       (previousHistory) => {
         if (previousHistory[record.id]) {
@@ -478,6 +508,15 @@ export function LeagueProvider({
   const upsertPickerClickerWeekState = (
     weekState: PickerClickerWeekState,
   ) => {
+    if (
+      isAreaLocked(
+        weekState.season,
+        "scoring",
+      )
+    ) {
+      return;
+    }
+
     setPickerClickerHistory(
       (previousHistory) => {
         if (
@@ -498,6 +537,15 @@ export function LeagueProvider({
   const upsertObscureStatCoinFlipResolution = (
     resolution: ObscureStatCoinFlipResolution,
   ) => {
+    if (
+      isAreaLocked(
+        resolution.season,
+        "scoring",
+      )
+    ) {
+      return;
+    }
+
     setObscureStatCoinFlipHistory(
       (previousHistory) => ({
         ...previousHistory,
@@ -513,6 +561,21 @@ export function LeagueProvider({
       resolutionId.trim();
 
     if (!normalizedResolutionId) {
+      return;
+    }
+
+    const existingResolution =
+      obscureStatCoinFlipHistory[
+        normalizedResolutionId
+      ];
+
+    if (
+      existingResolution &&
+      isAreaLocked(
+        existingResolution.season,
+        "scoring",
+      )
+    ) {
       return;
     }
 
@@ -542,6 +605,15 @@ export function LeagueProvider({
   const initializePayoutLedgerSeason = (
     season: number,
   ) => {
+    if (
+      isAreaLocked(
+        season,
+        "payout-ledger",
+      )
+    ) {
+      return;
+    }
+
     const ledgerId =
       getPayoutLedgerSeasonId(season);
 
@@ -565,6 +637,15 @@ export function LeagueProvider({
   const synchronizePayoutLedgerSeason = (
     season: number,
   ) => {
+    if (
+      isAreaLocked(
+        season,
+        "payout-ledger",
+      )
+    ) {
+      return;
+    }
+
     const ledgerId =
       getPayoutLedgerSeasonId(season);
 
@@ -599,6 +680,15 @@ export function LeagueProvider({
     season: number,
     entry: PayoutLedgerEntry,
   ) => {
+    if (
+      isAreaLocked(
+        season,
+        "payout-ledger",
+      )
+    ) {
+      return;
+    }
+
     const ledgerId =
       getPayoutLedgerSeasonId(season);
 
@@ -632,6 +722,15 @@ export function LeagueProvider({
     season: number,
     entryId: string,
   ) => {
+    if (
+      isAreaLocked(
+        season,
+        "payout-ledger",
+      )
+    ) {
+      return;
+    }
+
     const ledgerId =
       getPayoutLedgerSeasonId(season);
 
@@ -666,6 +765,15 @@ export function LeagueProvider({
     entryId: string,
     status: PayoutLedgerEntryStatus,
   ) => {
+    if (
+      isAreaLocked(
+        season,
+        "payout-ledger",
+      )
+    ) {
+      return;
+    }
+
     const ledgerId =
       getPayoutLedgerSeasonId(season);
 
@@ -702,6 +810,15 @@ export function LeagueProvider({
     entryId: string,
     needsReview: boolean,
   ) => {
+    if (
+      isAreaLocked(
+        season,
+        "payout-ledger",
+      )
+    ) {
+      return;
+    }
+
     const ledgerId =
       getPayoutLedgerSeasonId(season);
 
@@ -737,6 +854,15 @@ export function LeagueProvider({
     season: number,
     playoffPicture: NFLPlayoffPicture,
   ) => {
+    if (
+      isAreaLocked(
+        season,
+        "playoffs",
+      )
+    ) {
+      return;
+    }
+
     const seasonId = getPlayoffSeasonId(
       season,
     );
@@ -762,6 +888,15 @@ export function LeagueProvider({
     season: number,
     playoffPicture: NFLPlayoffPicture,
   ) => {
+    if (
+      isAreaLocked(
+        season,
+        "playoffs",
+      )
+    ) {
+      return;
+    }
+
     const seasonId = getPlayoffSeasonId(
       season,
     );
@@ -781,6 +916,15 @@ export function LeagueProvider({
     season: number,
     input: RecordPlayoffMatchupResultInput,
   ) => {
+    if (
+      isAreaLocked(
+        season,
+        "playoffs",
+      )
+    ) {
+      return;
+    }
+
     const seasonId = getPlayoffSeasonId(
       season,
     );
@@ -812,6 +956,15 @@ export function LeagueProvider({
     season: number,
     matchupId: string,
   ) => {
+    if (
+      isAreaLocked(
+        season,
+        "playoffs",
+      )
+    ) {
+      return;
+    }
+
     const seasonId = getPlayoffSeasonId(
       season,
     );
@@ -844,6 +997,13 @@ export function LeagueProvider({
   };
 
   const resetLeaguePersistence = () => {
+    const season =
+      getLeagueSeasonNumber(league);
+
+    if (isSeasonClosed(season)) {
+      return;
+    }
+
     clearPersistedLeagueState();
 
     setLeague(
