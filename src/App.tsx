@@ -3,6 +3,7 @@ import {
   Route,
   Routes,
 } from "react-router-dom";
+
 import { NFLProvider } from "./context/NFLContext";
 import { ObscureStatProvider } from "./context/ObscureStatContext";
 import { SeasonAwardProvider } from "./context/SeasonAwardContext";
@@ -15,6 +16,7 @@ import AppLayout from "./layouts/AppLayout";
 import Commissioner from "./pages/Commissioner";
 import Dashboard from "./pages/Dashboard";
 import Games from "./pages/Games";
+import NotFound from "./pages/NotFound";
 import Picks from "./pages/Picks";
 import Players from "./pages/Players";
 import Standings from "./pages/Standings";
@@ -64,6 +66,11 @@ function App() {
                 <Route
                   path="commissioner"
                   element={<Commissioner />}
+                />
+
+                <Route
+                  path="*"
+                  element={<NotFound />}
                 />
               </Route>
             </Routes>
