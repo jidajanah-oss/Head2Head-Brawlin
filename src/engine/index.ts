@@ -22,6 +22,8 @@ export * from "./seasonAwardCoinFlipEngine";
 export * from "./seasonAwardEngine";
 export * from "./seasonAwardPayoutLedger";
 export * from "./seasonAwardTypes";
+export * from "./seasonCloseoutEngine";
+export * from "./seasonCloseoutTypes";
 export * from "./seasonStandingsEngine";
 export * from "./weekControlEngine";
 export * from "./weeklyScoringEngine";
