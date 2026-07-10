@@ -5,6 +5,7 @@ import {
 } from "react-router-dom";
 import { NFLProvider } from "./context/NFLContext";
 import { ObscureStatProvider } from "./context/ObscureStatContext";
+import { SeasonAwardProvider } from "./context/SeasonAwardContext";
 import ObscureStatPayoutSync from "./features/payouts/ObscureStatPayoutSync";
 import PlayoffPayoutSync from "./features/payouts/PlayoffPayoutSync";
 import PickerClickerSync from "./features/scoring/PickerClickerSync";
@@ -21,49 +22,51 @@ function App() {
   return (
     <NFLProvider>
       <ObscureStatProvider>
-        <PickerClickerSync />
-        <WeeklyScoringSync />
-        <ObscureStatPayoutSync />
-        <PlayoffPayoutSync />
+        <SeasonAwardProvider>
+          <PickerClickerSync />
+          <WeeklyScoringSync />
+          <ObscureStatPayoutSync />
+          <PlayoffPayoutSync />
 
-        <BrowserRouter>
-          <Routes>
-            <Route
-              path="/"
-              element={<AppLayout />}
-            >
+          <BrowserRouter>
+            <Routes>
               <Route
-                index
-                element={<Dashboard />}
-              />
+                path="/"
+                element={<AppLayout />}
+              >
+                <Route
+                  index
+                  element={<Dashboard />}
+                />
 
-              <Route
-                path="games"
-                element={<Games />}
-              />
+                <Route
+                  path="games"
+                  element={<Games />}
+                />
 
-              <Route
-                path="picks"
-                element={<Picks />}
-              />
+                <Route
+                  path="picks"
+                  element={<Picks />}
+                />
 
-              <Route
-                path="standings"
-                element={<Standings />}
-              />
+                <Route
+                  path="standings"
+                  element={<Standings />}
+                />
 
-              <Route
-                path="players"
-                element={<Players />}
-              />
+                <Route
+                  path="players"
+                  element={<Players />}
+                />
 
-              <Route
-                path="commissioner"
-                element={<Commissioner />}
-              />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+                <Route
+                  path="commissioner"
+                  element={<Commissioner />}
+                />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </SeasonAwardProvider>
       </ObscureStatProvider>
     </NFLProvider>
   );
