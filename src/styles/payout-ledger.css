@@ -283,3 +283,121 @@
     justify-content: flex-start;
   }
 }
+
+.payout-ledger__reconciliation {
+  display: grid;
+  gap: 16px;
+}
+
+.payout-ledger__budget-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.payout-ledger__budget-strip > div {
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+  border: 1px solid rgba(245, 197, 24, 0.18);
+  border-radius: 12px;
+  background: rgba(245, 197, 24, 0.06);
+}
+
+.payout-ledger__budget-strip span {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.payout-ledger__budget-strip strong {
+  color: #f5c518;
+  font-size: 1.15rem;
+}
+
+.payout-ledger__reconciliation-copy {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.payout-ledger__plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.payout-ledger__plan-card {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: rgba(5, 9, 20, 0.42);
+}
+
+.payout-ledger__plan-card--complete {
+  border-color: rgba(72, 187, 120, 0.32);
+}
+
+.payout-ledger__plan-card--over,
+.payout-ledger__plan-card--mismatch {
+  border-color: rgba(255, 122, 122, 0.38);
+}
+
+.payout-ledger__plan-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.payout-ledger__plan-heading strong {
+  line-height: 1.35;
+}
+
+.payout-ledger__plan-counts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.payout-ledger__plan-counts span {
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.76rem;
+}
+
+.payout-ledger__plan-card > small,
+.payout-ledger__fixed-amount small {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.72rem;
+}
+
+.payout-ledger__adjustment-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 900px) {
+  .payout-ledger__budget-strip {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .payout-ledger__budget-strip,
+  .payout-ledger__plan-counts {
+    grid-template-columns: 1fr;
+  }
+}

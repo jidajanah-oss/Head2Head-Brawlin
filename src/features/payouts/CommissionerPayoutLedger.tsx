@@ -15,6 +15,7 @@ import { useLeague } from "../../context/LeagueContext";
 import { useNFL } from "../../context/NFLContext";
 import {
   PAYOUT_LEDGER_AMOUNTS_CENTS,
+  buildPayoutLedgerReconciliation,
   buildPayoutLedgerSummary,
   createPayoutLedgerEntry,
   getPayoutLedgerSeasonId,
@@ -24,6 +25,7 @@ import type {
   PayoutLedgerDirection,
   PayoutLedgerEntry,
   PayoutLedgerEntryStatus,
+  PayoutLedgerPlanLine,
 } from "../../engine";
 import "../../styles/payout-ledger.css";
 
@@ -198,6 +200,80 @@ function sortLedgerEntries(
 
   return first.sourceLabel.localeCompare(
     second.sourceLabel,
+  );
+}
+
+function getPlanStatusLabel(
+  line: PayoutLedgerPlanLine,
+): string {
+  switch (line.status) {
+    case "complete":
+      return "Complete";
+    case "over":
+      return "Over Plan";
+    case "mismatch":
+      return "Mismatch";
+    default:
+      return "Missing";
+  }
+}
+
+function getPlanStatusVariant(
+  line: PayoutLedgerPlanLine,
+): "success" | "danger" | "neutral" {
+  if (line.status === "complete") {
+    return "success";
+  }
+
+  if (
+    line.status === "over" ||
+    line.status === "mismatch"
+  ) {
+    return "danger";
+  }
+
+  return "neutral";
+}
+
+function PayoutPlanCard({
+  line,
+}: {
+  line: PayoutLedgerPlanLine;
+}) {
+  return (
+    <article
+      className={`payout-ledger__plan-card payout-ledger__plan-card--${line.status}`}
+    >
+      <div className="payout-ledger__plan-heading">
+        <strong>{line.label}</strong>
+        <SteelBadge
+          variant={getPlanStatusVariant(line)}
+        >
+          {getPlanStatusLabel(line)}
+        </SteelBadge>
+      </div>
+
+      <div className="payout-ledger__plan-counts">
+        <span>
+          <strong>{line.actualCount}</strong>
+          {" / "}
+          {line.expectedCount} entries
+        </span>
+        <span>
+          {formatMoney(line.actualTotalCents)}
+          {" / "}
+          {formatMoney(line.expectedTotalCents)}
+        </span>
+      </div>
+
+      <small>
+        {line.remainingCount > 0
+          ? `${line.remainingCount} remaining`
+          : line.status === "complete"
+            ? "Official allocation complete"
+            : "Review allocation"}
+      </small>
+    </article>
   );
 }
 
@@ -442,6 +518,35 @@ function CommissionerPayoutLedger() {
     ? buildPayoutLedgerSummary(ledger)
     : null;
 
+  const reconciliation = useMemo(
+    () =>
+      ledger
+        ? buildPayoutLedgerReconciliation(
+            ledger,
+          )
+        : null,
+    [ledger],
+  );
+
+  const planLineByCategory = useMemo(
+    () =>
+      new Map<
+        PayoutLedgerCategory,
+        PayoutLedgerPlanLine
+      >(
+        reconciliation?.lines.map((line) => [
+          line.category,
+          line,
+        ]) ?? [],
+      ),
+    [reconciliation],
+  );
+
+  const selectedPlanLine =
+    planLineByCategory.get(
+      selectedCategory,
+    ) ?? null;
+
   const handleStatusChange = (
     entryId: string,
     status: PayoutLedgerEntryStatus,
@@ -512,6 +617,17 @@ function CommissionerPayoutLedger() {
 
     const isAdjustment =
       selectedOption.category === "adjustment";
+
+    if (
+      !isAdjustment &&
+      selectedPlanLine &&
+      selectedPlanLine.remainingCount <= 0
+    ) {
+      setFormMessage(
+        `${selectedOption.label} is already fully allocated. Remove an existing entry or use an adjustment.`,
+      );
+      return;
+    }
 
     const parsedAdjustmentAmount =
       Number.parseFloat(adjustmentAmount);
@@ -600,7 +716,7 @@ function CommissionerPayoutLedger() {
         }
       />
 
-      {!ledger || !summary ? (
+      {!ledger || !summary || !reconciliation ? (
         <SteelCard
           className="payout-ledger__empty"
           variant="elevated"
@@ -686,6 +802,104 @@ function CommissionerPayoutLedger() {
             />
           </div>
 
+          <SteelCard
+            className="payout-ledger__reconciliation"
+            variant="elevated"
+            as="section"
+          >
+            <div className="payout-ledger__panel-heading">
+              <div>
+                <span>Season Reconciliation</span>
+                <h3>Official Prize Schedule</h3>
+              </div>
+              <SteelBadge
+                variant={
+                  reconciliation.issueLineCount === 0
+                    ? "success"
+                    : "neutral"
+                }
+              >
+                {reconciliation.completeLineCount}
+                {" / "}
+                {reconciliation.lines.length} complete
+              </SteelBadge>
+            </div>
+
+            <div className="payout-ledger__budget-strip">
+              <div>
+                <span>32-Player Buy-Ins</span>
+                <strong>
+                  {formatMoney(
+                    reconciliation.fullLeagueBuyInsCents,
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Official Prize Plan</span>
+                <strong>
+                  {formatMoney(
+                    reconciliation.plannedPayoutsCents,
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Planned Reserve</span>
+                <strong>
+                  {formatMoney(
+                    reconciliation.plannedReserveCents,
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Recognized Official</span>
+                <strong>
+                  {formatMoney(
+                    reconciliation.recognizedOfficialPayoutsCents,
+                  )}
+                </strong>
+              </div>
+            </div>
+
+            <p className="payout-ledger__reconciliation-copy">
+              The official 32-player schedule funds
+              $799 in prizes from $800 in buy-ins,
+              leaving a $1 season reserve. Manual
+              adjustments are tracked separately from
+              this prize-plan check.
+            </p>
+
+            <div className="payout-ledger__plan-grid">
+              {reconciliation.lines.map((line) => (
+                <PayoutPlanCard
+                  key={line.category}
+                  line={line}
+                />
+              ))}
+            </div>
+
+            {reconciliation.adjustmentPayoutsCents > 0 ||
+            reconciliation.adjustmentCollectionsCents > 0 ? (
+              <div className="payout-ledger__adjustment-summary">
+                <span>
+                  Adjustment collections:{" "}
+                  <strong>
+                    {formatMoney(
+                      reconciliation.adjustmentCollectionsCents,
+                    )}
+                  </strong>
+                </span>
+                <span>
+                  Adjustment payouts:{" "}
+                  <strong>
+                    {formatMoney(
+                      reconciliation.adjustmentPayoutsCents,
+                    )}
+                  </strong>
+                </span>
+              </div>
+            ) : null}
+          </SteelCard>
+
           {summary.reviewEntryCount > 0 ? (
             <SteelCard
               className="payout-ledger__review-alert"
@@ -763,14 +977,31 @@ function CommissionerPayoutLedger() {
                   }}
                 >
                   {MANUAL_PAYOUT_OPTIONS.map(
-                    (option) => (
-                      <option
-                        key={option.category}
-                        value={option.category}
-                      >
-                        {option.label}
-                      </option>
-                    ),
+                    (option) => {
+                      const planLine =
+                        planLineByCategory.get(
+                          option.category,
+                        );
+                      const isFullyAllocated =
+                        option.category !==
+                          "adjustment" &&
+                        planLine?.remainingCount === 0;
+
+                      return (
+                        <option
+                          key={option.category}
+                          value={option.category}
+                          disabled={isFullyAllocated}
+                        >
+                          {option.label}
+                          {isFullyAllocated
+                            ? " — Complete"
+                            : planLine
+                              ? ` — ${planLine.remainingCount} left`
+                              : ""}
+                        </option>
+                      );
+                    },
                   )}
                 </select>
               </label>
@@ -823,6 +1054,16 @@ function CommissionerPayoutLedger() {
                       selectedOption.amountCents ?? 0,
                     )}
                   </strong>
+                  {selectedPlanLine ? (
+                    <small>
+                      {selectedPlanLine.remainingCount}{" "}
+                      official slot
+                      {selectedPlanLine.remainingCount === 1
+                        ? ""
+                        : "s"}{" "}
+                      remaining
+                    </small>
+                  ) : null}
                 </div>
               )}
 

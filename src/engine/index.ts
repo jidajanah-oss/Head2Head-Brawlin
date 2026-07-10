@@ -11,6 +11,7 @@ export * from "./obscureStatPayoutLedger";
 export * from "./obscureStatSchedule";
 export * from "./obscureStatTypes";
 export * from "./payoutLedgerEngine";
+export * from "./payoutLedgerPlan";
 export * from "./payoutLedgerTypes";
 export * from "./pickerClickerEngine";
 export * from "./pickerClickerTypes";
