@@ -21,6 +21,23 @@ import Picks from "./pages/Picks";
 import Players from "./pages/Players";
 import Standings from "./pages/Standings";
 
+function getRouterBaseName(): string {
+  const baseUrl =
+    import.meta.env.BASE_URL.trim();
+
+  if (!baseUrl || baseUrl === "/") {
+    return "/";
+  }
+
+  return `/${baseUrl.replace(
+    /^\/+|\/+$/g,
+    "",
+  )}`;
+}
+
+const ROUTER_BASE_NAME =
+  getRouterBaseName();
+
 function App() {
   return (
     <NFLProvider>
@@ -32,7 +49,9 @@ function App() {
           <PlayoffPayoutSync />
           <SeasonAwardPayoutSync />
 
-          <BrowserRouter>
+          <BrowserRouter
+            basename={ROUTER_BASE_NAME}
+          >
             <Routes>
               <Route
                 path="/"
