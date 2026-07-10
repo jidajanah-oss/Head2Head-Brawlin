@@ -15,6 +15,8 @@ export * from "./payoutLedgerPlan";
 export * from "./payoutLedgerTypes";
 export * from "./pickerClickerEngine";
 export * from "./pickerClickerTypes";
+export * from "./playoffResultsEngine";
+export * from "./playoffResultsTypes";
 export * from "./seasonStandingsEngine";
 export * from "./weekControlEngine";
 export * from "./weeklyScoringEngine";
