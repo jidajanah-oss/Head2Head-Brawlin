@@ -1,5 +1,6 @@
 export * from "./NFLDataProvider";
 export * from "./MockNFLDataProvider";
+export * from "./ESPNNFLDataProvider";
 export * from "./NFLProviderFactory";
 export * from "./NFLGameSyncEngine";
 export * from "./NFLGameAdapter";
