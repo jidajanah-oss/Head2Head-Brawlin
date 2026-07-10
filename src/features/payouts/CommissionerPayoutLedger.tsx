@@ -1,4 +1,8 @@
-import { useMemo } from "react";
+import {
+  useMemo,
+  useState,
+} from "react";
+import type { FormEvent } from "react";
 import FranchiseLogo from "../../components/franchise/FranchiseLogo";
 import {
   SteelBadge,
@@ -10,11 +14,14 @@ import {
 import { useLeague } from "../../context/LeagueContext";
 import { useNFL } from "../../context/NFLContext";
 import {
+  PAYOUT_LEDGER_AMOUNTS_CENTS,
   buildPayoutLedgerSummary,
+  createPayoutLedgerEntry,
   getPayoutLedgerSeasonId,
 } from "../../engine";
 import type {
   PayoutLedgerCategory,
+  PayoutLedgerDirection,
   PayoutLedgerEntry,
   PayoutLedgerEntryStatus,
 } from "../../engine";
@@ -26,7 +33,7 @@ const CATEGORY_LABELS: Record<
 > = {
   "player-buy-in": "Player Buy-In",
   "obscure-stat-award": "Obscure-Stat Award",
-  "division-group-payout": "Division Group Payout",
+  "division-group-payout": "Division Group Share",
   "afc-winner": "AFC Winner",
   "nfc-winner": "NFC Winner",
   "wild-card-loser": "Wild Card Loser",
@@ -39,6 +46,105 @@ const CATEGORY_LABELS: Record<
   "last-to-lose": "Last to Lose",
   adjustment: "Adjustment",
 };
+
+type ValueChangeEvent = {
+  target: {
+    value: string;
+  };
+};
+
+type ManualPayoutOption = {
+  category: PayoutLedgerCategory;
+  label: string;
+  amountCents: number | null;
+  sourceLabel: string;
+};
+
+const MANUAL_PAYOUT_OPTIONS: ManualPayoutOption[] = [
+  {
+    category: "division-group-payout",
+    label: "Division Group Share — $12",
+    amountCents:
+      PAYOUT_LEDGER_AMOUNTS_CENTS.divisionPlayerShare,
+    sourceLabel: "Division group payout share",
+  },
+  {
+    category: "afc-winner",
+    label: "AFC Winner — $20",
+    amountCents:
+      PAYOUT_LEDGER_AMOUNTS_CENTS.afcWinner,
+    sourceLabel: "AFC winner payout",
+  },
+  {
+    category: "nfc-winner",
+    label: "NFC Winner — $20",
+    amountCents:
+      PAYOUT_LEDGER_AMOUNTS_CENTS.nfcWinner,
+    sourceLabel: "NFC winner payout",
+  },
+  {
+    category: "wild-card-loser",
+    label: "Wild Card Loser — $20",
+    amountCents:
+      PAYOUT_LEDGER_AMOUNTS_CENTS.wildCardLoser,
+    sourceLabel: "Wild Card round loser payout",
+  },
+  {
+    category: "divisional-loser",
+    label: "Divisional Loser — $40",
+    amountCents:
+      PAYOUT_LEDGER_AMOUNTS_CENTS.divisionalLoser,
+    sourceLabel: "Divisional round loser payout",
+  },
+  {
+    category: "conference-loser",
+    label: "Conference Loser — $60",
+    amountCents:
+      PAYOUT_LEDGER_AMOUNTS_CENTS.conferenceLoser,
+    sourceLabel: "Conference round loser payout",
+  },
+  {
+    category: "super-bowl-loser",
+    label: "Super Bowl Loser — $80",
+    amountCents:
+      PAYOUT_LEDGER_AMOUNTS_CENTS.superBowlLoser,
+    sourceLabel: "Super Bowl runner-up payout",
+  },
+  {
+    category: "super-bowl-winner",
+    label: "Super Bowl Winner — $160",
+    amountCents:
+      PAYOUT_LEDGER_AMOUNTS_CENTS.superBowlWinner,
+    sourceLabel: "Super Bowl champion payout",
+  },
+  {
+    category: "biggest-winner",
+    label: "Biggest Winner — $15",
+    amountCents:
+      PAYOUT_LEDGER_AMOUNTS_CENTS.biggestWinner,
+    sourceLabel: "Biggest Winner season award",
+  },
+  {
+    category: "biggest-loser",
+    label: "Biggest Loser — $1",
+    amountCents:
+      PAYOUT_LEDGER_AMOUNTS_CENTS.biggestLoser,
+    sourceLabel: "Biggest Loser season award",
+  },
+  {
+    category: "last-to-lose",
+    label: "Last to Lose — $10",
+    amountCents:
+      PAYOUT_LEDGER_AMOUNTS_CENTS.lastToLose,
+    sourceLabel: "Last to Lose season award",
+  },
+  {
+    category: "adjustment",
+    label: "Manual Adjustment",
+    amountCents: null,
+    sourceLabel: "Commissioner ledger adjustment",
+  },
+];
 
 const moneyFormatter = new Intl.NumberFormat(
   "en-US",
@@ -95,6 +201,20 @@ function sortLedgerEntries(
   );
 }
 
+function createManualSourceKey(
+  category: PayoutLedgerCategory,
+): string {
+  const randomPart =
+    typeof crypto !== "undefined" &&
+    "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : Math.random()
+          .toString(36)
+          .slice(2);
+
+  return `manual-${category}-${Date.now()}-${randomPart}`;
+}
+
 type LedgerEntryRowProps = {
   entry: PayoutLedgerEntry;
   customLogo?: string;
@@ -103,6 +223,7 @@ type LedgerEntryRowProps = {
     status: PayoutLedgerEntryStatus,
   ) => void;
   onClearReview: (entryId: string) => void;
+  onRemove: (entry: PayoutLedgerEntry) => void;
 };
 
 function LedgerEntryRow({
@@ -110,6 +231,7 @@ function LedgerEntryRow({
   customLogo,
   onStatusChange,
   onClearReview,
+  onRemove,
 }: LedgerEntryRowProps) {
   const nextStatus: PayoutLedgerEntryStatus =
     entry.status === "paid"
@@ -144,6 +266,9 @@ function LedgerEntryRow({
         <span>{entry.sourceLabel}</span>
         {entry.note ? (
           <small>{entry.note}</small>
+        ) : null}
+        {entry.origin === "manual" ? (
+          <small>Commissioner entry</small>
         ) : null}
       </div>
 
@@ -215,6 +340,17 @@ function LedgerEntryRow({
             Clear Review
           </SteelButton>
         ) : null}
+
+        {entry.origin === "manual" ? (
+          <SteelButton
+            type="button"
+            size="sm"
+            variant="danger"
+            onClick={() => onRemove(entry)}
+          >
+            Remove
+          </SteelButton>
+        ) : null}
       </div>
     </article>
   );
@@ -226,6 +362,8 @@ function CommissionerPayoutLedger() {
     payoutLedgerHistory,
     initializePayoutLedgerSeason,
     synchronizePayoutLedgerSeason,
+    upsertPayoutLedgerEntry,
+    removePayoutLedgerEntry,
     setPayoutLedgerEntryStatus,
     setPayoutLedgerEntryReviewStatus,
   } = useLeague();
@@ -235,6 +373,23 @@ function CommissionerPayoutLedger() {
     getPayoutLedgerSeasonId(season);
   const ledger =
     payoutLedgerHistory[ledgerId] ?? null;
+
+  const [selectedPlayerId, setSelectedPlayerId] =
+    useState("");
+  const [selectedCategory, setSelectedCategory] =
+    useState<PayoutLedgerCategory>(
+      "division-group-payout",
+    );
+  const [adjustmentDirection, setAdjustmentDirection] =
+    useState<PayoutLedgerDirection>("payout");
+  const [adjustmentAmount, setAdjustmentAmount] =
+    useState("");
+  const [entryStatus, setEntryStatus] =
+    useState<PayoutLedgerEntryStatus>("unpaid");
+  const [entryNote, setEntryNote] =
+    useState("");
+  const [formMessage, setFormMessage] =
+    useState("");
 
   const playerLogoById = useMemo(
     () =>
@@ -256,6 +411,25 @@ function CommissionerPayoutLedger() {
         : [],
     [ledger],
   );
+
+  const manualPlayers = useMemo(
+    () =>
+      ledger
+        ? [...ledger.roster].sort(
+            (first, second) =>
+              first.playerName.localeCompare(
+                second.playerName,
+              ),
+          )
+        : [],
+    [ledger],
+  );
+
+  const selectedOption =
+    MANUAL_PAYOUT_OPTIONS.find(
+      (option) =>
+        option.category === selectedCategory,
+    ) ?? MANUAL_PAYOUT_OPTIONS[0];
 
   const collectionEntries = entries.filter(
     (entry) =>
@@ -286,6 +460,115 @@ function CommissionerPayoutLedger() {
       season,
       entryId,
       false,
+    );
+  };
+
+  const handleRemoveEntry = (
+    entry: PayoutLedgerEntry,
+  ) => {
+    if (entry.origin !== "manual") {
+      return;
+    }
+
+    const shouldRemove = window.confirm(
+      `Remove the ${CATEGORY_LABELS[entry.category]} entry for ${entry.playerName}?`,
+    );
+
+    if (!shouldRemove) {
+      return;
+    }
+
+    removePayoutLedgerEntry(
+      season,
+      entry.id,
+    );
+  };
+
+  const handleManualEntrySubmit = (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    setFormMessage("");
+
+    if (!ledger) {
+      setFormMessage(
+        "Initialize the season ledger first.",
+      );
+      return;
+    }
+
+    const player = ledger.roster.find(
+      (rosterPlayer) =>
+        rosterPlayer.playerId ===
+        selectedPlayerId,
+    );
+
+    if (!player) {
+      setFormMessage(
+        "Choose a player for this entry.",
+      );
+      return;
+    }
+
+    const isAdjustment =
+      selectedOption.category === "adjustment";
+
+    const parsedAdjustmentAmount =
+      Number.parseFloat(adjustmentAmount);
+
+    const amountCents = isAdjustment
+      ? Math.round(
+          parsedAdjustmentAmount * 100,
+        )
+      : selectedOption.amountCents ?? 0;
+
+    if (
+      !Number.isInteger(amountCents) ||
+      amountCents <= 0
+    ) {
+      setFormMessage(
+        "Enter an adjustment amount greater than $0.",
+      );
+      return;
+    }
+
+    const direction: PayoutLedgerDirection =
+      isAdjustment
+        ? adjustmentDirection
+        : "payout";
+
+    const now = new Date().toISOString();
+    const entry = createPayoutLedgerEntry(
+      {
+        season,
+        playerId: player.playerId,
+        playerName: player.playerName,
+        nflTeam: player.nflTeam,
+        direction,
+        category: selectedOption.category,
+        origin: "manual",
+        amountCents,
+        status: entryStatus,
+        sourceKey: createManualSourceKey(
+          selectedOption.category,
+        ),
+        sourceLabel:
+          selectedOption.sourceLabel,
+        note: entryNote,
+      },
+      now,
+    );
+
+    upsertPayoutLedgerEntry(
+      season,
+      entry,
+    );
+
+    setEntryNote("");
+    setAdjustmentAmount("");
+    setEntryStatus("unpaid");
+    setFormMessage(
+      `${CATEGORY_LABELS[entry.category]} added for ${entry.playerName}.`,
     );
   };
 
@@ -424,6 +707,172 @@ function CommissionerPayoutLedger() {
           ) : null}
 
           <SteelCard
+            className="payout-ledger__manual-panel"
+            variant="elevated"
+            as="section"
+          >
+            <div className="payout-ledger__panel-heading">
+              <div>
+                <span>Commissioner Entry</span>
+                <h3>Add Manual Payout</h3>
+              </div>
+              <SteelBadge variant="gold">
+                Official amounts loaded
+              </SteelBadge>
+            </div>
+
+            <form
+              className="payout-ledger__manual-form"
+              onSubmit={handleManualEntrySubmit}
+            >
+              <label>
+                <span>Player</span>
+                <select
+                  value={selectedPlayerId}
+                  onChange={(event: ValueChangeEvent) =>
+                    setSelectedPlayerId(
+                      event.target.value,
+                    )
+                  }
+                  required
+                >
+                  <option value="">
+                    Select player
+                  </option>
+                  {manualPlayers.map((player) => (
+                    <option
+                      key={player.playerId}
+                      value={player.playerId}
+                    >
+                      {player.playerName} — {player.nflTeam}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <span>Payout Type</span>
+                <select
+                  value={selectedCategory}
+                  onChange={(event: ValueChangeEvent) => {
+                    setSelectedCategory(
+                      event.target
+                        .value as PayoutLedgerCategory,
+                    );
+                    setFormMessage("");
+                  }}
+                >
+                  {MANUAL_PAYOUT_OPTIONS.map(
+                    (option) => (
+                      <option
+                        key={option.category}
+                        value={option.category}
+                      >
+                        {option.label}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+
+              {selectedCategory === "adjustment" ? (
+                <>
+                  <label>
+                    <span>Direction</span>
+                    <select
+                      value={adjustmentDirection}
+                      onChange={(event: ValueChangeEvent) =>
+                        setAdjustmentDirection(
+                          event.target
+                            .value as PayoutLedgerDirection,
+                        )
+                      }
+                    >
+                      <option value="payout">
+                        Payout
+                      </option>
+                      <option value="collection">
+                        Collection
+                      </option>
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>Amount</span>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={adjustmentAmount}
+                      onChange={(event: ValueChangeEvent) =>
+                        setAdjustmentAmount(
+                          event.target.value,
+                        )
+                      }
+                      required
+                    />
+                  </label>
+                </>
+              ) : (
+                <div className="payout-ledger__fixed-amount">
+                  <span>Amount</span>
+                  <strong>
+                    {formatMoney(
+                      selectedOption.amountCents ?? 0,
+                    )}
+                  </strong>
+                </div>
+              )}
+
+              <label>
+                <span>Status</span>
+                <select
+                  value={entryStatus}
+                  onChange={(event: ValueChangeEvent) =>
+                    setEntryStatus(
+                      event.target
+                        .value as PayoutLedgerEntryStatus,
+                    )
+                  }
+                >
+                  <option value="unpaid">
+                    Unpaid
+                  </option>
+                  <option value="paid">
+                    Paid now
+                  </option>
+                </select>
+              </label>
+
+              <label className="payout-ledger__note-field">
+                <span>Note</span>
+                <input
+                  type="text"
+                  maxLength={160}
+                  placeholder="Optional commissioner note"
+                  value={entryNote}
+                  onChange={(event: ValueChangeEvent) =>
+                    setEntryNote(
+                      event.target.value,
+                    )
+                  }
+                />
+              </label>
+
+              <div className="payout-ledger__manual-submit">
+                <SteelButton type="submit">
+                  Add Ledger Entry
+                </SteelButton>
+                {formMessage ? (
+                  <span>{formMessage}</span>
+                ) : null}
+              </div>
+            </form>
+          </SteelCard>
+
+          <SteelCard
             className="payout-ledger__panel"
             variant="elevated"
             as="section"
@@ -457,6 +906,9 @@ function CommissionerPayoutLedger() {
                     }
                     onClearReview={
                       handleClearReview
+                    }
+                    onRemove={
+                      handleRemoveEntry
                     }
                   />
                 ))
@@ -503,13 +955,16 @@ function CommissionerPayoutLedger() {
                     onClearReview={
                       handleClearReview
                     }
+                    onRemove={
+                      handleRemoveEntry
+                    }
                   />
                 ))
               ) : (
                 <p className="payout-ledger__empty-copy">
                   Resolved obscure-stat awards and
-                  future commissioner-entered payouts
-                  will appear here.
+                  commissioner-entered payouts will
+                  appear here.
                 </p>
               )}
             </div>

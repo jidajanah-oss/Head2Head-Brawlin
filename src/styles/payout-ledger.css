@@ -42,7 +42,8 @@
   line-height: 1.5;
 }
 
-.payout-ledger__panel {
+.payout-ledger__panel,
+.payout-ledger__manual-panel {
   display: grid;
   gap: 16px;
 }
@@ -67,6 +68,79 @@
 .payout-ledger__panel-heading h3 {
   margin: 4px 0 0;
   font-size: 1.2rem;
+}
+
+.payout-ledger__manual-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+.payout-ledger__manual-form label,
+.payout-ledger__fixed-amount {
+  display: grid;
+  gap: 7px;
+}
+
+.payout-ledger__manual-form label > span,
+.payout-ledger__fixed-amount > span {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.payout-ledger__manual-form input,
+.payout-ledger__manual-form select {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(5, 9, 20, 0.72);
+  color: #fff;
+  font: inherit;
+}
+
+.payout-ledger__manual-form input:focus,
+.payout-ledger__manual-form select:focus {
+  outline: 2px solid rgba(245, 197, 24, 0.48);
+  outline-offset: 1px;
+  border-color: rgba(245, 197, 24, 0.65);
+}
+
+.payout-ledger__fixed-amount {
+  min-height: 42px;
+  align-content: center;
+  padding: 8px 12px;
+  border: 1px solid rgba(245, 197, 24, 0.3);
+  border-radius: 10px;
+  background: rgba(245, 197, 24, 0.08);
+}
+
+.payout-ledger__fixed-amount strong {
+  color: #f5c518;
+  font-size: 1.1rem;
+}
+
+.payout-ledger__note-field {
+  grid-column: span 2;
+}
+
+.payout-ledger__manual-submit {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 2px;
+}
+
+.payout-ledger__manual-submit > span {
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.82rem;
 }
 
 .payout-ledger__entries {
@@ -149,6 +223,10 @@
 }
 
 @media (max-width: 1100px) {
+  .payout-ledger__manual-form {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+
   .payout-ledger__entry {
     grid-template-columns: minmax(190px, 1fr) minmax(220px, 1.4fr) minmax(100px, 0.65fr);
   }
@@ -172,6 +250,20 @@
   }
 
   .payout-ledger__panel-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .payout-ledger__manual-form {
+    grid-template-columns: 1fr;
+  }
+
+  .payout-ledger__note-field,
+  .payout-ledger__manual-submit {
+    grid-column: 1;
+  }
+
+  .payout-ledger__manual-submit {
     align-items: flex-start;
     flex-direction: column;
   }
