@@ -19,11 +19,15 @@ import type {
   PickerClickerHistory,
   PickerClickerWeekState,
 } from "../engine/pickerClickerTypes";
+import {
+  clampRegularSeasonWeek,
+  getNextRegularSeasonWeek,
+  getPreviousRegularSeasonWeek,
+} from "../engine/weekControlEngine";
 import type {
   FinalizedWeeklyScoringRecord,
   WeeklyScoringHistory,
 } from "../engine/weeklyScoringTypes";
-
 import { initialLeagueState } from "../lib/leagueEngine";
 import type { Game } from "../types/game";
 import type { Player } from "../types/player";
@@ -38,37 +42,43 @@ type LeagueContextType = {
   setPlayers: (players: Player[]) => void;
   addPlayer: (player: Player) => void;
   deletePlayer: (playerId: string) => void;
+
   updateGame: (game: Game) => void;
 
-  // 🏈 MULTIPLAYER PICKS
+  // CURRENT NFL WEEK
+  setCurrentWeek: (week: number) => void;
+  goToPreviousWeek: () => void;
+  goToNextWeek: () => void;
+
+  // MULTIPLAYER PICKS
   picks: Picks;
   setPick: (
     playerId: string,
     gameId: string,
-    team: string
+    team: string,
   ) => void;
 
-  // 🧠 ACTIVE PLAYER SYSTEM
+  // ACTIVE PLAYER SYSTEM
   activePlayerId: string;
   setActivePlayerId: (id: string) => void;
 
-  // 🧪 NFL GAME RESULTS
+  // NFL GAME RESULTS
   gameResults: GameResults;
   setGameResults: (results: GameResults) => void;
 
-  // 🏆 FINALIZED WEEKLY SCORING
+  // FINALIZED WEEKLY SCORING
   scoringHistory: WeeklyScoringHistory;
   addFinalizedWeeklyScoringRecord: (
-    record: FinalizedWeeklyScoringRecord
+    record: FinalizedWeeklyScoringRecord,
   ) => void;
 
-  // 🖱️ PICKER CLICKER
+  // PICKER CLICKER
   pickerClickerHistory: PickerClickerHistory;
   upsertPickerClickerWeekState: (
-    weekState: PickerClickerWeekState
+    weekState: PickerClickerWeekState,
   ) => void;
 
-  // 💾 PERSISTENCE
+  // PERSISTENCE
   resetLeaguePersistence: () => void;
 };
 
@@ -78,12 +88,12 @@ const LeagueContext = createContext<
 
 function resolveActivePlayerId(
   activePlayerId: string,
-  players: Player[]
+  players: Player[],
 ) {
   if (
     activePlayerId &&
     players.some(
-      (player) => player.id === activePlayerId
+      (player) => player.id === activePlayerId,
     )
   ) {
     return activePlayerId;
@@ -94,16 +104,16 @@ function resolveActivePlayerId(
 
 function removePicksForMissingPlayers(
   picks: Picks,
-  players: Player[]
+  players: Player[],
 ) {
   const validPlayerIds = new Set(
-    players.map((player) => player.id)
+    players.map((player) => player.id),
   );
 
   return Object.entries(picks).reduce<Picks>(
     (
       cleanedPicks,
-      [playerId, playerPicks]
+      [playerId, playerPicks],
     ) => {
       if (validPlayerIds.has(playerId)) {
         cleanedPicks[playerId] = playerPicks;
@@ -111,8 +121,19 @@ function removePicksForMissingPlayers(
 
       return cleanedPicks;
     },
-    {}
+    {},
   );
+}
+
+function normalizeLeagueWeek(
+  league: LeagueState,
+): LeagueState {
+  return {
+    ...league,
+    currentWeek: clampRegularSeasonWeek(
+      league.currentWeek,
+    ),
+  };
 }
 
 export function LeagueProvider({
@@ -121,51 +142,51 @@ export function LeagueProvider({
   children: ReactNode;
 }) {
   const [persistedStartState] = useState(() =>
-    loadPersistedLeagueState(
-      initialLeagueState
-    )
+    loadPersistedLeagueState(initialLeagueState),
   );
 
-  const [league, setLeague] =
-    useState<LeagueState>(
-      persistedStartState.league
-    );
+  const [league, setLeague] = useState(() =>
+    normalizeLeagueWeek(
+      persistedStartState.league,
+    ),
+  );
 
-  const [picks, setPicks] = useState<Picks>(
-    () =>
-      removePicksForMissingPlayers(
-        persistedStartState.picks,
-        persistedStartState.league.players
-      )
+  const [picks, setPicks] = useState(() =>
+    removePicksForMissingPlayers(
+      persistedStartState.picks,
+      persistedStartState.league.players,
+    ),
   );
 
   const [
     activePlayerId,
     setActivePlayerId,
-  ] = useState<string>(() =>
+  ] = useState(() =>
     resolveActivePlayerId(
       persistedStartState.activePlayerId,
-      persistedStartState.league.players
-    )
+      persistedStartState.league.players,
+    ),
   );
 
-  const [gameResults, setGameResults] =
-    useState<GameResults>(
-      persistedStartState.gameResults
-    );
+  const [
+    gameResults,
+    setGameResults,
+  ] = useState(
+    persistedStartState.gameResults,
+  );
 
   const [
     scoringHistory,
     setScoringHistory,
-  ] = useState<WeeklyScoringHistory>(
-    persistedStartState.scoringHistory
+  ] = useState(
+    persistedStartState.scoringHistory,
   );
 
   const [
     pickerClickerHistory,
     setPickerClickerHistory,
-  ] = useState<PickerClickerHistory>(
-    persistedStartState.pickerClickerHistory
+  ] = useState(
+    persistedStartState.pickerClickerHistory,
   );
 
   useEffect(() => {
@@ -195,16 +216,16 @@ export function LeagueProvider({
     setPicks((previousPicks) =>
       removePicksForMissingPlayers(
         previousPicks,
-        players
-      )
+        players,
+      ),
     );
 
     setActivePlayerId(
       (previousPlayerId) =>
         resolveActivePlayerId(
           previousPlayerId,
-          players
-        )
+          players,
+        ),
     );
   };
 
@@ -219,17 +240,16 @@ export function LeagueProvider({
 
     setActivePlayerId(
       (previousPlayerId) =>
-        previousPlayerId || player.id
+        previousPlayerId || player.id,
     );
   };
 
   const deletePlayer = (
-    playerId: string
+    playerId: string,
   ) => {
     const remainingPlayers =
       league.players.filter(
-        (player) =>
-          player.id !== playerId
+        (player) => player.id !== playerId,
       );
 
     setLeague((previousLeague) => ({
@@ -237,7 +257,7 @@ export function LeagueProvider({
       players:
         previousLeague.players.filter(
           (player) =>
-            player.id !== playerId
+            player.id !== playerId,
         ),
     }));
 
@@ -262,30 +282,60 @@ export function LeagueProvider({
         return (
           remainingPlayers[0]?.id ?? ""
         );
-      }
+      },
     );
   };
 
   const updateGame = (game: Game) => {
     setLeague((previousLeague) => ({
       ...previousLeague,
-      games: previousLeague.games.map(
-        (currentGame) =>
-          currentGame.id === game.id
-            ? game
-            : currentGame
-      ),
+      games:
+        previousLeague.games.map(
+          (currentGame) =>
+            currentGame.id === game.id
+              ? game
+              : currentGame,
+        ),
+    }));
+  };
+
+  const setCurrentWeek = (
+    week: number,
+  ) => {
+    setLeague((previousLeague) => ({
+      ...previousLeague,
+      currentWeek:
+        clampRegularSeasonWeek(week),
+    }));
+  };
+
+  const goToPreviousWeek = () => {
+    setLeague((previousLeague) => ({
+      ...previousLeague,
+      currentWeek:
+        getPreviousRegularSeasonWeek(
+          previousLeague.currentWeek,
+        ),
+    }));
+  };
+
+  const goToNextWeek = () => {
+    setLeague((previousLeague) => ({
+      ...previousLeague,
+      currentWeek:
+        getNextRegularSeasonWeek(
+          previousLeague.currentWeek,
+        ),
     }));
   };
 
   const setPick = (
     playerId: string,
     gameId: string,
-    team: string
+    team: string,
   ) => {
     setPicks((previousPicks) => ({
       ...previousPicks,
-
       [playerId]: {
         ...previousPicks[playerId],
         [gameId]: team,
@@ -293,62 +343,63 @@ export function LeagueProvider({
     }));
   };
 
-  const addFinalizedWeeklyScoringRecord =
-    (
-      record: FinalizedWeeklyScoringRecord
-    ) => {
-      setScoringHistory(
-        (previousHistory) => {
-          if (
-            previousHistory[record.id]
-          ) {
-            return previousHistory;
-          }
-
-          return {
-            ...previousHistory,
-            [record.id]: record,
-          };
+  const addFinalizedWeeklyScoringRecord = (
+    record: FinalizedWeeklyScoringRecord,
+  ) => {
+    setScoringHistory(
+      (previousHistory) => {
+        if (
+          previousHistory[record.id]
+        ) {
+          return previousHistory;
         }
-      );
-    };
 
-  const upsertPickerClickerWeekState =
-    (
-      weekState: PickerClickerWeekState
-    ) => {
-      setPickerClickerHistory(
-        (previousHistory) => {
-          if (
-            previousHistory[
-              weekState.id
-            ] === weekState
-          ) {
-            return previousHistory;
-          }
+        return {
+          ...previousHistory,
+          [record.id]: record,
+        };
+      },
+    );
+  };
 
-          return {
-            ...previousHistory,
-            [weekState.id]: weekState,
-          };
+  const upsertPickerClickerWeekState = (
+    weekState: PickerClickerWeekState,
+  ) => {
+    setPickerClickerHistory(
+      (previousHistory) => {
+        if (
+          previousHistory[
+            weekState.id
+          ] === weekState
+        ) {
+          return previousHistory;
         }
-      );
-    };
+
+        return {
+          ...previousHistory,
+          [weekState.id]: weekState,
+        };
+      },
+    );
+  };
 
   const resetLeaguePersistence = () => {
     clearPersistedLeagueState();
 
-    setLeague(initialLeagueState);
+    setLeague(
+      normalizeLeagueWeek(
+        initialLeagueState,
+      ),
+    );
     setPicks({});
     setGameResults({});
     setScoringHistory({});
     setPickerClickerHistory({});
-
     setActivePlayerId(
       resolveActivePlayerId(
         "",
-        initialLeagueState.players
-      )
+        initialLeagueState.players,
+      ),
     );
   };
 
@@ -356,27 +407,23 @@ export function LeagueProvider({
     <LeagueContext.Provider
       value={{
         league,
-
         setPlayers,
         addPlayer,
         deletePlayer,
         updateGame,
-
+        setCurrentWeek,
+        goToPreviousWeek,
+        goToNextWeek,
         picks,
         setPick,
-
         activePlayerId,
         setActivePlayerId,
-
         gameResults,
         setGameResults,
-
         scoringHistory,
         addFinalizedWeeklyScoringRecord,
-
         pickerClickerHistory,
         upsertPickerClickerWeekState,
-
         resetLeaguePersistence,
       }}
     >
@@ -391,7 +438,7 @@ export function useLeague() {
 
   if (!context) {
     throw new Error(
-      "useLeague must be used within LeagueProvider"
+      "useLeague must be used within LeagueProvider",
     );
   }
 

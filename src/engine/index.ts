@@ -6,5 +6,6 @@ export * from "./nflTeamOwnership";
 export * from "./pickerClickerEngine";
 export * from "./pickerClickerTypes";
 export * from "./seasonStandingsEngine";
+export * from "./weekControlEngine";
 export * from "./weeklyScoringEngine";
 export * from "./weeklyScoringTypes";

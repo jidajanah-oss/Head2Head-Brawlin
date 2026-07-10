@@ -11,7 +11,12 @@ import {
 } from "../../components/steel";
 import { useLeague } from "../../context/LeagueContext";
 import { useNFL } from "../../context/NFLContext";
-import { getPickerClickerWeekId } from "../../engine";
+import {
+  FIRST_REGULAR_SEASON_WEEK,
+  getPickerClickerWeekId,
+  getWeekControlState,
+  LAST_REGULAR_SEASON_WEEK,
+} from "../../engine";
 import FranchiseAssignmentBoard from "../franchise/FranchiseAssignmentBoard";
 import SetupLeagueStep from "./SetupLeagueStep";
 import SetupPlayerManager from "./SetupPlayerManager";
@@ -24,6 +29,7 @@ import {
 
 import "../../styles/setup.css";
 import "../../styles/franchise.css";
+import "../../styles/week-control.css";
 
 const steps = [
   "League",
@@ -33,9 +39,20 @@ const steps = [
   "Start Season",
 ];
 
+const regularSeasonWeeks = Array.from(
+  {
+    length:
+      LAST_REGULAR_SEASON_WEEK -
+      FIRST_REGULAR_SEASON_WEEK +
+      1,
+  },
+  (_, index) =>
+    FIRST_REGULAR_SEASON_WEEK + index,
+);
+
 function getStepStatus(
   index: number,
-  currentStep: number
+  currentStep: number,
 ) {
   if (index === currentStep) {
     return "Active";
@@ -52,6 +69,9 @@ function SetupWizard() {
   const {
     league,
     pickerClickerHistory,
+    setCurrentWeek,
+    goToPreviousWeek,
+    goToNextWeek,
   } = useLeague();
 
   const { season } = useNFL();
@@ -61,7 +81,7 @@ function SetupWizard() {
 
   const [setup, setSetup] =
     useState<LeagueSetupState>(
-      defaultLeagueSetup
+      defaultLeagueSetup,
     );
 
   const currentStepName =
@@ -73,11 +93,16 @@ function SetupWizard() {
   const isLastStep =
     currentStep === steps.length - 1;
 
+  const weekControlState =
+    getWeekControlState(
+      league.currentWeek,
+    );
+
   const pickerClickerWeekState =
     pickerClickerHistory[
       getPickerClickerWeekId(
         season,
-        league.currentWeek
+        league.currentWeek,
       )
     ] ?? null;
 
@@ -89,7 +114,7 @@ function SetupWizard() {
       ? league.players.find(
           (player) =>
             player.id ===
-            pickerClickerAssignment.sourcePlayerId
+            pickerClickerAssignment.sourcePlayerId,
         )
       : null;
 
@@ -104,17 +129,17 @@ function SetupWizard() {
   const fallbackPickCount =
     pickerClickerWeekState
       ? Object.values(
-          pickerClickerWeekState.fallbackPicks
+          pickerClickerWeekState.fallbackPicks,
         ).reduce(
           (
             totalFallbacks,
-            playerFallbacks
+            playerFallbacks,
           ) =>
             totalFallbacks +
             Object.keys(
-              playerFallbacks
+              playerFallbacks,
             ).length,
-          0
+          0,
         )
       : 0;
 
@@ -122,14 +147,14 @@ function SetupWizard() {
     setCurrentStep((step) =>
       Math.min(
         step + 1,
-        steps.length - 1
-      )
+        steps.length - 1,
+      ),
     );
   };
 
   const previousStep = () => {
     setCurrentStep((step) =>
-      Math.max(step - 1, 0)
+      Math.max(step - 1, 0),
     );
   };
 
@@ -161,7 +186,7 @@ function SetupWizard() {
           label="Players"
           value={`${league.players.length}/${league.settings.maxPlayers}`}
           helper="League capacity"
-          icon="🏈"
+          icon="👥"
         />
 
         <SteelStatCard
@@ -185,6 +210,128 @@ function SetupWizard() {
           icon="🖱️"
         />
       </section>
+
+      <SteelCard
+        className="commissioner-week-control-card"
+        as="section"
+      >
+        <SteelSectionHeader
+          eyebrow="Season Navigation"
+          title="Commissioner Week Control"
+          description="Select the active regular-season week used by Games, Picks, scoring, standings, and Picker Clicker."
+          action={
+            <SteelBadge variant="gold">
+              Week {weekControlState.currentWeek} of{" "}
+              {LAST_REGULAR_SEASON_WEEK}
+            </SteelBadge>
+          }
+        />
+
+        <div className="commissioner-week-control-body">
+          <SteelButton
+            disabled={
+              !weekControlState.canGoPrevious
+            }
+            onClick={goToPreviousWeek}
+            size="md"
+            variant="secondary"
+          >
+            ◀ Week{" "}
+            {weekControlState.previousWeek}
+          </SteelButton>
+
+          <label className="commissioner-week-selector">
+            <span>Active League Week</span>
+
+            <select
+              aria-label="Select active league week"
+              value={weekControlState.currentWeek}
+              onChange={(event) => {
+                setCurrentWeek(
+                  Number(event.target.value),
+                );
+              }}
+            >
+              {regularSeasonWeeks.map(
+                (week) => (
+                  <option
+                    key={week}
+                    value={week}
+                  >
+                    Week {week}
+                  </option>
+                ),
+              )}
+            </select>
+
+            <small>
+              {league.settings.season} NFL
+              regular season
+            </small>
+          </label>
+
+          <SteelButton
+            disabled={
+              !weekControlState.canGoNext
+            }
+            onClick={goToNextWeek}
+            size="md"
+            variant="primary"
+          >
+            Week {weekControlState.nextWeek} ▶
+          </SteelButton>
+        </div>
+
+        <div className="commissioner-week-progress">
+          <div
+            className="commissioner-week-progress-track"
+            role="progressbar"
+            aria-label="Regular-season week progress"
+            aria-valuemin={
+              FIRST_REGULAR_SEASON_WEEK
+            }
+            aria-valuemax={
+              LAST_REGULAR_SEASON_WEEK
+            }
+            aria-valuenow={
+              weekControlState.currentWeek
+            }
+          >
+            <span
+              style={{
+                width: `${weekControlState.progressPercent}%`,
+              }}
+            />
+          </div>
+
+          <div className="commissioner-week-progress-labels">
+            <span>
+              Week{" "}
+              {FIRST_REGULAR_SEASON_WEEK}
+            </span>
+
+            <strong>
+              {
+                weekControlState.progressPercent
+              }
+              %
+            </strong>
+
+            <span>
+              Week{" "}
+              {LAST_REGULAR_SEASON_WEEK}
+            </span>
+          </div>
+        </div>
+
+        <p className="commissioner-week-control-note">
+          Changing the active week loads that
+          week&apos;s NFL schedule. Picks,
+          finalized scoring records, and Picker
+          Clicker history from other weeks remain
+          stored and are not deleted.
+        </p>
+      </SteelCard>
 
       <SteelCard
         className="commissioner-picker-clicker-card"
@@ -212,7 +359,8 @@ function SetupWizard() {
         <div className="commissioner-picker-clicker-body">
           <FranchiseLogo
             nflTeam={
-              pickerClickerSourcePlayer?.nflTeam ??
+              pickerClickerSourcePlayer
+                ?.nflTeam ??
               pickerClickerAssignment
                 ?.sourceNFLTeam
             }
@@ -249,12 +397,16 @@ function SetupWizard() {
           <div className="commissioner-picker-clicker-stats">
             <div>
               <span>Locked Games</span>
-              <strong>{lockedGameCount}</strong>
+              <strong>
+                {lockedGameCount}
+              </strong>
             </div>
 
             <div>
               <span>Fallback Picks</span>
-              <strong>{fallbackPickCount}</strong>
+              <strong>
+                {fallbackPickCount}
+              </strong>
             </div>
 
             <div>
@@ -293,7 +445,7 @@ function SetupWizard() {
           {steps.map((step, index) => {
             const status = getStepStatus(
               index,
-              currentStep
+              currentStep,
             );
 
             return (
@@ -385,7 +537,9 @@ function SetupWizard() {
               description="Check league configuration before starting the season."
             />
 
-            <SetupReviewStep setup={setup} />
+            <SetupReviewStep
+              setup={setup}
+            />
           </>
         ) : null}
 
@@ -397,7 +551,9 @@ function SetupWizard() {
               description="Launch the league when setup checks are complete."
             />
 
-            <StartSeasonStep setup={setup} />
+            <StartSeasonStep
+              setup={setup}
+            />
           </>
         ) : null}
       </SteelCard>
