@@ -1,12 +1,29 @@
 import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  getDefaultFranchiseLogoPath,
   getFranchiseLogoAlt,
   getFranchiseLogoFallbackText,
   getFranchiseLogoPath,
 } from "../../engine";
+
 import "../../styles/franchiseLogos.css";
 
-type FranchiseLogoSize = "xs" | "sm" | "md" | "lg" | "xl";
-type FranchiseLogoVariant = "badge" | "tile" | "ghost";
+type FranchiseLogoSize =
+  | "xs"
+  | "sm"
+  | "md"
+  | "lg"
+  | "xl";
+
+type FranchiseLogoVariant =
+  | "badge"
+  | "tile"
+  | "ghost";
 
 type FranchiseLogoProps = {
   nflTeam?: string | null;
@@ -25,31 +42,96 @@ function FranchiseLogo({
   variant = "badge",
   className = "",
 }: FranchiseLogoProps) {
-  const logoPath = getFranchiseLogoPath(nflTeam, customLogo);
-  const fallbackText = getFranchiseLogoFallbackText(nflTeam);
-  const alt = getFranchiseLogoAlt(nflTeam, displayName);
+  const preferredLogoPath =
+    getFranchiseLogoPath(
+      nflTeam,
+      customLogo,
+    );
 
-  const handleLogoError = (event: React.SyntheticEvent<HTMLImageElement>) => {
-    event.currentTarget.style.display = "none";
-    event.currentTarget.parentElement?.classList.add("franchise-logo--missing");
+  const defaultLogoPath =
+    getDefaultFranchiseLogoPath(
+      nflTeam,
+    );
+
+  const logoPaths = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [
+            preferredLogoPath,
+            defaultLogoPath,
+          ].filter(Boolean),
+        ),
+      ),
+    [
+      preferredLogoPath,
+      defaultLogoPath,
+    ],
+  );
+
+  const [
+    logoPathIndex,
+    setLogoPathIndex,
+  ] = useState(0);
+
+  useEffect(() => {
+    setLogoPathIndex(0);
+  }, [
+    preferredLogoPath,
+    defaultLogoPath,
+  ]);
+
+  const activeLogoPath =
+    logoPaths[logoPathIndex] ?? "";
+
+  const fallbackText =
+    getFranchiseLogoFallbackText(
+      nflTeam,
+    );
+
+  const alt = getFranchiseLogoAlt(
+    nflTeam,
+    displayName,
+  );
+
+  const handleLogoError = () => {
+    setLogoPathIndex(
+      (currentIndex) =>
+        currentIndex + 1,
+    );
   };
 
   const classes = [
     "franchise-logo",
     `franchise-logo--${size}`,
     `franchise-logo--${variant}`,
-    !logoPath ? "franchise-logo--missing" : "",
+    !activeLogoPath
+      ? "franchise-logo--missing"
+      : "",
     className,
   ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <span className={classes} aria-label={alt} title={alt}>
-      {logoPath ? (
-        <img src={logoPath} alt={alt} loading="lazy" onError={handleLogoError} />
+    <span
+      className={classes}
+      aria-label={alt}
+      title={alt}
+    >
+      {activeLogoPath ? (
+        <img
+          key={activeLogoPath}
+          src={activeLogoPath}
+          alt={alt}
+          loading="lazy"
+          onError={handleLogoError}
+        />
       ) : null}
-      <span className="franchise-logo__fallback">{fallbackText}</span>
+
+      <span className="franchise-logo__fallback">
+        {fallbackText}
+      </span>
     </span>
   );
 }
