@@ -5,6 +5,7 @@ import {
 } from "react-router-dom";
 
 import { NFLProvider } from "./context/NFLContext";
+import { ObscureStatProvider } from "./context/ObscureStatContext";
 import PickerClickerSync from "./features/scoring/PickerClickerSync";
 import WeeklyScoringSync from "./features/scoring/WeeklyScoringSync";
 import AppLayout from "./layouts/AppLayout";
@@ -18,25 +19,49 @@ import Standings from "./pages/Standings";
 function App() {
   return (
     <NFLProvider>
-      <PickerClickerSync />
-      <WeeklyScoringSync />
+      <ObscureStatProvider>
+        <PickerClickerSync />
+        <WeeklyScoringSync />
 
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<AppLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="games" element={<Games />} />
-            <Route path="picks" element={<Picks />} />
-            <Route path="standings" element={<Standings />} />
-            <Route path="players" element={<Players />} />
-
+        <BrowserRouter>
+          <Routes>
             <Route
-              path="commissioner"
-              element={<Commissioner />}
-            />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+              path="/"
+              element={<AppLayout />}
+            >
+              <Route
+                index
+                element={<Dashboard />}
+              />
+
+              <Route
+                path="games"
+                element={<Games />}
+              />
+
+              <Route
+                path="picks"
+                element={<Picks />}
+              />
+
+              <Route
+                path="standings"
+                element={<Standings />}
+              />
+
+              <Route
+                path="players"
+                element={<Players />}
+              />
+
+              <Route
+                path="commissioner"
+                element={<Commissioner />}
+              />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </ObscureStatProvider>
     </NFLProvider>
   );
 }
