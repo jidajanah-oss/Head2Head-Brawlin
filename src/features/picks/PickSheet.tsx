@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 
-import FranchiseLogo from "../../components/franchise/FranchiseLogo";
 import {
   SteelBadge,
   SteelCard,
@@ -35,12 +34,14 @@ function getTeamDisplayName(team: string) {
 function getPickBadgeVariant(locked: boolean, selected?: string) {
   if (locked) return "danger";
   if (selected) return "success";
+
   return "gold";
 }
 
 function getPickBadgeLabel(locked: boolean, selected?: string) {
   if (locked) return "Locked";
   if (selected) return "Picked";
+
   return "Open";
 }
 
@@ -63,23 +64,23 @@ function TeamPickOption({
 
   return (
     <button
-      className={`pick-option-v2 ${selected ? "is-selected" : ""}`}
+      className={`pick-option-v2 team-wordmark-button ${
+        selected ? "is-selected" : ""
+      } ${disabled ? "is-disabled" : ""}`.trim()}
       disabled={disabled}
       onClick={onSelect}
       type="button"
     >
       <span className="pick-option-side">{side}</span>
 
-      <FranchiseLogo
-        className="pick-option-logo"
-        displayName={displayName}
-        nflTeam={team}
-        size="md"
-      />
+      <span className="team-wordmark" aria-hidden="true">
+        <strong className="team-wordmark-abbr">{team}</strong>
+        <span className="team-wordmark-name">{displayName}</span>
+      </span>
 
-      <strong>{displayName}</strong>
-
-      <small>{selected ? "Selected" : disabled ? "Locked" : "Tap to pick"}</small>
+      <small>
+        {selected ? "Selected" : disabled ? "Locked" : "Tap to pick"}
+      </small>
     </button>
   );
 }
@@ -168,7 +169,9 @@ function PickSheet() {
             </strong>
 
             <small>
-              {missingCount > 0 ? `${missingCount} still open` : "Card complete"}
+              {missingCount > 0
+                ? `${missingCount} still open`
+                : "Card complete"}
             </small>
           </div>
         }
@@ -268,9 +271,9 @@ function PickSheet() {
 
           return (
             <SteelCard
-              className={`picks-card-v2 ${selected ? "has-selection" : ""} ${
-                locked ? "is-locked" : ""
-              }`.trim()}
+              className={`picks-card-v2 ${
+                selected ? "has-selection" : ""
+              } ${locked ? "is-locked" : ""}`.trim()}
               key={game.id}
               as="article"
             >
@@ -287,7 +290,9 @@ function PickSheet() {
               <div className="picks-matchup-v2">
                 <TeamPickOption
                   disabled={disabled}
-                  onSelect={() => handlePick(game.id, game.awayTeam, locked)}
+                  onSelect={() =>
+                    handlePick(game.id, game.awayTeam, locked)
+                  }
                   selected={selected === game.awayTeam}
                   side="away"
                   team={game.awayTeam}
@@ -297,7 +302,9 @@ function PickSheet() {
 
                 <TeamPickOption
                   disabled={disabled}
-                  onSelect={() => handlePick(game.id, game.homeTeam, locked)}
+                  onSelect={() =>
+                    handlePick(game.id, game.homeTeam, locked)
+                  }
                   selected={selected === game.homeTeam}
                   side="home"
                   team={game.homeTeam}
