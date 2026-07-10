@@ -26,9 +26,23 @@ export type WeeklyPlayerScoringResult = {
   opponentId: string | null;
   opponentName: string;
 
+  /**
+   * Effective score used for the weekly H2H matchup.
+   * This may include copied Picker Clicker picks.
+   */
   correctPicks: number;
   possiblePicks: number;
   missingPicks: number;
+
+  /**
+   * Correct picks eligible for the season correct-pick award.
+   * This is zero when the player needed Picker Clicker assistance.
+   */
+  seasonEligibleCorrectPicks?: number;
+
+  weeklyPrizeEligible?: boolean;
+  usedPickerClicker?: boolean;
+  pickerClickerFallbackCount?: number;
 
   outcome: WeeklyScoringOutcome;
   leaguePointsAwarded: number;
@@ -78,7 +92,10 @@ export type FinalizedWeeklyScoringRecord = {
 
   matchups: FinalizedWeeklyMatchupRecord[];
 
-  playerResults: Record<string, WeeklyPlayerScoringResult>;
+  playerResults: Record<
+    string,
+    WeeklyPlayerScoringResult
+  >;
 };
 
 export type WeeklyScoringHistory = Record<
@@ -96,13 +113,28 @@ export type SeasonPlayerScoringSummary = {
   ties: number;
 
   leaguePoints: number;
+
+  /**
+   * Award-eligible correct picks only.
+   * A Picker Clicker-assisted week contributes zero.
+   */
   seasonCorrectPicks: number;
+
+  /**
+   * All effective correct picks used in H2H scoring,
+   * including copied Picker Clicker selections.
+   */
+  headToHeadCorrectPicks?: number;
+
   seasonPossiblePicks: number;
   seasonMissingPicks: number;
 
   completedHeadToHeadWeeks: number;
   byeWeeks: number;
   openOpponentWeeks: number;
+
+  pickerClickerWeeks?: number;
+  weeklyPrizeIneligibleWeeks?: number;
 };
 
 export function getWeeklyScoringRecordId(

@@ -3,7 +3,9 @@ import { useEffect } from "react";
 import { useLeague } from "../../context/LeagueContext";
 import { useNFL } from "../../context/NFLContext";
 import {
+  buildEffectiveHeadToHeadPicks,
   buildFinalizedWeeklyScoringRecord,
+  getPickerClickerWeekId,
   getWeeklyScoringRecordId,
   inspectNFLWeekCompletion,
 } from "../../engine";
@@ -32,6 +34,7 @@ function WeeklyScoringSync() {
     setGameResults,
     scoringHistory,
     addFinalizedWeeklyScoringRecord,
+    pickerClickerHistory,
   } = useLeague();
 
   const { season, week, snapshot } = useNFL();
@@ -60,12 +63,7 @@ function WeeklyScoringSync() {
       ...completion.gameResults,
     };
 
-    if (
-      !areGameResultsEqual(
-        gameResults,
-        mergedGameResults
-      )
-    ) {
+    if (!areGameResultsEqual(gameResults, mergedGameResults)) {
       setGameResults(mergedGameResults);
     }
 
@@ -81,13 +79,46 @@ function WeeklyScoringSync() {
       return;
     }
 
+    const pickerClickerWeekId = getPickerClickerWeekId(
+      season,
+      week
+    );
+
+    const pickerClickerWeekState =
+      pickerClickerHistory[pickerClickerWeekId];
+
+    if (!pickerClickerWeekState) {
+      return;
+    }
+
+    const processedLockedGameIds = new Set(
+      pickerClickerWeekState.lockedGameIds
+    );
+
+    const completedGamesProcessed =
+      completion.completedGameIds.every((gameId) =>
+        processedLockedGameIds.has(gameId)
+      );
+
+    if (!completedGamesProcessed) {
+      return;
+    }
+
+    const effectivePicks = buildEffectiveHeadToHeadPicks({
+      picks,
+      pickerClickerHistory,
+      season,
+      throughWeek: week,
+    });
+
     const scoringRecord =
       buildFinalizedWeeklyScoringRecord({
         players: league.players,
-        picks,
+        picks: effectivePicks,
         nflGames: snapshot.nflGames,
         season,
         week,
+        pickerClickerWeekState,
       });
 
     if (!scoringRecord) {
@@ -100,6 +131,7 @@ function WeeklyScoringSync() {
     gameResults,
     league.currentWeek,
     league.players,
+    pickerClickerHistory,
     picks,
     scoringHistory,
     season,

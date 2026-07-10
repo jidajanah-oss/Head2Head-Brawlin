@@ -5,6 +5,7 @@ import {
 } from "react-router-dom";
 
 import { NFLProvider } from "./context/NFLContext";
+import PickerClickerSync from "./features/scoring/PickerClickerSync";
 import WeeklyScoringSync from "./features/scoring/WeeklyScoringSync";
 import AppLayout from "./layouts/AppLayout";
 import Commissioner from "./pages/Commissioner";
@@ -17,6 +18,7 @@ import Standings from "./pages/Standings";
 function App() {
   return (
     <NFLProvider>
+      <PickerClickerSync />
       <WeeklyScoringSync />
 
       <BrowserRouter>
@@ -27,6 +29,7 @@ function App() {
             <Route path="picks" element={<Picks />} />
             <Route path="standings" element={<Standings />} />
             <Route path="players" element={<Players />} />
+
             <Route
               path="commissioner"
               element={<Commissioner />}

@@ -319,6 +319,94 @@
   font-size: 0.82rem;
 }
 
+.picks-picker-clicker-card {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  border-color: rgba(245, 197, 66, 0.36);
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(245, 197, 66, 0.18),
+      transparent 36%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.075),
+      rgba(255, 255, 255, 0.025)
+    ),
+    #0d0d0d;
+  box-shadow:
+    inset 0 0 32px rgba(245, 197, 66, 0.05),
+    0 18px 44px rgba(0, 0, 0, 0.3);
+}
+
+.picks-picker-clicker-card::before {
+  content: "PC";
+  position: absolute;
+  top: -18px;
+  right: 10px;
+  color: rgba(245, 197, 66, 0.055);
+  font-size: 7rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: -0.08em;
+  pointer-events: none;
+}
+
+.picks-picker-clicker-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.picks-picker-clicker-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(245, 197, 66, 0.11),
+      rgba(255, 255, 255, 0.025)
+    ),
+    rgba(0, 0, 0, 0.32);
+}
+
+.picks-picker-clicker-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.picks-picker-clicker-copy span {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.69rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.picks-picker-clicker-copy strong {
+  color: #f5c542;
+  font-size: 1.08rem;
+  font-weight: 950;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.picks-picker-clicker-copy small {
+  max-width: 720px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .picks-stat-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -418,9 +506,35 @@
   border-color: rgba(255, 215, 0, 0.42);
 }
 
+.picks-card-v2.has-picker-clicker {
+  border-color: rgba(245, 197, 66, 0.72);
+  box-shadow:
+    inset 0 0 28px rgba(245, 197, 66, 0.07),
+    0 16px 34px rgba(0, 0, 0, 0.28);
+}
+
+.picks-card-v2.has-picker-clicker::before {
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(245, 197, 66, 0.24),
+      transparent 34%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(245, 197, 66, 0.08),
+      transparent 42%
+    );
+}
+
 .picks-card-v2.is-locked {
   border-color: rgba(255, 80, 80, 0.25);
   opacity: 0.86;
+}
+
+.picks-card-v2.has-picker-clicker.is-locked {
+  border-color: rgba(245, 197, 66, 0.58);
+  opacity: 1;
 }
 
 .picks-card-top,
@@ -515,10 +629,31 @@
     0 14px 30px rgba(0, 0, 0, 0.24);
 }
 
+.pick-option-v2.is-picker-clicker {
+  border-color: rgba(245, 197, 66, 0.76);
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(245, 197, 66, 0.055),
+      rgba(245, 197, 66, 0.055) 8px,
+      rgba(255, 255, 255, 0.018) 8px,
+      rgba(255, 255, 255, 0.018) 16px
+    ),
+    rgba(0, 0, 0, 0.34);
+  box-shadow:
+    inset 0 0 26px rgba(245, 197, 66, 0.1),
+    0 14px 30px rgba(0, 0, 0, 0.26);
+}
+
 .pick-option-v2:disabled,
 .pick-option-v2.is-disabled {
   cursor: not-allowed;
   opacity: 0.58;
+}
+
+.pick-option-v2.is-picker-clicker:disabled,
+.pick-option-v2.is-picker-clicker.is-disabled {
+  opacity: 1;
 }
 
 .pick-option-side {
@@ -617,6 +752,23 @@
     0 10px 24px rgba(0, 0, 0, 0.22);
 }
 
+.pick-option-v2.is-picker-clicker .team-wordmark {
+  border-color: rgba(245, 197, 66, 0.84);
+  border-style: dashed;
+  background:
+    radial-gradient(
+      circle at top,
+      rgba(245, 197, 66, 0.32),
+      transparent 70%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(245, 197, 66, 0.13),
+      rgba(255, 255, 255, 0.025)
+    ),
+    #080808;
+}
+
 .pick-option-v2 small {
   color: rgba(255, 255, 255, 0.56);
   font-size: 0.72rem;
@@ -628,6 +780,10 @@
 
 .pick-option-v2.is-selected small {
   color: #f5c542;
+}
+
+.pick-option-v2.is-picker-clicker small {
+  color: #fff3ba;
 }
 
 .picks-card-details {
@@ -673,6 +829,13 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.picks-card-v2.has-picker-clicker .picks-status-v2 {
+  padding: 10px 12px;
+  border: 1px solid rgba(245, 197, 66, 0.24);
+  border-radius: 12px;
+  background: rgba(245, 197, 66, 0.07);
+}
+
 .picks-state-card {
   padding: 20px;
 }
@@ -681,7 +844,28 @@
   border-color: rgba(255, 80, 80, 0.35);
 }
 
+@media (max-width: 540px) {
+  .picks-picker-clicker-body {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+}
+
 @media (max-width: 420px) {
+  .picks-picker-clicker-card {
+    padding: 16px;
+  }
+
+  .picks-picker-clicker-card::before {
+    top: -8px;
+    right: 6px;
+    font-size: 5rem;
+  }
+
+  .picks-picker-clicker-body {
+    padding: 14px;
+  }
+
   .picks-matchup-v2 {
     gap: 7px;
   }

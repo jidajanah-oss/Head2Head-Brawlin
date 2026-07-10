@@ -1,4 +1,12 @@
 import type {
+  PickerClickerAssignment,
+  PickerClickerFallbackPick,
+  PickerClickerFallbackStatus,
+  PickerClickerHistory,
+  PickerClickerWeekFallbacks,
+  PickerClickerWeekState,
+} from "./pickerClickerTypes";
+import type {
   FinalizedWeeklyMatchupRecord,
   FinalizedWeeklyScoringRecord,
   WeeklyPlayerScoringResult,
@@ -8,7 +16,11 @@ import type {
   WeeklyScoringOutcome,
 } from "./weeklyScoringTypes";
 
-export type PersistedPicks = Record<string, Record<string, string>>;
+export type PersistedPicks = Record<
+  string,
+  Record<string, string>
+>;
+
 export type PersistedGameResults = Record<string, string>;
 
 export type LeaguePersistenceState<TLeague> = {
@@ -17,15 +29,19 @@ export type LeaguePersistenceState<TLeague> = {
   activePlayerId: string;
   gameResults: PersistedGameResults;
   scoringHistory: WeeklyScoringHistory;
+  pickerClickerHistory: PickerClickerHistory;
 };
 
-type StoredLeagueSnapshot<TLeague> = LeaguePersistenceState<TLeague> & {
-  schemaVersion: number;
-  savedAt: string;
-};
+type StoredLeagueSnapshot<TLeague> =
+  LeaguePersistenceState<TLeague> & {
+    schemaVersion: number;
+    savedAt: string;
+  };
 
-const STORAGE_KEY = "head2head-brawlin-steel.league.v1";
-const SCHEMA_VERSION = 2;
+const STORAGE_KEY =
+  "head2head-brawlin-steel.league.v1";
+
+const SCHEMA_VERSION = 3;
 
 function isBrowserStorageAvailable() {
   return (
@@ -34,7 +50,9 @@ function isBrowserStorageAvailable() {
   );
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(
+  value: unknown
+): value is Record<string, unknown> {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -42,31 +60,91 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   );
 }
 
-function sanitizeString(value: unknown, fallback = "") {
-  return typeof value === "string" ? value : fallback;
-}
-
-function sanitizeNullableString(value: unknown) {
-  return typeof value === "string" ? value : null;
-}
-
-function sanitizeNumber(value: unknown, fallback = 0) {
-  return typeof value === "number" && Number.isFinite(value)
+function sanitizeString(
+  value: unknown,
+  fallback = ""
+) {
+  return typeof value === "string"
     ? value
     : fallback;
 }
 
-function sanitizeBoolean(value: unknown, fallback = false) {
-  return typeof value === "boolean" ? value : fallback;
+function sanitizeNullableString(value: unknown) {
+  return typeof value === "string"
+    ? value
+    : null;
 }
 
-function sanitizeStringArray(value: unknown): string[] {
+function sanitizeNumber(
+  value: unknown,
+  fallback = 0
+) {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value)
+  )
+    ? value
+    : fallback;
+}
+
+function sanitizeOptionalNumber(
+  value: unknown
+): number | undefined {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value)
+  )
+    ? value
+    : undefined;
+}
+
+function sanitizePositiveInteger(
+  value: unknown,
+  fallback = 0
+) {
+  const numericValue = sanitizeNumber(
+    value,
+    fallback
+  );
+
+  if (numericValue <= 0) {
+    return fallback;
+  }
+
+  return Math.trunc(numericValue);
+}
+
+function sanitizeBoolean(
+  value: unknown,
+  fallback = false
+) {
+  return typeof value === "boolean"
+    ? value
+    : fallback;
+}
+
+function sanitizeOptionalBoolean(
+  value: unknown
+): boolean | undefined {
+  return typeof value === "boolean"
+    ? value
+    : undefined;
+}
+
+function sanitizeStringArray(
+  value: unknown
+): string[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value.filter(
-    (item): item is string => typeof item === "string"
+  return Array.from(
+    new Set(
+      value.filter(
+        (item): item is string =>
+          typeof item === "string"
+      )
+    )
   );
 }
 
@@ -77,36 +155,39 @@ function sanitizeStringRecord(
     return {};
   }
 
-  return Object.entries(value).reduce<Record<string, string>>(
-    (cleaned, [key, recordValue]) => {
-      if (typeof recordValue === "string") {
-        cleaned[key] = recordValue;
-      }
+  return Object.entries(value).reduce<
+    Record<string, string>
+  >((cleaned, [key, recordValue]) => {
+    if (typeof recordValue === "string") {
+      cleaned[key] = recordValue;
+    }
 
-      return cleaned;
-    },
-    {}
-  );
+    return cleaned;
+  }, {});
 }
 
-function sanitizePicks(value: unknown): PersistedPicks {
+function sanitizePicks(
+  value: unknown
+): PersistedPicks {
   if (!isRecord(value)) {
     return {};
   }
 
-  return Object.entries(value).reduce<PersistedPicks>(
-    (cleaned, [playerId, playerPicks]) => {
-      const cleanPlayerPicks =
-        sanitizeStringRecord(playerPicks);
+  return Object.entries(value).reduce<
+    PersistedPicks
+  >((cleaned, [playerId, playerPicks]) => {
+    const cleanPlayerPicks =
+      sanitizeStringRecord(playerPicks);
 
-      if (Object.keys(cleanPlayerPicks).length > 0) {
-        cleaned[playerId] = cleanPlayerPicks;
-      }
+    if (
+      Object.keys(cleanPlayerPicks).length > 0
+    ) {
+      cleaned[playerId] =
+        cleanPlayerPicks;
+    }
 
-      return cleaned;
-    },
-    {}
-  );
+    return cleaned;
+  }, {});
 }
 
 function sanitizeWeeklyScoringOutcome(
@@ -160,9 +241,15 @@ function sanitizeWeeklyPlayerScoringResult(
     return null;
   }
 
-  const outcome = sanitizeWeeklyScoringOutcome(value.outcome);
+  const outcome =
+    sanitizeWeeklyScoringOutcome(
+      value.outcome
+    );
+
   const matchupType =
-    sanitizeWeeklyScoringMatchupType(value.matchupType);
+    sanitizeWeeklyScoringMatchupType(
+      value.matchupType
+    );
 
   if (
     !outcome ||
@@ -176,6 +263,26 @@ function sanitizeWeeklyPlayerScoringResult(
     return null;
   }
 
+  const seasonEligibleCorrectPicks =
+    sanitizeOptionalNumber(
+      value.seasonEligibleCorrectPicks
+    );
+
+  const weeklyPrizeEligible =
+    sanitizeOptionalBoolean(
+      value.weeklyPrizeEligible
+    );
+
+  const usedPickerClicker =
+    sanitizeOptionalBoolean(
+      value.usedPickerClicker
+    );
+
+  const pickerClickerFallbackCount =
+    sanitizeOptionalNumber(
+      value.pickerClickerFallbackCount
+    );
+
   return {
     playerId: value.playerId,
     playerName: value.playerName,
@@ -184,35 +291,87 @@ function sanitizeWeeklyPlayerScoringResult(
     matchupId: value.matchupId,
     matchupType,
 
-    opponentId: sanitizeNullableString(value.opponentId),
+    opponentId:
+      sanitizeNullableString(
+        value.opponentId
+      ),
+
     opponentName: value.opponentName,
 
-    correctPicks: sanitizeNumber(value.correctPicks),
-    possiblePicks: sanitizeNumber(value.possiblePicks),
-    missingPicks: sanitizeNumber(value.missingPicks),
+    correctPicks:
+      sanitizeNumber(
+        value.correctPicks
+      ),
+
+    possiblePicks:
+      sanitizeNumber(
+        value.possiblePicks
+      ),
+
+    missingPicks:
+      sanitizeNumber(
+        value.missingPicks
+      ),
+
+    ...(seasonEligibleCorrectPicks !==
+    undefined
+      ? {
+          seasonEligibleCorrectPicks,
+        }
+      : {}),
+
+    ...(weeklyPrizeEligible !== undefined
+      ? {
+          weeklyPrizeEligible,
+        }
+      : {}),
+
+    ...(usedPickerClicker !== undefined
+      ? {
+          usedPickerClicker,
+        }
+      : {}),
+
+    ...(pickerClickerFallbackCount !==
+    undefined
+      ? {
+          pickerClickerFallbackCount,
+        }
+      : {}),
 
     outcome,
-    leaguePointsAwarded: sanitizeNumber(
-      value.leaguePointsAwarded
-    ),
+
+    leaguePointsAwarded:
+      sanitizeNumber(
+        value.leaguePointsAwarded
+      ),
   };
 }
 
 function sanitizePlayerResults(
   value: unknown
-): Record<string, WeeklyPlayerScoringResult> {
+): Record<
+  string,
+  WeeklyPlayerScoringResult
+> {
   if (!isRecord(value)) {
     return {};
   }
 
   return Object.entries(value).reduce<
-    Record<string, WeeklyPlayerScoringResult>
+    Record<
+      string,
+      WeeklyPlayerScoringResult
+    >
   >((cleaned, [playerId, playerResult]) => {
     const sanitizedResult =
-      sanitizeWeeklyPlayerScoringResult(playerResult);
+      sanitizeWeeklyPlayerScoringResult(
+        playerResult
+      );
 
     if (sanitizedResult) {
-      cleaned[playerId] = sanitizedResult;
+      cleaned[playerId] =
+        sanitizedResult;
     }
 
     return cleaned;
@@ -227,10 +386,14 @@ function sanitizeFinalizedWeeklyMatchupRecord(
   }
 
   const matchupType =
-    sanitizeWeeklyScoringMatchupType(value.matchupType);
+    sanitizeWeeklyScoringMatchupType(
+      value.matchupType
+    );
 
   const status =
-    sanitizeWeeklyScoringMatchupStatus(value.status);
+    sanitizeWeeklyScoringMatchupStatus(
+      value.status
+    );
 
   if (
     !matchupType ||
@@ -252,27 +415,69 @@ function sanitizeFinalizedWeeklyMatchupRecord(
 
   return {
     id: value.id,
-    season: sanitizeNumber(value.season),
-    week: sanitizeNumber(value.week),
+
+    season:
+      sanitizePositiveInteger(
+        value.season
+      ),
+
+    week:
+      sanitizePositiveInteger(
+        value.week
+      ),
 
     matchupId: value.matchupId,
     matchupType,
-    ...(sourceGameId ? { sourceGameId } : {}),
+
+    ...(sourceGameId
+      ? {
+          sourceGameId,
+        }
+      : {}),
 
     playerAId: value.playerAId,
     playerAName: value.playerAName,
     playerATeam: value.playerATeam,
 
-    playerBId: sanitizeNullableString(value.playerBId),
-    playerBName: sanitizeNullableString(value.playerBName),
-    playerBTeam: sanitizeNullableString(value.playerBTeam),
+    playerBId:
+      sanitizeNullableString(
+        value.playerBId
+      ),
 
-    playerAScore: sanitizeNumber(value.playerAScore),
-    playerBScore: sanitizeNumber(value.playerBScore),
-    possiblePoints: sanitizeNumber(value.possiblePoints),
+    playerBName:
+      sanitizeNullableString(
+        value.playerBName
+      ),
 
-    winnerId: sanitizeNullableString(value.winnerId),
-    isTie: sanitizeBoolean(value.isTie),
+    playerBTeam:
+      sanitizeNullableString(
+        value.playerBTeam
+      ),
+
+    playerAScore:
+      sanitizeNumber(
+        value.playerAScore
+      ),
+
+    playerBScore:
+      sanitizeNumber(
+        value.playerBScore
+      ),
+
+    possiblePoints:
+      sanitizeNumber(
+        value.possiblePoints
+      ),
+
+    winnerId:
+      sanitizeNullableString(
+        value.winnerId
+      ),
+
+    isTie:
+      sanitizeBoolean(
+        value.isTie
+      ),
 
     status,
     resultLabel: value.resultLabel,
@@ -286,19 +491,20 @@ function sanitizeFinalizedWeeklyMatchups(
     return [];
   }
 
-  return value.reduce<FinalizedWeeklyMatchupRecord[]>(
-    (cleaned, matchup) => {
-      const sanitizedMatchup =
-        sanitizeFinalizedWeeklyMatchupRecord(matchup);
+  return value.reduce<
+    FinalizedWeeklyMatchupRecord[]
+  >((cleaned, matchup) => {
+    const sanitizedMatchup =
+      sanitizeFinalizedWeeklyMatchupRecord(
+        matchup
+      );
 
-      if (sanitizedMatchup) {
-        cleaned.push(sanitizedMatchup);
-      }
+    if (sanitizedMatchup) {
+      cleaned.push(sanitizedMatchup);
+    }
 
-      return cleaned;
-    },
-    []
-  );
+    return cleaned;
+  }, []);
 }
 
 function sanitizeFinalizedWeeklyScoringRecord(
@@ -309,46 +515,73 @@ function sanitizeFinalizedWeeklyScoringRecord(
     return null;
   }
 
-  const season = sanitizeNumber(value.season);
-  const week = sanitizeNumber(value.week);
+  const season =
+    sanitizePositiveInteger(
+      value.season
+    );
+
+  const week =
+    sanitizePositiveInteger(
+      value.week
+    );
 
   if (season <= 0 || week <= 0) {
     return null;
   }
 
   return {
-    id: sanitizeString(value.id, fallbackId),
+    id: sanitizeString(
+      value.id,
+      fallbackId
+    ),
+
     season,
     week,
-    finalizedAt: sanitizeString(value.finalizedAt),
 
-    totalScheduledGames: sanitizeNumber(
-      value.totalScheduledGames
-    ),
-    completedGameCount: sanitizeNumber(
-      value.completedGameCount
-    ),
-    canceledGameCount: sanitizeNumber(
-      value.canceledGameCount
-    ),
-    eligibleScoringGameCount: sanitizeNumber(
-      value.eligibleScoringGameCount
-    ),
+    finalizedAt:
+      sanitizeString(
+        value.finalizedAt
+      ),
 
-    completedGameIds: sanitizeStringArray(
-      value.completedGameIds
-    ),
-    canceledGameIds: sanitizeStringArray(
-      value.canceledGameIds
-    ),
+    totalScheduledGames:
+      sanitizeNumber(
+        value.totalScheduledGames
+      ),
 
-    matchups: sanitizeFinalizedWeeklyMatchups(
-      value.matchups
-    ),
+    completedGameCount:
+      sanitizeNumber(
+        value.completedGameCount
+      ),
 
-    playerResults: sanitizePlayerResults(
-      value.playerResults
-    ),
+    canceledGameCount:
+      sanitizeNumber(
+        value.canceledGameCount
+      ),
+
+    eligibleScoringGameCount:
+      sanitizeNumber(
+        value.eligibleScoringGameCount
+      ),
+
+    completedGameIds:
+      sanitizeStringArray(
+        value.completedGameIds
+      ),
+
+    canceledGameIds:
+      sanitizeStringArray(
+        value.canceledGameIds
+      ),
+
+    matchups:
+      sanitizeFinalizedWeeklyMatchups(
+        value.matchups
+      ),
+
+    playerResults:
+      sanitizePlayerResults(
+        value.playerResults
+      ),
   };
 }
 
@@ -359,16 +592,318 @@ function sanitizeWeeklyScoringHistory(
     return {};
   }
 
-  return Object.entries(value).reduce<WeeklyScoringHistory>(
-    (cleaned, [recordId, recordValue]) => {
-      const sanitizedRecord =
-        sanitizeFinalizedWeeklyScoringRecord(
-          recordValue,
-          recordId
+  return Object.entries(value).reduce<
+    WeeklyScoringHistory
+  >((cleaned, [recordId, recordValue]) => {
+    const sanitizedRecord =
+      sanitizeFinalizedWeeklyScoringRecord(
+        recordValue,
+        recordId
+      );
+
+    if (sanitizedRecord) {
+      cleaned[sanitizedRecord.id] =
+        sanitizedRecord;
+    }
+
+    return cleaned;
+  }, {});
+}
+
+function sanitizePickerClickerFallbackStatus(
+  value: unknown
+): PickerClickerFallbackStatus | null {
+  if (
+    value === "copied" ||
+    value === "no-source-pick"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function sanitizePickerClickerAssignment(
+  value: unknown
+): PickerClickerAssignment | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const season =
+    sanitizePositiveInteger(
+      value.season
+    );
+
+  const week =
+    sanitizePositiveInteger(
+      value.week
+    );
+
+  const cycleNumber =
+    sanitizePositiveInteger(
+      value.cycleNumber,
+      1
+    );
+
+  if (
+    season <= 0 ||
+    week <= 0 ||
+    typeof value.id !== "string" ||
+    typeof value.sourcePlayerId !==
+      "string" ||
+    typeof value.sourcePlayerName !==
+      "string" ||
+    typeof value.sourceNFLTeam !==
+      "string"
+  ) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    season,
+    week,
+
+    sourcePlayerId:
+      value.sourcePlayerId,
+
+    sourcePlayerName:
+      value.sourcePlayerName,
+
+    sourceNFLTeam:
+      value.sourceNFLTeam,
+
+    cycleNumber,
+
+    assignedAt:
+      sanitizeString(
+        value.assignedAt
+      ),
+  };
+}
+
+function sanitizePickerClickerFallbackPick(
+  value: unknown
+): PickerClickerFallbackPick | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const status =
+    sanitizePickerClickerFallbackStatus(
+      value.status
+    );
+
+  const season =
+    sanitizePositiveInteger(
+      value.season
+    );
+
+  const week =
+    sanitizePositiveInteger(
+      value.week
+    );
+
+  if (
+    !status ||
+    season <= 0 ||
+    week <= 0 ||
+    typeof value.id !== "string" ||
+    typeof value.gameId !== "string" ||
+    typeof value.playerId !== "string" ||
+    typeof value.sourcePlayerId !==
+      "string"
+  ) {
+    return null;
+  }
+
+  const team =
+    sanitizeNullableString(value.team);
+
+  if (
+    status === "copied" &&
+    !team
+  ) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    season,
+    week,
+    gameId: value.gameId,
+
+    playerId: value.playerId,
+
+    sourcePlayerId:
+      value.sourcePlayerId,
+
+    team:
+      status === "copied"
+        ? team
+        : null,
+
+    status,
+
+    appliedAt:
+      sanitizeString(
+        value.appliedAt
+      ),
+  };
+}
+
+function sanitizePickerClickerWeekFallbacks(
+  value: unknown
+): PickerClickerWeekFallbacks {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce<
+    PickerClickerWeekFallbacks
+  >(
+    (
+      cleanedPlayers,
+      [playerId, playerFallbacks]
+    ) => {
+      if (!isRecord(playerFallbacks)) {
+        return cleanedPlayers;
+      }
+
+      const cleanPlayerFallbacks =
+        Object.entries(
+          playerFallbacks
+        ).reduce<
+          Record<
+            string,
+            PickerClickerFallbackPick
+          >
+        >(
+          (
+            cleanedGames,
+            [gameId, fallbackValue]
+          ) => {
+            const sanitizedFallback =
+              sanitizePickerClickerFallbackPick(
+                fallbackValue
+              );
+
+            if (sanitizedFallback) {
+              cleanedGames[gameId] =
+                sanitizedFallback;
+            }
+
+            return cleanedGames;
+          },
+          {}
         );
 
-      if (sanitizedRecord) {
-        cleaned[sanitizedRecord.id] = sanitizedRecord;
+      if (
+        Object.keys(
+          cleanPlayerFallbacks
+        ).length > 0
+      ) {
+        cleanedPlayers[playerId] =
+          cleanPlayerFallbacks;
+      }
+
+      return cleanedPlayers;
+    },
+    {}
+  );
+}
+
+function sanitizePickerClickerWeekState(
+  value: unknown,
+  fallbackId: string
+): PickerClickerWeekState | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const assignment =
+    sanitizePickerClickerAssignment(
+      value.assignment
+    );
+
+  const season =
+    sanitizePositiveInteger(
+      value.season
+    );
+
+  const week =
+    sanitizePositiveInteger(
+      value.week
+    );
+
+  if (
+    !assignment ||
+    season <= 0 ||
+    week <= 0 ||
+    assignment.season !== season ||
+    assignment.week !== week
+  ) {
+    return null;
+  }
+
+  return {
+    id: sanitizeString(
+      value.id,
+      fallbackId
+    ),
+
+    season,
+    week,
+
+    assignment,
+
+    fallbackPicks:
+      sanitizePickerClickerWeekFallbacks(
+        value.fallbackPicks
+      ),
+
+    ineligiblePlayerIds:
+      sanitizeStringArray(
+        value.ineligiblePlayerIds
+      ),
+
+    lockedGameIds:
+      sanitizeStringArray(
+        value.lockedGameIds
+      ),
+
+    updatedAt:
+      sanitizeString(
+        value.updatedAt,
+        assignment.assignedAt
+      ),
+  };
+}
+
+function sanitizePickerClickerHistory(
+  value: unknown
+): PickerClickerHistory {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce<
+    PickerClickerHistory
+  >(
+    (
+      cleaned,
+      [weekStateId, weekStateValue]
+    ) => {
+      const sanitizedWeekState =
+        sanitizePickerClickerWeekState(
+          weekStateValue,
+          weekStateId
+        );
+
+      if (sanitizedWeekState) {
+        cleaned[sanitizedWeekState.id] =
+          sanitizedWeekState;
       }
 
       return cleaned;
@@ -394,16 +929,20 @@ function mergeLeagueState<TLeague>(
   } as TLeague;
 }
 
-export function loadPersistedLeagueState<TLeague>(
+export function loadPersistedLeagueState<
+  TLeague,
+>(
   fallbackLeague: TLeague
 ): LeaguePersistenceState<TLeague> {
-  const fallbackState: LeaguePersistenceState<TLeague> = {
-    league: fallbackLeague,
-    picks: {},
-    activePlayerId: "",
-    gameResults: {},
-    scoringHistory: {},
-  };
+  const fallbackState: LeaguePersistenceState<TLeague> =
+    {
+      league: fallbackLeague,
+      picks: {},
+      activePlayerId: "",
+      gameResults: {},
+      scoringHistory: {},
+      pickerClickerHistory: {},
+    };
 
   if (!isBrowserStorageAvailable()) {
     return fallbackState;
@@ -411,7 +950,9 @@ export function loadPersistedLeagueState<TLeague>(
 
   try {
     const rawSnapshot =
-      window.localStorage.getItem(STORAGE_KEY);
+      window.localStorage.getItem(
+        STORAGE_KEY
+      );
 
     if (!rawSnapshot) {
       return fallbackState;
@@ -419,7 +960,9 @@ export function loadPersistedLeagueState<TLeague>(
 
     const parsedSnapshot = JSON.parse(
       rawSnapshot
-    ) as Partial<StoredLeagueSnapshot<TLeague>>;
+    ) as Partial<
+      StoredLeagueSnapshot<TLeague>
+    >;
 
     if (!isRecord(parsedSnapshot)) {
       return fallbackState;
@@ -431,27 +974,40 @@ export function loadPersistedLeagueState<TLeague>(
         parsedSnapshot.league
       ),
 
-      picks: sanitizePicks(parsedSnapshot.picks),
+      picks:
+        sanitizePicks(
+          parsedSnapshot.picks
+        ),
 
       activePlayerId:
-        typeof parsedSnapshot.activePlayerId === "string"
+        typeof parsedSnapshot.activePlayerId ===
+        "string"
           ? parsedSnapshot.activePlayerId
           : "",
 
-      gameResults: sanitizeStringRecord(
-        parsedSnapshot.gameResults
-      ),
+      gameResults:
+        sanitizeStringRecord(
+          parsedSnapshot.gameResults
+        ),
 
-      scoringHistory: sanitizeWeeklyScoringHistory(
-        parsedSnapshot.scoringHistory
-      ),
+      scoringHistory:
+        sanitizeWeeklyScoringHistory(
+          parsedSnapshot.scoringHistory
+        ),
+
+      pickerClickerHistory:
+        sanitizePickerClickerHistory(
+          parsedSnapshot.pickerClickerHistory
+        ),
     };
   } catch {
     return fallbackState;
   }
 }
 
-export function savePersistedLeagueState<TLeague>(
+export function savePersistedLeagueState<
+  TLeague,
+>(
   state: LeaguePersistenceState<TLeague>
 ): boolean {
   if (!isBrowserStorageAvailable()) {
@@ -459,16 +1015,29 @@ export function savePersistedLeagueState<TLeague>(
   }
 
   try {
-    const snapshot: StoredLeagueSnapshot<TLeague> = {
-      schemaVersion: SCHEMA_VERSION,
-      savedAt: new Date().toISOString(),
+    const snapshot: StoredLeagueSnapshot<TLeague> =
+      {
+        schemaVersion:
+          SCHEMA_VERSION,
 
-      league: state.league,
-      picks: state.picks,
-      activePlayerId: state.activePlayerId,
-      gameResults: state.gameResults,
-      scoringHistory: state.scoringHistory,
-    };
+        savedAt:
+          new Date().toISOString(),
+
+        league: state.league,
+        picks: state.picks,
+
+        activePlayerId:
+          state.activePlayerId,
+
+        gameResults:
+          state.gameResults,
+
+        scoringHistory:
+          state.scoringHistory,
+
+        pickerClickerHistory:
+          state.pickerClickerHistory,
+      };
 
     window.localStorage.setItem(
       STORAGE_KEY,
@@ -487,7 +1056,10 @@ export function clearPersistedLeagueState(): boolean {
   }
 
   try {
-    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(
+      STORAGE_KEY
+    );
+
     return true;
   } catch {
     return false;
