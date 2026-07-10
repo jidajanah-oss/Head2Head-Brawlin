@@ -10,12 +10,15 @@ import {
 import type { ReactNode } from "react";
 
 import {
+  applyObscureStatCoinFlipResolution,
   buildObscureStatAwardResult,
+  getObscureStatCoinFlipId,
   getObscureStatRule,
   NFLGameStatsProviderFactory,
 } from "../engine";
 import type {
   ObscureStatAwardResult,
+  ObscureStatCoinFlipResolution,
   ObscureStatGameStatsById,
   ObscureStatRule,
 } from "../engine";
@@ -24,7 +27,13 @@ import { useNFL } from "./NFLContext";
 
 type ObscureStatContextValue = {
   rule: ObscureStatRule;
+
+  baseResult: ObscureStatAwardResult;
   result: ObscureStatAwardResult;
+
+  coinFlipResolution:
+    | ObscureStatCoinFlipResolution
+    | null;
 
   gameStatsById:
     ObscureStatGameStatsById;
@@ -56,6 +65,7 @@ export function ObscureStatProvider({
   const {
     league,
     scoringHistory,
+    obscureStatCoinFlipHistory,
   } = useLeague();
 
   const {
@@ -64,10 +74,12 @@ export function ObscureStatProvider({
     snapshot,
   } = useNFL();
 
-  const [gameStatsById, setGameStatsById] =
-    useState<ObscureStatGameStatsById>(
-      {},
-    );
+  const [
+    gameStatsById,
+    setGameStatsById,
+  ] = useState<ObscureStatGameStatsById>(
+    {},
+  );
 
   const [loading, setLoading] =
     useState(false);
@@ -101,6 +113,7 @@ export function ObscureStatProvider({
       nextWeekKey;
 
     gameStatsRef.current = {};
+
     setGameStatsById({});
     setError(null);
     setLoading(false);
@@ -159,6 +172,7 @@ export function ObscureStatProvider({
             missingCompletedGames.map(
               async (game) => ({
                 gameId: game.id,
+
                 snapshot:
                   await provider.getGameStatsById(
                     game.id,
@@ -257,13 +271,15 @@ export function ObscureStatProvider({
       ? snapshot
       : null;
 
-  const result = useMemo(
+  const baseResult = useMemo(
     () =>
       buildObscureStatAwardResult({
         players: league.players,
+
         nflGames:
           matchingSnapshot
             ?.nflGames ?? [],
+
         gameStatsById,
         scoringHistory,
         season,
@@ -279,18 +295,50 @@ export function ObscureStatProvider({
     ],
   );
 
+  const coinFlipResolutionId =
+    getObscureStatCoinFlipId(
+      season,
+      league.currentWeek,
+    );
+
+  const coinFlipResolution =
+    obscureStatCoinFlipHistory[
+      coinFlipResolutionId
+    ] ?? null;
+
+  const result = useMemo(
+    () =>
+      applyObscureStatCoinFlipResolution(
+        baseResult,
+        coinFlipResolution,
+      ),
+    [
+      baseResult,
+      coinFlipResolution,
+    ],
+  );
+
   const value = useMemo(
     () => ({
       rule,
+
+      baseResult,
       result,
+
+      coinFlipResolution,
+
       gameStatsById,
+
       loading,
       error,
+
       refresh,
     }),
     [
       rule,
+      baseResult,
       result,
+      coinFlipResolution,
       gameStatsById,
       loading,
       error,

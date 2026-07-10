@@ -338,6 +338,7 @@ function SetupWizard() {
       <ObscureStatAwardCard
         className="commissioner-obscure-stat-award"
         showLeaderboard
+        showCoinFlipControls
       />
 
       <SteelCard

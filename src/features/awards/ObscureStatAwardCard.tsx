@@ -1,3 +1,8 @@
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import FranchiseLogo from "../../components/franchise/FranchiseLogo";
 import {
   SteelBadge,
@@ -7,6 +12,9 @@ import {
 } from "../../components/steel";
 import { useLeague } from "../../context/LeagueContext";
 import { useObscureStat } from "../../context/ObscureStatContext";
+import {
+  createObscureStatCoinFlipResolution,
+} from "../../engine";
 import type {
   ObscureStatAwardCandidate,
   ObscureStatAwardResolutionMethod,
@@ -19,6 +27,7 @@ import "../../styles/obscure-stat-award.css";
 type ObscureStatAwardCardProps = {
   className?: string;
   showLeaderboard?: boolean;
+  showCoinFlipControls?: boolean;
 };
 
 type BadgeVariant =
@@ -190,10 +199,19 @@ function getPendingMessage(
   }
 
   return {
-    title: "Waiting for final NFL statistics",
+    title:
+      "Waiting for final NFL statistics",
     detail:
       "The award will be calculated after every required NFL game for this week is final.",
   };
+}
+
+function getActionErrorMessage(
+  error: unknown,
+): string {
+  return error instanceof Error
+    ? error.message
+    : "Unable to save the offline coin-flip winner.";
 }
 
 function ObscureStatCandidateRow({
@@ -299,16 +317,59 @@ function ObscureStatCandidateRow({
 function ObscureStatAwardCard({
   className = "",
   showLeaderboard = false,
+  showCoinFlipControls = false,
 }: ObscureStatAwardCardProps) {
-  const { league } = useLeague();
+  const {
+    league,
+    upsertObscureStatCoinFlipResolution,
+    clearObscureStatCoinFlipResolution,
+  } = useLeague();
 
   const {
     rule,
+    baseResult,
     result,
+    coinFlipResolution,
     loading,
     error,
     refresh,
   } = useObscureStat();
+
+  const coinFlipCandidates =
+    baseResult.candidates.filter(
+      (candidate) =>
+        baseResult.coinFlipPlayerIds.includes(
+          candidate.playerId,
+        ),
+    );
+
+  const defaultCoinFlipWinnerId =
+    coinFlipResolution?.winnerPlayerId ??
+    coinFlipCandidates[0]?.playerId ??
+    "";
+
+  const [
+    selectedCoinFlipWinnerId,
+    setSelectedCoinFlipWinnerId,
+  ] = useState(
+    defaultCoinFlipWinnerId,
+  );
+
+  const [
+    coinFlipActionError,
+    setCoinFlipActionError,
+  ] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedCoinFlipWinnerId(
+      defaultCoinFlipWinnerId,
+    );
+
+    setCoinFlipActionError(null);
+  }, [
+    defaultCoinFlipWinnerId,
+    baseResult.id,
+  ]);
 
   const winnerPlayer =
     result.winner
@@ -319,16 +380,25 @@ function ObscureStatAwardCard({
         )
       : null;
 
-  const coinFlipCandidates =
-    result.candidates.filter(
+  const savedCoinFlipWinner =
+    coinFlipCandidates.find(
       (candidate) =>
-        result.coinFlipPlayerIds.includes(
-          candidate.playerId,
-        ),
+        candidate.playerId ===
+        coinFlipResolution
+          ?.winnerPlayerId,
     );
 
   const pendingMessage =
     getPendingMessage(result);
+
+  const shouldShowCoinFlipPanel =
+    baseResult.status ===
+      "coin-flip-required" &&
+    (
+      showCoinFlipControls ||
+      result.status ===
+        "coin-flip-required"
+    );
 
   const classes = [
     "obscure-stat-award-card",
@@ -337,6 +407,47 @@ function ObscureStatAwardCard({
   ]
     .filter(Boolean)
     .join(" ");
+
+  const recordCoinFlipWinner = () => {
+    setCoinFlipActionError(null);
+
+    try {
+      const resolution =
+        createObscureStatCoinFlipResolution({
+          result: baseResult,
+
+          winnerPlayerId:
+            selectedCoinFlipWinnerId,
+        });
+
+      upsertObscureStatCoinFlipResolution(
+        resolution,
+      );
+    } catch (actionError) {
+      setCoinFlipActionError(
+        getActionErrorMessage(
+          actionError,
+        ),
+      );
+    }
+  };
+
+  const clearCoinFlipWinner = () => {
+    if (!coinFlipResolution) {
+      return;
+    }
+
+    clearObscureStatCoinFlipResolution(
+      coinFlipResolution.id,
+    );
+
+    setSelectedCoinFlipWinnerId(
+      coinFlipCandidates[0]
+        ?.playerId ?? "",
+    );
+
+    setCoinFlipActionError(null);
+  };
 
   return (
     <SteelCard
@@ -375,14 +486,17 @@ function ObscureStatAwardCard({
       <div className="obscure-stat-rule-summary">
         <div>
           <span>Selected Stat</span>
+
           <strong>{rule.label}</strong>
         </div>
 
         <div>
           <span>Winning Direction</span>
+
           <strong>
             {rule.direction
-              ? rule.direction === "highest"
+              ? rule.direction ===
+                "highest"
                 ? "Highest"
                 : "Lowest"
               : "—"}
@@ -391,6 +505,7 @@ function ObscureStatAwardCard({
 
         <div>
           <span>Payout</span>
+
           <strong>
             {rule.payoutDollars > 0
               ? `$${rule.payoutDollars}`
@@ -407,13 +522,14 @@ function ObscureStatAwardCard({
 
           <div>
             <strong>
-              No obscure-stat award this week
+              No obscure-stat award this
+              week
             </strong>
 
             <p>
-              The scheduled award returns on
-              the next active obscure-stat
-              week.
+              The scheduled award returns
+              on the next active
+              obscure-stat week.
             </p>
           </div>
         </div>
@@ -441,7 +557,8 @@ function ObscureStatAwardCard({
         </div>
       ) : null}
 
-      {result.status === "unavailable" ? (
+      {result.status ===
+      "unavailable" ? (
         <div className="obscure-stat-state-panel is-error">
           <div className="obscure-stat-state-icon">
             !
@@ -508,7 +625,8 @@ function ObscureStatAwardCard({
 
           <div className="obscure-stat-winner-identity">
             <span>
-              Official Week {result.week} Winner
+              Official Week {result.week}{" "}
+              Winner
             </span>
 
             <strong>
@@ -544,23 +662,24 @@ function ObscureStatAwardCard({
         </div>
       ) : null}
 
-      {result.status ===
-      "coin-flip-required" ? (
+      {shouldShowCoinFlipPanel ? (
         <div className="obscure-stat-coin-flip">
           <div className="obscure-stat-state-icon">
             🪙
           </div>
 
-          <div>
+          <div className="obscure-stat-coin-flip-body">
             <strong>
-              Offline coin flip required
+              {coinFlipResolution
+                ? "Offline coin flip winner recorded"
+                : "Offline coin flip required"}
             </strong>
 
             <p>
-              The obscure stat, weekly
-              correct picks, standings
-              points, and assigned NFL team
-              result are still tied.
+              {coinFlipResolution &&
+              savedCoinFlipWinner
+                ? `${savedCoinFlipWinner.playerName} is currently recorded as the offline coin-flip winner.`
+                : "The obscure stat, weekly correct picks, standings points, and assigned NFL team result are still tied."}
             </p>
 
             <div className="obscure-stat-coin-flip-players">
@@ -570,12 +689,113 @@ function ObscureStatAwardCard({
                     key={
                       candidate.playerId
                     }
+                    className={
+                      candidate.playerId ===
+                      coinFlipResolution
+                        ?.winnerPlayerId
+                        ? "is-selected"
+                        : ""
+                    }
                   >
                     {candidate.playerName}
                   </span>
                 ),
               )}
             </div>
+
+            {showCoinFlipControls ? (
+              <div className="obscure-stat-coin-flip-controls">
+                <label
+                  htmlFor={`obscure-stat-coin-flip-winner-${result.week}`}
+                >
+                  <span>
+                    Offline Coin Flip Winner
+                  </span>
+
+                  <select
+                    id={`obscure-stat-coin-flip-winner-${result.week}`}
+                    name={`obscure-stat-coin-flip-winner-${result.week}`}
+                    value={
+                      selectedCoinFlipWinnerId
+                    }
+                    onChange={(event) => {
+                      setSelectedCoinFlipWinnerId(
+                        event.target.value,
+                      );
+
+                      setCoinFlipActionError(
+                        null,
+                      );
+                    }}
+                  >
+                    {coinFlipCandidates.map(
+                      (candidate) => (
+                        <option
+                          key={
+                            candidate.playerId
+                          }
+                          value={
+                            candidate.playerId
+                          }
+                        >
+                          {
+                            candidate.playerName
+                          }{" "}
+                          —{" "}
+                          {
+                            candidate.nflTeam
+                          }
+                        </option>
+                      ),
+                    )}
+                  </select>
+
+                  <small>
+                    Conduct the coin flip
+                    offline, then record the
+                    winner here.
+                  </small>
+                </label>
+
+                <div className="obscure-stat-coin-flip-actions">
+                  <SteelButton
+                    disabled={
+                      !selectedCoinFlipWinnerId
+                    }
+                    onClick={
+                      recordCoinFlipWinner
+                    }
+                    size="sm"
+                    variant="primary"
+                  >
+                    {coinFlipResolution
+                      ? "Update Winner"
+                      : "Record Winner"}
+                  </SteelButton>
+
+                  {coinFlipResolution ? (
+                    <SteelButton
+                      onClick={
+                        clearCoinFlipWinner
+                      }
+                      size="sm"
+                      variant="danger"
+                    >
+                      Clear Decision
+                    </SteelButton>
+                  ) : null}
+                </div>
+
+                {coinFlipActionError ? (
+                  <p
+                    className="obscure-stat-coin-flip-action-error"
+                    role="alert"
+                  >
+                    {coinFlipActionError}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -618,6 +838,7 @@ function ObscureStatAwardCard({
       <div className="obscure-stat-award-footer">
         <div>
           <span>Eligible Players</span>
+
           <strong>
             {result.eligiblePlayerCount}
           </strong>
@@ -625,13 +846,17 @@ function ObscureStatAwardCard({
 
         <div>
           <span>Unavailable</span>
+
           <strong>
-            {result.unavailablePlayerCount}
+            {
+              result.unavailablePlayerCount
+            }
           </strong>
         </div>
 
         <div>
           <span>Weekly Scoring</span>
+
           <strong>
             {result.weeklyScoringFinalized
               ? "Final"
@@ -641,6 +866,7 @@ function ObscureStatAwardCard({
 
         <div>
           <span>NFL Statistics</span>
+
           <strong>
             {result.allRequiredGameStatsFinal
               ? "Final"

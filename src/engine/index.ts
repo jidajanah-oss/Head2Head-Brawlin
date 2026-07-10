@@ -5,6 +5,8 @@ export * from "./nfl";
 export * from "./nflTeamOwnership";
 export * from "./obscureStatAwardEngine";
 export * from "./obscureStatAwardTypes";
+export * from "./obscureStatCoinFlipEngine";
+export * from "./obscureStatCoinFlipTypes";
 export * from "./obscureStatSchedule";
 export * from "./obscureStatTypes";
 export * from "./pickerClickerEngine";

@@ -16,6 +16,10 @@ import type {
   PersistedPicks,
 } from "../engine/leaguePersistence";
 import type {
+  ObscureStatCoinFlipHistory,
+  ObscureStatCoinFlipResolution,
+} from "../engine/obscureStatCoinFlipTypes";
+import type {
   PickerClickerHistory,
   PickerClickerWeekState,
 } from "../engine/pickerClickerTypes";
@@ -78,6 +82,18 @@ type LeagueContextType = {
     weekState: PickerClickerWeekState,
   ) => void;
 
+  // OBSCURE STAT OFFLINE COIN FLIP
+  obscureStatCoinFlipHistory:
+    ObscureStatCoinFlipHistory;
+
+  upsertObscureStatCoinFlipResolution: (
+    resolution: ObscureStatCoinFlipResolution,
+  ) => void;
+
+  clearObscureStatCoinFlipResolution: (
+    resolutionId: string,
+  ) => void;
+
   // PERSISTENCE
   resetLeaguePersistence: () => void;
 };
@@ -93,7 +109,8 @@ function resolveActivePlayerId(
   if (
     activePlayerId &&
     players.some(
-      (player) => player.id === activePlayerId,
+      (player) =>
+        player.id === activePlayerId,
     )
   ) {
     return activePlayerId;
@@ -116,7 +133,8 @@ function removePicksForMissingPlayers(
       [playerId, playerPicks],
     ) => {
       if (validPlayerIds.has(playerId)) {
-        cleanedPicks[playerId] = playerPicks;
+        cleanedPicks[playerId] =
+          playerPicks;
       }
 
       return cleanedPicks;
@@ -130,9 +148,10 @@ function normalizeLeagueWeek(
 ): LeagueState {
   return {
     ...league,
-    currentWeek: clampRegularSeasonWeek(
-      league.currentWeek,
-    ),
+    currentWeek:
+      clampRegularSeasonWeek(
+        league.currentWeek,
+      ),
   };
 }
 
@@ -141,22 +160,27 @@ export function LeagueProvider({
 }: {
   children: ReactNode;
 }) {
-  const [persistedStartState] = useState(() =>
-    loadPersistedLeagueState(initialLeagueState),
-  );
+  const [persistedStartState] =
+    useState(() =>
+      loadPersistedLeagueState(
+        initialLeagueState,
+      ),
+    );
 
-  const [league, setLeague] = useState(() =>
-    normalizeLeagueWeek(
-      persistedStartState.league,
-    ),
-  );
+  const [league, setLeague] =
+    useState(() =>
+      normalizeLeagueWeek(
+        persistedStartState.league,
+      ),
+    );
 
-  const [picks, setPicks] = useState(() =>
-    removePicksForMissingPlayers(
-      persistedStartState.picks,
-      persistedStartState.league.players,
-    ),
-  );
+  const [picks, setPicks] =
+    useState(() =>
+      removePicksForMissingPlayers(
+        persistedStartState.picks,
+        persistedStartState.league.players,
+      ),
+    );
 
   const [
     activePlayerId,
@@ -189,6 +213,14 @@ export function LeagueProvider({
     persistedStartState.pickerClickerHistory,
   );
 
+  const [
+    obscureStatCoinFlipHistory,
+    setObscureStatCoinFlipHistory,
+  ] = useState(
+    persistedStartState
+      .obscureStatCoinFlipHistory,
+  );
+
   useEffect(() => {
     savePersistedLeagueState({
       league,
@@ -197,6 +229,7 @@ export function LeagueProvider({
       gameResults,
       scoringHistory,
       pickerClickerHistory,
+      obscureStatCoinFlipHistory,
     });
   }, [
     league,
@@ -205,9 +238,12 @@ export function LeagueProvider({
     gameResults,
     scoringHistory,
     pickerClickerHistory,
+    obscureStatCoinFlipHistory,
   ]);
 
-  const setPlayers = (players: Player[]) => {
+  const setPlayers = (
+    players: Player[],
+  ) => {
     setLeague((previousLeague) => ({
       ...previousLeague,
       players,
@@ -229,7 +265,9 @@ export function LeagueProvider({
     );
   };
 
-  const addPlayer = (player: Player) => {
+  const addPlayer = (
+    player: Player,
+  ) => {
     setLeague((previousLeague) => ({
       ...previousLeague,
       players: [
@@ -249,7 +287,8 @@ export function LeagueProvider({
   ) => {
     const remainingPlayers =
       league.players.filter(
-        (player) => player.id !== playerId,
+        (player) =>
+          player.id !== playerId,
       );
 
     setLeague((previousLeague) => ({
@@ -286,7 +325,9 @@ export function LeagueProvider({
     );
   };
 
-  const updateGame = (game: Game) => {
+  const updateGame = (
+    game: Game,
+  ) => {
     setLeague((previousLeague) => ({
       ...previousLeague,
       games:
@@ -383,6 +424,51 @@ export function LeagueProvider({
     );
   };
 
+  const upsertObscureStatCoinFlipResolution =
+    (
+      resolution:
+        ObscureStatCoinFlipResolution,
+    ) => {
+      setObscureStatCoinFlipHistory(
+        (previousHistory) => ({
+          ...previousHistory,
+          [resolution.id]: resolution,
+        }),
+      );
+    };
+
+  const clearObscureStatCoinFlipResolution =
+    (resolutionId: string) => {
+      const normalizedResolutionId =
+        resolutionId.trim();
+
+      if (!normalizedResolutionId) {
+        return;
+      }
+
+      setObscureStatCoinFlipHistory(
+        (previousHistory) => {
+          if (
+            !previousHistory[
+              normalizedResolutionId
+            ]
+          ) {
+            return previousHistory;
+          }
+
+          const nextHistory = {
+            ...previousHistory,
+          };
+
+          delete nextHistory[
+            normalizedResolutionId
+          ];
+
+          return nextHistory;
+        },
+      );
+    };
+
   const resetLeaguePersistence = () => {
     clearPersistedLeagueState();
 
@@ -391,10 +477,13 @@ export function LeagueProvider({
         initialLeagueState,
       ),
     );
+
     setPicks({});
     setGameResults({});
     setScoringHistory({});
     setPickerClickerHistory({});
+    setObscureStatCoinFlipHistory({});
+
     setActivePlayerId(
       resolveActivePlayerId(
         "",
@@ -407,23 +496,36 @@ export function LeagueProvider({
     <LeagueContext.Provider
       value={{
         league,
+
         setPlayers,
         addPlayer,
         deletePlayer,
+
         updateGame,
+
         setCurrentWeek,
         goToPreviousWeek,
         goToNextWeek,
+
         picks,
         setPick,
+
         activePlayerId,
         setActivePlayerId,
+
         gameResults,
         setGameResults,
+
         scoringHistory,
         addFinalizedWeeklyScoringRecord,
+
         pickerClickerHistory,
         upsertPickerClickerWeekState,
+
+        obscureStatCoinFlipHistory,
+        upsertObscureStatCoinFlipResolution,
+        clearObscureStatCoinFlipResolution,
+
         resetLeaguePersistence,
       }}
     >
