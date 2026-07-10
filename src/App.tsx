@@ -3,9 +3,9 @@ import {
   Route,
   Routes,
 } from "react-router-dom";
-
 import { NFLProvider } from "./context/NFLContext";
 import { ObscureStatProvider } from "./context/ObscureStatContext";
+import ObscureStatPayoutSync from "./features/payouts/ObscureStatPayoutSync";
 import PickerClickerSync from "./features/scoring/PickerClickerSync";
 import WeeklyScoringSync from "./features/scoring/WeeklyScoringSync";
 import AppLayout from "./layouts/AppLayout";
@@ -22,6 +22,7 @@ function App() {
       <ObscureStatProvider>
         <PickerClickerSync />
         <WeeklyScoringSync />
+        <ObscureStatPayoutSync />
 
         <BrowserRouter>
           <Routes>
