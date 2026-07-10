@@ -1,4 +1,5 @@
 import ObscureStatAwardCard from "../features/awards/ObscureStatAwardCard";
+import SeasonAwardsBoard from "../features/awards/SeasonAwardsBoard";
 import PublicPlayoffResults from "../features/playoffs/PublicPlayoffResults";
 import StandingsBoard from "../features/standings/StandingsBoard";
 
@@ -8,6 +9,7 @@ function Standings() {
   return (
     <>
       <ObscureStatAwardCard />
+      <SeasonAwardsBoard />
       <PublicPlayoffResults />
       <StandingsBoard />
     </>
