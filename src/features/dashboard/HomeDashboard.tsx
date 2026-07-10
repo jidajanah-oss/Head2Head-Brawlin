@@ -12,7 +12,7 @@ import {
 import { useLeague } from "../../context/LeagueContext";
 import { useNFL } from "../../context/NFLContext";
 import {
-  buildNFLStyleDivisionStandings,
+  buildSeasonAwareNFLStyleDivisionStandings,
   formatHeadToHeadRecord,
   getNFLTeamDisplayName,
   PickLockEngine,
@@ -64,10 +64,15 @@ function HomeDashboard() {
     league,
     picks,
     gameResults,
+    scoringHistory,
     activePlayerId,
   } = useLeague();
 
-  const { snapshot, loading } = useNFL();
+  const {
+    season,
+    snapshot,
+    loading,
+  } = useNFL();
 
   const weekGames = snapshot?.weekGames ?? [];
   const nflGames = snapshot?.nflGames ?? [];
@@ -93,32 +98,36 @@ function HomeDashboard() {
 
   const allPicks = useMemo(
     () =>
-      league.players.reduce<Record<string, Record<string, string>>>(
-        (playerPicks, player) => {
-          playerPicks[player.id] = picks[player.id] || {};
+      league.players.reduce<
+        Record<string, Record<string, string>>
+      >((playerPicks, player) => {
+        playerPicks[player.id] =
+          picks[player.id] || {};
 
-          return playerPicks;
-        },
-        {}
-      ),
+        return playerPicks;
+      }, {}),
     [league.players, picks]
   );
 
   const divisionStandings = useMemo(
     () =>
-      buildNFLStyleDivisionStandings(
-        league.players,
-        allPicks,
+      buildSeasonAwareNFLStyleDivisionStandings({
+        players: league.players,
+        picks: allPicks,
         gameResults,
-        league.currentWeek,
-        nflGames
-      ),
+        scoringHistory,
+        nflGames,
+        season,
+        week: league.currentWeek,
+      }),
     [
       league.players,
       allPicks,
       gameResults,
-      league.currentWeek,
+      scoringHistory,
       nflGames,
+      season,
+      league.currentWeek,
     ]
   );
 
@@ -139,7 +148,9 @@ function HomeDashboard() {
   );
 
   const selectedPickCount = activePlayerId
-    ? Object.values(picks[activePlayerId] ?? {}).filter(Boolean).length
+    ? Object.values(
+        picks[activePlayerId] ?? {}
+      ).filter(Boolean).length
     : 0;
 
   return (
@@ -156,7 +167,9 @@ function HomeDashboard() {
           <div className="dashboard-week-card">
             <span>Current Week</span>
 
-            <strong>Week {league.currentWeek}</strong>
+            <strong>
+              Week {league.currentWeek}
+            </strong>
 
             <small>
               {liveGames.length > 0
@@ -203,10 +216,18 @@ function HomeDashboard() {
       >
         <SteelSectionHeader
           eyebrow="Featured Matchup"
-          title={loading ? "Loading NFL Game..." : "Game of the Week"}
+          title={
+            loading
+              ? "Loading NFL Game..."
+              : "Game of the Week"
+          }
           action={
             <SteelBadge
-              variant={featuredGame ? "gold" : "neutral"}
+              variant={
+                featuredGame
+                  ? "gold"
+                  : "neutral"
+              }
             >
               {featuredGame
                 ? getStatusLabel(featuredGame)
@@ -223,7 +244,9 @@ function HomeDashboard() {
                 side="Away"
               />
 
-              <div className="dashboard-matchup-at">@</div>
+              <div className="dashboard-matchup-at">
+                @
+              </div>
 
               <DashboardTeamWordmark
                 team={featuredGame.homeTeam}
@@ -238,7 +261,9 @@ function HomeDashboard() {
               </SteelBadge>
 
               <SteelBadge variant="neutral">
-                {formatKickoff(featuredGame.kickoff)}
+                {formatKickoff(
+                  featuredGame.kickoff
+                )}
               </SteelBadge>
             </div>
           </>
@@ -255,13 +280,18 @@ function HomeDashboard() {
         variant="gold"
       >
         <div>
-          <p className="steel-ui-eyebrow">Next Move</p>
+          <p className="steel-ui-eyebrow">
+            Next Move
+          </p>
 
-          <h2>Lock in your picks before kickoff.</h2>
+          <h2>
+            Lock in your picks before kickoff.
+          </h2>
 
           <p>
-            Review the board, make your selections, and stay ahead
-            of the league.
+            Review the board, make your
+            selections, and stay ahead of the
+            league.
           </p>
         </div>
 
@@ -283,9 +313,12 @@ function HomeDashboard() {
           >
             <a href="/games">
               <span>📺</span>
+
               <strong>Game Center</strong>
+
               <small>
-                Live games, scores, and kickoff status
+                Live games, scores, and kickoff
+                status
               </small>
             </a>
           </SteelCard>
@@ -296,9 +329,12 @@ function HomeDashboard() {
           >
             <a href="/picks">
               <span>✅</span>
+
               <strong>Make Picks</strong>
+
               <small>
-                Submit this week&apos;s winning card
+                Submit this week&apos;s winning
+                card
               </small>
             </a>
           </SteelCard>
@@ -309,8 +345,12 @@ function HomeDashboard() {
           >
             <a href="/standings">
               <span>🏆</span>
+
               <strong>Standings</strong>
-              <small>Track the championship race</small>
+
+              <small>
+                Track the championship race
+              </small>
             </a>
           </SteelCard>
 
@@ -320,8 +360,12 @@ function HomeDashboard() {
           >
             <a href="/commissioner">
               <span>⚙️</span>
+
               <strong>Commish HQ</strong>
-              <small>Manage league operations</small>
+
+              <small>
+                Manage league operations
+              </small>
             </a>
           </SteelCard>
         </div>
@@ -351,10 +395,14 @@ function HomeDashboard() {
           <div className="dashboard-franchise-logo-row">
             <FranchiseLogo
               nflTeam={activePlayer?.nflTeam}
-              customLogo={activePlayer?.customLogo}
+              customLogo={
+                activePlayer?.customLogo
+              }
               displayName={
                 activePlayer
-                  ? getTeamDisplayName(activePlayer.nflTeam)
+                  ? getTeamDisplayName(
+                      activePlayer.nflTeam
+                    )
                   : "No team"
               }
               size="xl"
@@ -365,7 +413,8 @@ function HomeDashboard() {
               <span>Pick Card</span>
 
               <strong>
-                {selectedPickCount}/{weekGames.length || 0}
+                {selectedPickCount}/
+                {weekGames.length || 0}
               </strong>
 
               <small>
@@ -381,7 +430,11 @@ function HomeDashboard() {
         >
           <SteelSectionHeader
             eyebrow="Top Seed"
-            title={leader ? leader.name : "No Leader Yet"}
+            title={
+              leader
+                ? leader.name
+                : "No Leader Yet"
+            }
             description={
               leader
                 ? `${leader.nflTeamAbbreviation} • ${leader.division}`
@@ -391,8 +444,12 @@ function HomeDashboard() {
 
           <div className="dashboard-franchise-logo-row">
             <FranchiseLogo
-              nflTeam={leader?.nflTeamAbbreviation}
-              displayName={leader?.nflTeamDisplayName}
+              nflTeam={
+                leader?.nflTeamAbbreviation
+              }
+              displayName={
+                leader?.nflTeamDisplayName
+              }
               size="xl"
               variant="tile"
             />
@@ -402,7 +459,9 @@ function HomeDashboard() {
 
               <strong>
                 {leader
-                  ? formatHeadToHeadRecord(leader)
+                  ? formatHeadToHeadRecord(
+                      leader
+                    )
                   : "—"}
               </strong>
 
@@ -430,7 +489,9 @@ function HomeDashboard() {
             <span>Games Remaining</span>
 
             <strong>
-              {loading ? "..." : upcomingGames.length}
+              {loading
+                ? "..."
+                : upcomingGames.length}
             </strong>
           </div>
 
@@ -438,7 +499,9 @@ function HomeDashboard() {
             <span>Final Games</span>
 
             <strong>
-              {loading ? "..." : finalGames.length}
+              {loading
+                ? "..."
+                : finalGames.length}
             </strong>
           </div>
 
