@@ -17,6 +17,7 @@ import {
   getWeekControlState,
   LAST_REGULAR_SEASON_WEEK,
 } from "../../engine";
+import ObscureStatAwardCard from "../awards/ObscureStatAwardCard";
 import FranchiseAssignmentBoard from "../franchise/FranchiseAssignmentBoard";
 import SetupLeagueStep from "./SetupLeagueStep";
 import SetupPlayerManager from "./SetupPlayerManager";
@@ -218,7 +219,7 @@ function SetupWizard() {
         <SteelSectionHeader
           eyebrow="Season Navigation"
           title="Commissioner Week Control"
-          description="Select the active regular-season week used by Games, Picks, scoring, standings, and Picker Clicker."
+          description="Select the active regular-season week used by Games, Picks, scoring, standings, Picker Clicker, and the obscure-stat award."
           action={
             <SteelBadge variant="gold">
               Week {weekControlState.currentWeek} of{" "}
@@ -327,11 +328,17 @@ function SetupWizard() {
         <p className="commissioner-week-control-note">
           Changing the active week loads that
           week&apos;s NFL schedule. Picks,
-          finalized scoring records, and Picker
-          Clicker history from other weeks remain
+          finalized scoring records, Picker
+          Clicker history, and obscure-stat
+          results from other weeks remain
           stored and are not deleted.
         </p>
       </SteelCard>
+
+      <ObscureStatAwardCard
+        className="commissioner-obscure-stat-award"
+        showLeaderboard
+      />
 
       <SteelCard
         className="commissioner-picker-clicker-card"
@@ -397,6 +404,7 @@ function SetupWizard() {
           <div className="commissioner-picker-clicker-stats">
             <div>
               <span>Locked Games</span>
+
               <strong>
                 {lockedGameCount}
               </strong>
@@ -404,6 +412,7 @@ function SetupWizard() {
 
             <div>
               <span>Fallback Picks</span>
+
               <strong>
                 {fallbackPickCount}
               </strong>
@@ -411,6 +420,7 @@ function SetupWizard() {
 
             <div>
               <span>Prize Ineligible</span>
+
               <strong>
                 {assistedPlayerCount}
               </strong>

@@ -17,6 +17,7 @@ import {
   getNFLTeamDisplayName,
   PickLockEngine,
 } from "../../engine";
+import ObscureStatAwardCard from "../awards/ObscureStatAwardCard";
 import {
   formatKickoff,
   getStatusEmoji,
@@ -28,7 +29,9 @@ type DashboardTeamWordmarkProps = {
   side: "Away" | "Home";
 };
 
-function getTeamDisplayName(team?: string) {
+function getTeamDisplayName(
+  team?: string,
+) {
   if (!team) {
     return "Pending";
   }
@@ -49,7 +52,9 @@ function DashboardTeamWordmark({
       <small>{side}</small>
 
       <div className="team-wordmark dashboard-team-wordmark-badge">
-        <strong className="team-wordmark-abbr">{team}</strong>
+        <strong className="team-wordmark-abbr">
+          {team}
+        </strong>
 
         <span className="team-wordmark-name">
           {getTeamDisplayName(team)}
@@ -74,39 +79,59 @@ function HomeDashboard() {
     loading,
   } = useNFL();
 
-  const weekGames = snapshot?.weekGames ?? [];
-  const nflGames = snapshot?.nflGames ?? [];
-  const featuredGame = weekGames[0];
+  const weekGames =
+    snapshot?.weekGames ?? [];
 
-  const liveGames = weekGames.filter((game) =>
-    getStatusLabel(game).toLowerCase().includes("live")
+  const nflGames =
+    snapshot?.nflGames ?? [];
+
+  const featuredGame =
+    weekGames[0];
+
+  const liveGames = weekGames.filter(
+    (game) =>
+      getStatusLabel(game)
+        .toLowerCase()
+        .includes("live"),
   );
 
-  const finalGames = weekGames.filter((game) =>
-    getStatusLabel(game).toLowerCase().includes("final")
+  const finalGames = weekGames.filter(
+    (game) =>
+      getStatusLabel(game)
+        .toLowerCase()
+        .includes("final"),
   );
 
-  const upcomingGames = weekGames.filter((game) => {
-    const label = getStatusLabel(game).toLowerCase();
+  const upcomingGames =
+    weekGames.filter((game) => {
+      const label = getStatusLabel(game)
+        .toLowerCase();
 
-    return !label.includes("live") && !label.includes("final");
-  });
+      return (
+        !label.includes("live") &&
+        !label.includes("final")
+      );
+    });
 
-  const lockedGames = weekGames.filter((game) =>
-    PickLockEngine.isPickLocked(game)
-  );
+  const lockedGames =
+    weekGames.filter((game) =>
+      PickLockEngine.isPickLocked(game),
+    );
 
   const allPicks = useMemo(
     () =>
       league.players.reduce<
-        Record<string, Record<string, string>>
+        Record<
+          string,
+          Record<string, string>
+        >
       >((playerPicks, player) => {
         playerPicks[player.id] =
           picks[player.id] || {};
 
         return playerPicks;
       }, {}),
-    [league.players, picks]
+    [league.players, picks],
   );
 
   const divisionStandings = useMemo(
@@ -128,30 +153,38 @@ function HomeDashboard() {
       nflGames,
       season,
       league.currentWeek,
-    ]
+    ],
   );
 
-  const standings = divisionStandings.allRows;
-  const leader = standings[0];
+  const standings =
+    divisionStandings.allRows;
 
-  const activePlayerRankIndex = standings.findIndex(
-    (player) => player.id === activePlayerId
-  );
+  const leader =
+    standings[0];
+
+  const activePlayerRankIndex =
+    standings.findIndex(
+      (player) =>
+        player.id === activePlayerId,
+    );
 
   const activePlayerRank =
     activePlayerRankIndex >= 0
       ? activePlayerRankIndex + 1
       : null;
 
-  const activePlayer = league.players.find(
-    (player) => player.id === activePlayerId
-  );
+  const activePlayer =
+    league.players.find(
+      (player) =>
+        player.id === activePlayerId,
+    );
 
-  const selectedPickCount = activePlayerId
-    ? Object.values(
-        picks[activePlayerId] ?? {}
-      ).filter(Boolean).length
-    : 0;
+  const selectedPickCount =
+    activePlayerId
+      ? Object.values(
+          picks[activePlayerId] ?? {},
+        ).filter(Boolean).length
+      : 0;
 
   return (
     <main className="dashboard dashboard-v2">
@@ -185,30 +218,44 @@ function HomeDashboard() {
           label="Players"
           value={league.players.length}
           helper={`${league.settings.maxPlayers} max competitors`}
-          icon="🏈"
+          icon="👥"
         />
 
         <SteelStatCard
           label="Games Loaded"
-          value={loading ? "..." : weekGames.length}
+          value={
+            loading
+              ? "..."
+              : weekGames.length
+          }
           helper={`Week ${league.currentWeek} schedule`}
           icon="📅"
         />
 
         <SteelStatCard
           label="Live Games"
-          value={loading ? "..." : liveGames.length}
+          value={
+            loading
+              ? "..."
+              : liveGames.length
+          }
           helper="Real-time status board"
           icon="⚡"
         />
 
         <SteelStatCard
           label="Locked"
-          value={loading ? "..." : lockedGames.length}
+          value={
+            loading
+              ? "..."
+              : lockedGames.length
+          }
           helper="Pick windows closed"
           icon="🔒"
         />
       </section>
+
+      <ObscureStatAwardCard className="dashboard-obscure-stat-award" />
 
       <SteelCard
         className="dashboard-featured-game"
@@ -230,7 +277,9 @@ function HomeDashboard() {
               }
             >
               {featuredGame
-                ? getStatusLabel(featuredGame)
+                ? getStatusLabel(
+                    featuredGame,
+                  )
                 : "Pending"}
             </SteelBadge>
           }
@@ -240,7 +289,9 @@ function HomeDashboard() {
           <>
             <div className="dashboard-matchup dashboard-matchup--wordmarks">
               <DashboardTeamWordmark
-                team={featuredGame.awayTeam}
+                team={
+                  featuredGame.awayTeam
+                }
                 side="Away"
               />
 
@@ -249,20 +300,26 @@ function HomeDashboard() {
               </div>
 
               <DashboardTeamWordmark
-                team={featuredGame.homeTeam}
+                team={
+                  featuredGame.homeTeam
+                }
                 side="Home"
               />
             </div>
 
             <div className="dashboard-meta-row">
               <SteelBadge variant="success">
-                {getStatusEmoji(featuredGame)}{" "}
-                {getStatusLabel(featuredGame)}
+                {getStatusEmoji(
+                  featuredGame,
+                )}{" "}
+                {getStatusLabel(
+                  featuredGame,
+                )}
               </SteelBadge>
 
               <SteelBadge variant="neutral">
                 {formatKickoff(
-                  featuredGame.kickoff
+                  featuredGame.kickoff,
                 )}
               </SteelBadge>
             </div>
@@ -285,17 +342,21 @@ function HomeDashboard() {
           </p>
 
           <h2>
-            Lock in your picks before kickoff.
+            Lock in your picks before
+            kickoff.
           </h2>
 
           <p>
             Review the board, make your
-            selections, and stay ahead of the
-            league.
+            selections, and stay ahead of
+            the league.
           </p>
         </div>
 
-        <SteelButton href="/picks" size="lg">
+        <SteelButton
+          href="/picks"
+          size="lg"
+        >
           Continue Picking
         </SteelButton>
       </SteelCard>
@@ -312,13 +373,15 @@ function HomeDashboard() {
             className="dashboard-action-card"
           >
             <a href="/games">
-              <span>📺</span>
+              <span>🏈</span>
 
-              <strong>Game Center</strong>
+              <strong>
+                Game Center
+              </strong>
 
               <small>
-                Live games, scores, and kickoff
-                status
+                Live games, scores, and
+                kickoff status
               </small>
             </a>
           </SteelCard>
@@ -330,11 +393,13 @@ function HomeDashboard() {
             <a href="/picks">
               <span>✅</span>
 
-              <strong>Make Picks</strong>
+              <strong>
+                Make Picks
+              </strong>
 
               <small>
-                Submit this week&apos;s winning
-                card
+                Submit this week&apos;s
+                winning card
               </small>
             </a>
           </SteelCard>
@@ -344,12 +409,15 @@ function HomeDashboard() {
             className="dashboard-action-card"
           >
             <a href="/standings">
-              <span>🏆</span>
+              <span>📊</span>
 
-              <strong>Standings</strong>
+              <strong>
+                Standings
+              </strong>
 
               <small>
-                Track the championship race
+                Track the championship
+                race
               </small>
             </a>
           </SteelCard>
@@ -361,7 +429,9 @@ function HomeDashboard() {
             <a href="/commissioner">
               <span>⚙️</span>
 
-              <strong>Commish HQ</strong>
+              <strong>
+                Commish HQ
+              </strong>
 
               <small>
                 Manage league operations
@@ -386,7 +456,7 @@ function HomeDashboard() {
             description={
               activePlayer
                 ? `${activePlayer.nflTeam} • ${getTeamDisplayName(
-                    activePlayer.nflTeam
+                    activePlayer.nflTeam,
                   )}`
                 : "Select an active player from Player Manager."
             }
@@ -394,14 +464,16 @@ function HomeDashboard() {
 
           <div className="dashboard-franchise-logo-row">
             <FranchiseLogo
-              nflTeam={activePlayer?.nflTeam}
+              nflTeam={
+                activePlayer?.nflTeam
+              }
               customLogo={
                 activePlayer?.customLogo
               }
               displayName={
                 activePlayer
                   ? getTeamDisplayName(
-                      activePlayer.nflTeam
+                      activePlayer.nflTeam,
                     )
                   : "No team"
               }
@@ -418,7 +490,9 @@ function HomeDashboard() {
               </strong>
 
               <small>
-                Week {league.currentWeek} selections
+                Week{" "}
+                {league.currentWeek}{" "}
+                selections
               </small>
             </div>
           </div>
@@ -460,7 +534,7 @@ function HomeDashboard() {
               <strong>
                 {leader
                   ? formatHeadToHeadRecord(
-                      leader
+                      leader,
                     )
                   : "—"}
               </strong>
@@ -486,7 +560,9 @@ function HomeDashboard() {
 
         <div className="dashboard-snapshot-grid">
           <div>
-            <span>Games Remaining</span>
+            <span>
+              Games Remaining
+            </span>
 
             <strong>
               {loading
@@ -496,7 +572,9 @@ function HomeDashboard() {
           </div>
 
           <div>
-            <span>Final Games</span>
+            <span>
+              Final Games
+            </span>
 
             <strong>
               {loading
@@ -506,7 +584,9 @@ function HomeDashboard() {
           </div>
 
           <div>
-            <span>Your Rank</span>
+            <span>
+              Your Rank
+            </span>
 
             <strong>
               {activePlayerRank
