@@ -13,6 +13,17 @@ import type {
   PayoutLedgerSeasonState,
 } from "./payoutLedgerTypes";
 import type {
+  PlayoffConference,
+  PlayoffMatchupRecord,
+  PlayoffMatchupStatus,
+  PlayoffParticipantSnapshot,
+  PlayoffResultSource,
+  PlayoffResultsHistory,
+  PlayoffRound,
+  PlayoffSeasonState,
+  PlayoffSeasonStatus,
+} from "./playoffResultsTypes";
+import type {
   PickerClickerAssignment,
   PickerClickerFallbackPick,
   PickerClickerFallbackStatus,
@@ -53,6 +64,7 @@ export type LeaguePersistenceState<TLeague> = {
   pickerClickerHistory: PickerClickerHistory;
   obscureStatCoinFlipHistory: ObscureStatCoinFlipHistory;
   payoutLedgerHistory: PayoutLedgerHistory;
+  playoffResultsHistory: PlayoffResultsHistory;
 };
 
 type StoredLeagueSnapshot<TLeague> =
@@ -64,7 +76,7 @@ type StoredLeagueSnapshot<TLeague> =
 const STORAGE_KEY =
   "head2head-brawlin-steel.league.v1";
 
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 function isBrowserStorageAvailable() {
   return (
@@ -1227,6 +1239,465 @@ function sanitizePayoutLedgerHistory(
   }, {});
 }
 
+function sanitizePlayoffRound(
+  value: unknown,
+): PlayoffRound | null {
+  if (
+    value === "wildcard" ||
+    value === "divisional" ||
+    value === "conference-championship" ||
+    value === "super-bowl"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function sanitizePlayoffConference(
+  value: unknown,
+): PlayoffConference | null {
+  if (
+    value === "AFC" ||
+    value === "NFC" ||
+    value === "NFL"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function sanitizePlayoffSeasonStatus(
+  value: unknown,
+): PlayoffSeasonStatus | null {
+  if (
+    value === "active" ||
+    value === "complete"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function sanitizePlayoffMatchupStatus(
+  value: unknown,
+): PlayoffMatchupStatus | null {
+  if (
+    value === "waiting" ||
+    value === "ready" ||
+    value === "needs-resolution" ||
+    value === "final"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function sanitizePlayoffResultSource(
+  value: unknown,
+): PlayoffResultSource | null {
+  if (
+    value === "score" ||
+    value === "commissioner-tie-resolution"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function sanitizePlayoffParticipantSnapshot(
+  value: unknown,
+): PlayoffParticipantSnapshot | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const conference =
+    sanitizePlayoffConference(
+      value.conference,
+    );
+  const playerId = sanitizeString(
+    value.playerId,
+  ).trim();
+  const playerName = sanitizeString(
+    value.playerName,
+  ).trim();
+  const nflTeam = sanitizeString(
+    value.nflTeam,
+  ).trim();
+  const seed = sanitizePositiveInteger(
+    value.seed,
+  );
+
+  if (
+    (conference !== "AFC" &&
+      conference !== "NFC") ||
+    !playerId ||
+    !playerName ||
+    !nflTeam ||
+    seed <= 0
+  ) {
+    return null;
+  }
+
+  return {
+    playerId,
+    playerName,
+    nflTeam,
+    conference,
+    seed,
+    regularSeasonLeaguePoints: Math.max(
+      0,
+      sanitizeInteger(
+        value.regularSeasonLeaguePoints,
+      ),
+    ),
+    regularSeasonWins: Math.max(
+      0,
+      sanitizeInteger(
+        value.regularSeasonWins,
+      ),
+    ),
+    regularSeasonLosses: Math.max(
+      0,
+      sanitizeInteger(
+        value.regularSeasonLosses,
+      ),
+    ),
+    regularSeasonTies: Math.max(
+      0,
+      sanitizeInteger(
+        value.regularSeasonTies,
+      ),
+    ),
+    regularSeasonCorrectPicks: Math.max(
+      0,
+      sanitizeInteger(
+        value.regularSeasonCorrectPicks,
+      ),
+    ),
+  };
+}
+
+function sanitizePlayoffParticipantList(
+  value: unknown,
+  conference: "AFC" | "NFC",
+): PlayoffParticipantSnapshot[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seenPlayerIds = new Set<string>();
+  const seenSeeds = new Set<number>();
+
+  return value
+    .reduce<PlayoffParticipantSnapshot[]>(
+      (cleaned, participantValue) => {
+        const participant =
+          sanitizePlayoffParticipantSnapshot(
+            participantValue,
+          );
+
+        if (
+          participant &&
+          participant.conference === conference &&
+          !seenPlayerIds.has(
+            participant.playerId,
+          ) &&
+          !seenSeeds.has(participant.seed)
+        ) {
+          seenPlayerIds.add(
+            participant.playerId,
+          );
+          seenSeeds.add(participant.seed);
+          cleaned.push(participant);
+        }
+
+        return cleaned;
+      },
+      [],
+    )
+    .sort(
+      (participantA, participantB) =>
+        participantA.seed -
+        participantB.seed,
+    );
+}
+
+function sanitizeNullablePlayoffScore(
+  value: unknown,
+): number | null {
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(value) ||
+    !Number.isInteger(value) ||
+    value < 0
+  ) {
+    return null;
+  }
+
+  return value;
+}
+
+function sanitizePlayoffMatchupSide(
+  value: unknown,
+): PlayoffMatchupRecord["teamA"] {
+  if (!isRecord(value)) {
+    return {
+      participant: null,
+      score: null,
+    };
+  }
+
+  return {
+    participant:
+      sanitizePlayoffParticipantSnapshot(
+        value.participant,
+      ),
+    score: sanitizeNullablePlayoffScore(
+      value.score,
+    ),
+  };
+}
+
+function sanitizePlayoffMatchupRecord(
+  value: unknown,
+  fallbackId: string,
+): PlayoffMatchupRecord | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const season = sanitizePositiveInteger(
+    value.season,
+  );
+  const round = sanitizePlayoffRound(
+    value.round,
+  );
+  const conference =
+    sanitizePlayoffConference(
+      value.conference,
+    );
+  const status =
+    sanitizePlayoffMatchupStatus(
+      value.status,
+    );
+  const position = sanitizePositiveInteger(
+    value.position,
+  );
+  const id = sanitizeString(
+    value.id,
+    fallbackId,
+  ).trim();
+  const title = sanitizeString(
+    value.title,
+  ).trim();
+  const matchupLabel = sanitizeString(
+    value.matchupLabel,
+  ).trim();
+
+  if (
+    season <= 0 ||
+    !round ||
+    !conference ||
+    !status ||
+    position <= 0 ||
+    !id ||
+    !title ||
+    !matchupLabel
+  ) {
+    return null;
+  }
+
+  if (
+    round === "super-bowl"
+      ? conference !== "NFL"
+      : conference === "NFL"
+  ) {
+    return null;
+  }
+
+  const teamA = sanitizePlayoffMatchupSide(
+    value.teamA,
+  );
+  const teamB = sanitizePlayoffMatchupSide(
+    value.teamB,
+  );
+  const participantIds = new Set(
+    [
+      teamA.participant?.playerId,
+      teamB.participant?.playerId,
+    ].filter(
+      (playerId): playerId is string =>
+        Boolean(playerId),
+    ),
+  );
+  const winnerId = sanitizeNullableString(
+    value.winnerId,
+  );
+  const loserId = sanitizeNullableString(
+    value.loserId,
+  );
+
+  return {
+    id,
+    season,
+    round,
+    conference,
+    position,
+    title,
+    matchupLabel,
+    teamA,
+    teamB,
+    status,
+    winnerId:
+      winnerId &&
+      participantIds.has(winnerId)
+        ? winnerId
+        : null,
+    loserId:
+      loserId &&
+      participantIds.has(loserId)
+        ? loserId
+        : null,
+    isTie: sanitizeBoolean(value.isTie),
+    resultSource:
+      sanitizePlayoffResultSource(
+        value.resultSource,
+      ),
+    finalizedAt: sanitizeNullableString(
+      value.finalizedAt,
+    ),
+    updatedAt: sanitizeString(
+      value.updatedAt,
+    ),
+    note: sanitizeString(value.note),
+  };
+}
+
+function sanitizePlayoffMatchups(
+  value: unknown,
+  season: number,
+): Record<string, PlayoffMatchupRecord> {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce<
+    Record<string, PlayoffMatchupRecord>
+  >((cleaned, [matchupId, matchupValue]) => {
+    const matchup =
+      sanitizePlayoffMatchupRecord(
+        matchupValue,
+        matchupId,
+      );
+
+    if (matchup && matchup.season === season) {
+      cleaned[matchup.id] = matchup;
+    }
+
+    return cleaned;
+  }, {});
+}
+
+function sanitizePlayoffSeasonState(
+  value: unknown,
+  fallbackId: string,
+): PlayoffSeasonState | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const season = sanitizePositiveInteger(
+    value.season,
+  );
+  const status = sanitizePlayoffSeasonStatus(
+    value.status,
+  );
+  const id = sanitizeString(
+    value.id,
+    fallbackId,
+  ).trim();
+
+  if (
+    season <= 0 ||
+    !status ||
+    !id ||
+    !isRecord(value.seeds)
+  ) {
+    return null;
+  }
+
+  const matchups = sanitizePlayoffMatchups(
+    value.matchups,
+    season,
+  );
+
+  return {
+    id,
+    season,
+    status,
+    initializedAt: sanitizeString(
+      value.initializedAt,
+    ),
+    updatedAt: sanitizeString(
+      value.updatedAt,
+    ),
+    seeds: {
+      capturedAt: sanitizeString(
+        value.seeds.capturedAt,
+      ),
+      AFC: sanitizePlayoffParticipantList(
+        value.seeds.AFC,
+        "AFC",
+      ),
+      NFC: sanitizePlayoffParticipantList(
+        value.seeds.NFC,
+        "NFC",
+      ),
+    },
+    matchups,
+    afcChampionId: sanitizeNullableString(
+      value.afcChampionId,
+    ),
+    nfcChampionId: sanitizeNullableString(
+      value.nfcChampionId,
+    ),
+    championId: sanitizeNullableString(
+      value.championId,
+    ),
+  };
+}
+
+function sanitizePlayoffResultsHistory(
+  value: unknown,
+): PlayoffResultsHistory {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce<
+    PlayoffResultsHistory
+  >((cleaned, [seasonId, seasonValue]) => {
+    const playoffSeason =
+      sanitizePlayoffSeasonState(
+        seasonValue,
+        seasonId,
+      );
+
+    if (playoffSeason) {
+      cleaned[playoffSeason.id] =
+        playoffSeason;
+    }
+
+    return cleaned;
+  }, {});
+}
+
 function mergeLeagueState<TLeague>(
   fallbackLeague: TLeague,
   persistedLeague: unknown,
@@ -1258,6 +1729,7 @@ export function loadPersistedLeagueState<
     pickerClickerHistory: {},
     obscureStatCoinFlipHistory: {},
     payoutLedgerHistory: {},
+    playoffResultsHistory: {},
   };
 
   if (!isBrowserStorageAvailable()) {
@@ -1314,6 +1786,10 @@ export function loadPersistedLeagueState<
         sanitizePayoutLedgerHistory(
           parsedSnapshot.payoutLedgerHistory,
         ),
+      playoffResultsHistory:
+        sanitizePlayoffResultsHistory(
+          parsedSnapshot.playoffResultsHistory,
+        ),
     };
   } catch {
     return fallbackState;
@@ -1344,6 +1820,8 @@ export function savePersistedLeagueState<
         state.obscureStatCoinFlipHistory,
       payoutLedgerHistory:
         state.payoutLedgerHistory,
+      playoffResultsHistory:
+        state.playoffResultsHistory,
     };
 
     window.localStorage.setItem(

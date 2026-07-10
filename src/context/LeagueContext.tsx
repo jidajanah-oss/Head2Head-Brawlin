@@ -32,6 +32,17 @@ import type {
   PayoutLedgerEntryStatus,
   PayoutLedgerHistory,
 } from "../engine/payoutLedgerTypes";
+import {
+  clearPlayoffMatchupResult as clearStoredPlayoffMatchupResult,
+  getPlayoffSeasonId,
+  initializePlayoffSeason as createPlayoffSeason,
+  recordPlayoffMatchupResult as recordStoredPlayoffMatchupResult,
+} from "../engine/playoffResultsEngine";
+import type {
+  PlayoffResultsHistory,
+  RecordPlayoffMatchupResultInput,
+} from "../engine/playoffResultsTypes";
+import type { NFLPlayoffPicture } from "../engine/h2hEngine";
 import type {
   PickerClickerHistory,
   PickerClickerWeekState,
@@ -128,6 +139,25 @@ type LeagueContextType = {
     season: number,
     entryId: string,
     needsReview: boolean,
+  ) => void;
+
+  // PLAYOFF RESULTS
+  playoffResultsHistory: PlayoffResultsHistory;
+  initializePlayoffSeason: (
+    season: number,
+    playoffPicture: NFLPlayoffPicture,
+  ) => void;
+  resetPlayoffSeason: (
+    season: number,
+    playoffPicture: NFLPlayoffPicture,
+  ) => void;
+  recordPlayoffMatchupResult: (
+    season: number,
+    input: RecordPlayoffMatchupResultInput,
+  ) => void;
+  clearPlayoffMatchupResult: (
+    season: number,
+    matchupId: string,
   ) => void;
 
   // PERSISTENCE
@@ -257,6 +287,13 @@ export function LeagueProvider({
     persistedStartState.payoutLedgerHistory,
   );
 
+  const [
+    playoffResultsHistory,
+    setPlayoffResultsHistory,
+  ] = useState(
+    persistedStartState.playoffResultsHistory,
+  );
+
   useEffect(() => {
     savePersistedLeagueState({
       league,
@@ -267,6 +304,7 @@ export function LeagueProvider({
       pickerClickerHistory,
       obscureStatCoinFlipHistory,
       payoutLedgerHistory,
+      playoffResultsHistory,
     });
   }, [
     league,
@@ -277,6 +315,7 @@ export function LeagueProvider({
     pickerClickerHistory,
     obscureStatCoinFlipHistory,
     payoutLedgerHistory,
+    playoffResultsHistory,
   ]);
 
   const setPlayers = (
@@ -694,6 +733,116 @@ export function LeagueProvider({
     );
   };
 
+  const initializePlayoffSeason = (
+    season: number,
+    playoffPicture: NFLPlayoffPicture,
+  ) => {
+    const seasonId = getPlayoffSeasonId(
+      season,
+    );
+
+    setPlayoffResultsHistory(
+      (previousHistory) => {
+        if (previousHistory[seasonId]) {
+          return previousHistory;
+        }
+
+        return {
+          ...previousHistory,
+          [seasonId]: createPlayoffSeason(
+            season,
+            playoffPicture,
+          ),
+        };
+      },
+    );
+  };
+
+  const resetPlayoffSeason = (
+    season: number,
+    playoffPicture: NFLPlayoffPicture,
+  ) => {
+    const seasonId = getPlayoffSeasonId(
+      season,
+    );
+
+    setPlayoffResultsHistory(
+      (previousHistory) => ({
+        ...previousHistory,
+        [seasonId]: createPlayoffSeason(
+          season,
+          playoffPicture,
+        ),
+      }),
+    );
+  };
+
+  const recordPlayoffMatchupResult = (
+    season: number,
+    input: RecordPlayoffMatchupResultInput,
+  ) => {
+    const seasonId = getPlayoffSeasonId(
+      season,
+    );
+
+    setPlayoffResultsHistory(
+      (previousHistory) => {
+        const existingSeason =
+          previousHistory[seasonId];
+
+        if (!existingSeason) {
+          return previousHistory;
+        }
+
+        const nextSeason =
+          recordStoredPlayoffMatchupResult(
+            existingSeason,
+            input,
+          );
+
+        return {
+          ...previousHistory,
+          [seasonId]: nextSeason,
+        };
+      },
+    );
+  };
+
+  const clearPlayoffMatchupResult = (
+    season: number,
+    matchupId: string,
+  ) => {
+    const seasonId = getPlayoffSeasonId(
+      season,
+    );
+
+    setPlayoffResultsHistory(
+      (previousHistory) => {
+        const existingSeason =
+          previousHistory[seasonId];
+
+        if (!existingSeason) {
+          return previousHistory;
+        }
+
+        const nextSeason =
+          clearStoredPlayoffMatchupResult(
+            existingSeason,
+            matchupId,
+          );
+
+        if (nextSeason === existingSeason) {
+          return previousHistory;
+        }
+
+        return {
+          ...previousHistory,
+          [seasonId]: nextSeason,
+        };
+      },
+    );
+  };
+
   const resetLeaguePersistence = () => {
     clearPersistedLeagueState();
 
@@ -708,6 +857,7 @@ export function LeagueProvider({
     setPickerClickerHistory({});
     setObscureStatCoinFlipHistory({});
     setPayoutLedgerHistory({});
+    setPlayoffResultsHistory({});
     setActivePlayerId(
       resolveActivePlayerId(
         "",
@@ -747,6 +897,11 @@ export function LeagueProvider({
         removePayoutLedgerEntry,
         setPayoutLedgerEntryStatus,
         setPayoutLedgerEntryReviewStatus,
+        playoffResultsHistory,
+        initializePlayoffSeason,
+        resetPlayoffSeason,
+        recordPlayoffMatchupResult,
+        clearPlayoffMatchupResult,
         resetLeaguePersistence,
       }}
     >
