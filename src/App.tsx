@@ -8,6 +8,7 @@ import { ObscureStatProvider } from "./context/ObscureStatContext";
 import { SeasonAwardProvider } from "./context/SeasonAwardContext";
 import ObscureStatPayoutSync from "./features/payouts/ObscureStatPayoutSync";
 import PlayoffPayoutSync from "./features/payouts/PlayoffPayoutSync";
+import SeasonAwardPayoutSync from "./features/payouts/SeasonAwardPayoutSync";
 import PickerClickerSync from "./features/scoring/PickerClickerSync";
 import WeeklyScoringSync from "./features/scoring/WeeklyScoringSync";
 import AppLayout from "./layouts/AppLayout";
@@ -27,6 +28,7 @@ function App() {
           <WeeklyScoringSync />
           <ObscureStatPayoutSync />
           <PlayoffPayoutSync />
+          <SeasonAwardPayoutSync />
 
           <BrowserRouter>
             <Routes>
