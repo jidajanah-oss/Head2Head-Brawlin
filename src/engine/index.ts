@@ -3,6 +3,8 @@ export * from "./gameWeek";
 export * from "./h2hEngine";
 export * from "./nfl";
 export * from "./nflTeamOwnership";
+export * from "./obscureStatSchedule";
+export * from "./obscureStatTypes";
 export * from "./pickerClickerEngine";
 export * from "./pickerClickerTypes";
 export * from "./seasonStandingsEngine";

@@ -7,3 +7,6 @@ export * from "./NFLGameAdapter";
 export * from "./LivePollingEngine";
 export * from "./NFLTypes";
 export * from "./NFLService";
+export * from "./NFLGameStatsTypes";
+export * from "./ESPNNFLGameStatsProvider";
+export * from "./NFLGameStatsProviderFactory";
