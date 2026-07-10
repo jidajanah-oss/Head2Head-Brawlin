@@ -5,7 +5,6 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-
 import {
   clearPersistedLeagueState,
   loadPersistedLeagueState,
@@ -19,6 +18,20 @@ import type {
   ObscureStatCoinFlipHistory,
   ObscureStatCoinFlipResolution,
 } from "../engine/obscureStatCoinFlipTypes";
+import {
+  getPayoutLedgerSeasonId,
+  initializePayoutLedgerSeason as createPayoutLedgerSeason,
+  removePayoutLedgerEntry as removeLedgerEntry,
+  setPayoutLedgerEntryReviewStatus as updateLedgerEntryReviewStatus,
+  setPayoutLedgerEntryStatus as updateLedgerEntryStatus,
+  synchronizePayoutLedgerRosterAndBuyIns,
+  upsertPayoutLedgerEntry as upsertLedgerEntry,
+} from "../engine/payoutLedgerEngine";
+import type {
+  PayoutLedgerEntry,
+  PayoutLedgerEntryStatus,
+  PayoutLedgerHistory,
+} from "../engine/payoutLedgerTypes";
 import type {
   PickerClickerHistory,
   PickerClickerWeekState,
@@ -42,11 +55,9 @@ type GameResults = PersistedGameResults;
 
 type LeagueContextType = {
   league: LeagueState;
-
   setPlayers: (players: Player[]) => void;
   addPlayer: (player: Player) => void;
   deletePlayer: (playerId: string) => void;
-
   updateGame: (game: Game) => void;
 
   // CURRENT NFL WEEK
@@ -85,13 +96,38 @@ type LeagueContextType = {
   // OBSCURE STAT OFFLINE COIN FLIP
   obscureStatCoinFlipHistory:
     ObscureStatCoinFlipHistory;
-
   upsertObscureStatCoinFlipResolution: (
     resolution: ObscureStatCoinFlipResolution,
   ) => void;
-
   clearObscureStatCoinFlipResolution: (
     resolutionId: string,
+  ) => void;
+
+  // COMMISSIONER PAYOUT LEDGER
+  payoutLedgerHistory: PayoutLedgerHistory;
+  initializePayoutLedgerSeason: (
+    season: number,
+  ) => void;
+  synchronizePayoutLedgerSeason: (
+    season: number,
+  ) => void;
+  upsertPayoutLedgerEntry: (
+    season: number,
+    entry: PayoutLedgerEntry,
+  ) => void;
+  removePayoutLedgerEntry: (
+    season: number,
+    entryId: string,
+  ) => void;
+  setPayoutLedgerEntryStatus: (
+    season: number,
+    entryId: string,
+    status: PayoutLedgerEntryStatus,
+  ) => void;
+  setPayoutLedgerEntryReviewStatus: (
+    season: number,
+    entryId: string,
+    needsReview: boolean,
   ) => void;
 
   // PERSISTENCE
@@ -127,14 +163,15 @@ function removePicksForMissingPlayers(
     players.map((player) => player.id),
   );
 
-  return Object.entries(picks).reduce<Picks>(
+  return Object.entries(picks).reduce<
+    Picks
+  >(
     (
       cleanedPicks,
       [playerId, playerPicks],
     ) => {
       if (validPlayerIds.has(playerId)) {
-        cleanedPicks[playerId] =
-          playerPicks;
+        cleanedPicks[playerId] = playerPicks;
       }
 
       return cleanedPicks;
@@ -148,10 +185,9 @@ function normalizeLeagueWeek(
 ): LeagueState {
   return {
     ...league,
-    currentWeek:
-      clampRegularSeasonWeek(
-        league.currentWeek,
-      ),
+    currentWeek: clampRegularSeasonWeek(
+      league.currentWeek,
+    ),
   };
 }
 
@@ -160,27 +196,24 @@ export function LeagueProvider({
 }: {
   children: ReactNode;
 }) {
-  const [persistedStartState] =
-    useState(() =>
-      loadPersistedLeagueState(
-        initialLeagueState,
-      ),
-    );
+  const [persistedStartState] = useState(() =>
+    loadPersistedLeagueState(
+      initialLeagueState,
+    ),
+  );
 
-  const [league, setLeague] =
-    useState(() =>
-      normalizeLeagueWeek(
-        persistedStartState.league,
-      ),
-    );
+  const [league, setLeague] = useState(() =>
+    normalizeLeagueWeek(
+      persistedStartState.league,
+    ),
+  );
 
-  const [picks, setPicks] =
-    useState(() =>
-      removePicksForMissingPlayers(
-        persistedStartState.picks,
-        persistedStartState.league.players,
-      ),
-    );
+  const [picks, setPicks] = useState(() =>
+    removePicksForMissingPlayers(
+      persistedStartState.picks,
+      persistedStartState.league.players,
+    ),
+  );
 
   const [
     activePlayerId,
@@ -192,19 +225,15 @@ export function LeagueProvider({
     ),
   );
 
-  const [
-    gameResults,
-    setGameResults,
-  ] = useState(
-    persistedStartState.gameResults,
-  );
+  const [gameResults, setGameResults] =
+    useState(
+      persistedStartState.gameResults,
+    );
 
-  const [
-    scoringHistory,
-    setScoringHistory,
-  ] = useState(
-    persistedStartState.scoringHistory,
-  );
+  const [scoringHistory, setScoringHistory] =
+    useState(
+      persistedStartState.scoringHistory,
+    );
 
   const [
     pickerClickerHistory,
@@ -221,6 +250,13 @@ export function LeagueProvider({
       .obscureStatCoinFlipHistory,
   );
 
+  const [
+    payoutLedgerHistory,
+    setPayoutLedgerHistory,
+  ] = useState(
+    persistedStartState.payoutLedgerHistory,
+  );
+
   useEffect(() => {
     savePersistedLeagueState({
       league,
@@ -230,6 +266,7 @@ export function LeagueProvider({
       scoringHistory,
       pickerClickerHistory,
       obscureStatCoinFlipHistory,
+      payoutLedgerHistory,
     });
   }, [
     league,
@@ -239,6 +276,7 @@ export function LeagueProvider({
     scoringHistory,
     pickerClickerHistory,
     obscureStatCoinFlipHistory,
+    payoutLedgerHistory,
   ]);
 
   const setPlayers = (
@@ -318,9 +356,7 @@ export function LeagueProvider({
           return previousPlayerId;
         }
 
-        return (
-          remainingPlayers[0]?.id ?? ""
-        );
+        return remainingPlayers[0]?.id ?? "";
       },
     );
   };
@@ -330,13 +366,12 @@ export function LeagueProvider({
   ) => {
     setLeague((previousLeague) => ({
       ...previousLeague,
-      games:
-        previousLeague.games.map(
-          (currentGame) =>
-            currentGame.id === game.id
-              ? game
-              : currentGame,
-        ),
+      games: previousLeague.games.map(
+        (currentGame) =>
+          currentGame.id === game.id
+            ? game
+            : currentGame,
+      ),
     }));
   };
 
@@ -389,9 +424,7 @@ export function LeagueProvider({
   ) => {
     setScoringHistory(
       (previousHistory) => {
-        if (
-          previousHistory[record.id]
-        ) {
+        if (previousHistory[record.id]) {
           return previousHistory;
         }
 
@@ -409,9 +442,8 @@ export function LeagueProvider({
     setPickerClickerHistory(
       (previousHistory) => {
         if (
-          previousHistory[
-            weekState.id
-          ] === weekState
+          previousHistory[weekState.id] ===
+          weekState
         ) {
           return previousHistory;
         }
@@ -424,50 +456,243 @@ export function LeagueProvider({
     );
   };
 
-  const upsertObscureStatCoinFlipResolution =
-    (
-      resolution:
-        ObscureStatCoinFlipResolution,
-    ) => {
-      setObscureStatCoinFlipHistory(
-        (previousHistory) => ({
-          ...previousHistory,
-          [resolution.id]: resolution,
-        }),
-      );
-    };
+  const upsertObscureStatCoinFlipResolution = (
+    resolution: ObscureStatCoinFlipResolution,
+  ) => {
+    setObscureStatCoinFlipHistory(
+      (previousHistory) => ({
+        ...previousHistory,
+        [resolution.id]: resolution,
+      }),
+    );
+  };
 
-  const clearObscureStatCoinFlipResolution =
-    (resolutionId: string) => {
-      const normalizedResolutionId =
-        resolutionId.trim();
+  const clearObscureStatCoinFlipResolution = (
+    resolutionId: string,
+  ) => {
+    const normalizedResolutionId =
+      resolutionId.trim();
 
-      if (!normalizedResolutionId) {
-        return;
-      }
+    if (!normalizedResolutionId) {
+      return;
+    }
 
-      setObscureStatCoinFlipHistory(
-        (previousHistory) => {
-          if (
-            !previousHistory[
-              normalizedResolutionId
-            ]
-          ) {
-            return previousHistory;
-          }
-
-          const nextHistory = {
-            ...previousHistory,
-          };
-
-          delete nextHistory[
+    setObscureStatCoinFlipHistory(
+      (previousHistory) => {
+        if (
+          !previousHistory[
             normalizedResolutionId
-          ];
+          ]
+        ) {
+          return previousHistory;
+        }
 
-          return nextHistory;
-        },
-      );
-    };
+        const nextHistory = {
+          ...previousHistory,
+        };
+
+        delete nextHistory[
+          normalizedResolutionId
+        ];
+
+        return nextHistory;
+      },
+    );
+  };
+
+  const initializePayoutLedgerSeason = (
+    season: number,
+  ) => {
+    const ledgerId =
+      getPayoutLedgerSeasonId(season);
+
+    setPayoutLedgerHistory(
+      (previousHistory) => {
+        if (previousHistory[ledgerId]) {
+          return previousHistory;
+        }
+
+        return {
+          ...previousHistory,
+          [ledgerId]: createPayoutLedgerSeason(
+            season,
+            league.players,
+          ),
+        };
+      },
+    );
+  };
+
+  const synchronizePayoutLedgerSeason = (
+    season: number,
+  ) => {
+    const ledgerId =
+      getPayoutLedgerSeasonId(season);
+
+    setPayoutLedgerHistory(
+      (previousHistory) => {
+        const existingLedger =
+          previousHistory[ledgerId];
+
+        const nextLedger = existingLedger
+          ? synchronizePayoutLedgerRosterAndBuyIns(
+              existingLedger,
+              league.players,
+            )
+          : createPayoutLedgerSeason(
+              season,
+              league.players,
+            );
+
+        if (nextLedger === existingLedger) {
+          return previousHistory;
+        }
+
+        return {
+          ...previousHistory,
+          [ledgerId]: nextLedger,
+        };
+      },
+    );
+  };
+
+  const upsertPayoutLedgerEntry = (
+    season: number,
+    entry: PayoutLedgerEntry,
+  ) => {
+    const ledgerId =
+      getPayoutLedgerSeasonId(season);
+
+    setPayoutLedgerHistory(
+      (previousHistory) => {
+        const existingLedger =
+          previousHistory[ledgerId];
+
+        if (!existingLedger) {
+          return previousHistory;
+        }
+
+        const nextLedger = upsertLedgerEntry(
+          existingLedger,
+          entry,
+        );
+
+        if (nextLedger === existingLedger) {
+          return previousHistory;
+        }
+
+        return {
+          ...previousHistory,
+          [ledgerId]: nextLedger,
+        };
+      },
+    );
+  };
+
+  const removePayoutLedgerEntry = (
+    season: number,
+    entryId: string,
+  ) => {
+    const ledgerId =
+      getPayoutLedgerSeasonId(season);
+
+    setPayoutLedgerHistory(
+      (previousHistory) => {
+        const existingLedger =
+          previousHistory[ledgerId];
+
+        if (!existingLedger) {
+          return previousHistory;
+        }
+
+        const nextLedger = removeLedgerEntry(
+          existingLedger,
+          entryId,
+        );
+
+        if (nextLedger === existingLedger) {
+          return previousHistory;
+        }
+
+        return {
+          ...previousHistory,
+          [ledgerId]: nextLedger,
+        };
+      },
+    );
+  };
+
+  const setPayoutLedgerEntryStatus = (
+    season: number,
+    entryId: string,
+    status: PayoutLedgerEntryStatus,
+  ) => {
+    const ledgerId =
+      getPayoutLedgerSeasonId(season);
+
+    setPayoutLedgerHistory(
+      (previousHistory) => {
+        const existingLedger =
+          previousHistory[ledgerId];
+
+        if (!existingLedger) {
+          return previousHistory;
+        }
+
+        const nextLedger =
+          updateLedgerEntryStatus(
+            existingLedger,
+            entryId,
+            status,
+          );
+
+        if (nextLedger === existingLedger) {
+          return previousHistory;
+        }
+
+        return {
+          ...previousHistory,
+          [ledgerId]: nextLedger,
+        };
+      },
+    );
+  };
+
+  const setPayoutLedgerEntryReviewStatus = (
+    season: number,
+    entryId: string,
+    needsReview: boolean,
+  ) => {
+    const ledgerId =
+      getPayoutLedgerSeasonId(season);
+
+    setPayoutLedgerHistory(
+      (previousHistory) => {
+        const existingLedger =
+          previousHistory[ledgerId];
+
+        if (!existingLedger) {
+          return previousHistory;
+        }
+
+        const nextLedger =
+          updateLedgerEntryReviewStatus(
+            existingLedger,
+            entryId,
+            needsReview,
+          );
+
+        if (nextLedger === existingLedger) {
+          return previousHistory;
+        }
+
+        return {
+          ...previousHistory,
+          [ledgerId]: nextLedger,
+        };
+      },
+    );
+  };
 
   const resetLeaguePersistence = () => {
     clearPersistedLeagueState();
@@ -477,13 +702,12 @@ export function LeagueProvider({
         initialLeagueState,
       ),
     );
-
     setPicks({});
     setGameResults({});
     setScoringHistory({});
     setPickerClickerHistory({});
     setObscureStatCoinFlipHistory({});
-
+    setPayoutLedgerHistory({});
     setActivePlayerId(
       resolveActivePlayerId(
         "",
@@ -496,36 +720,33 @@ export function LeagueProvider({
     <LeagueContext.Provider
       value={{
         league,
-
         setPlayers,
         addPlayer,
         deletePlayer,
-
         updateGame,
-
         setCurrentWeek,
         goToPreviousWeek,
         goToNextWeek,
-
         picks,
         setPick,
-
         activePlayerId,
         setActivePlayerId,
-
         gameResults,
         setGameResults,
-
         scoringHistory,
         addFinalizedWeeklyScoringRecord,
-
         pickerClickerHistory,
         upsertPickerClickerWeekState,
-
         obscureStatCoinFlipHistory,
         upsertObscureStatCoinFlipResolution,
         clearObscureStatCoinFlipResolution,
-
+        payoutLedgerHistory,
+        initializePayoutLedgerSeason,
+        synchronizePayoutLedgerSeason,
+        upsertPayoutLedgerEntry,
+        removePayoutLedgerEntry,
+        setPayoutLedgerEntryStatus,
+        setPayoutLedgerEntryReviewStatus,
         resetLeaguePersistence,
       }}
     >
@@ -535,8 +756,7 @@ export function LeagueProvider({
 }
 
 export function useLeague() {
-  const context =
-    useContext(LeagueContext);
+  const context = useContext(LeagueContext);
 
   if (!context) {
     throw new Error(

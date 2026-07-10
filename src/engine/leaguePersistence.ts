@@ -3,6 +3,16 @@ import type {
   ObscureStatCoinFlipResolution,
 } from "./obscureStatCoinFlipTypes";
 import type {
+  PayoutLedgerCategory,
+  PayoutLedgerDirection,
+  PayoutLedgerEntry,
+  PayoutLedgerEntryOrigin,
+  PayoutLedgerEntryStatus,
+  PayoutLedgerHistory,
+  PayoutLedgerPlayerSnapshot,
+  PayoutLedgerSeasonState,
+} from "./payoutLedgerTypes";
+import type {
   PickerClickerAssignment,
   PickerClickerFallbackPick,
   PickerClickerFallbackStatus,
@@ -19,6 +29,10 @@ import type {
   WeeklyScoringMatchupType,
   WeeklyScoringOutcome,
 } from "./weeklyScoringTypes";
+import type {
+  PlayerRole,
+  PlayerStatus,
+} from "../types/player";
 
 export type PersistedPicks = Record<
   string,
@@ -37,8 +51,8 @@ export type LeaguePersistenceState<TLeague> = {
   gameResults: PersistedGameResults;
   scoringHistory: WeeklyScoringHistory;
   pickerClickerHistory: PickerClickerHistory;
-  obscureStatCoinFlipHistory:
-    ObscureStatCoinFlipHistory;
+  obscureStatCoinFlipHistory: ObscureStatCoinFlipHistory;
+  payoutLedgerHistory: PayoutLedgerHistory;
 };
 
 type StoredLeagueSnapshot<TLeague> =
@@ -50,13 +64,12 @@ type StoredLeagueSnapshot<TLeague> =
 const STORAGE_KEY =
   "head2head-brawlin-steel.league.v1";
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 function isBrowserStorageAvailable() {
   return (
     typeof window !== "undefined" &&
-    typeof window.localStorage !==
-      "undefined"
+    typeof window.localStorage !== "undefined"
   );
 }
 
@@ -91,10 +104,8 @@ function sanitizeNumber(
   value: unknown,
   fallback = 0,
 ): number {
-  return (
-    typeof value === "number" &&
+  return typeof value === "number" &&
     Number.isFinite(value)
-  )
     ? value
     : fallback;
 }
@@ -102,20 +113,32 @@ function sanitizeNumber(
 function sanitizeOptionalNumber(
   value: unknown,
 ): number | undefined {
-  return (
-    typeof value === "number" &&
+  return typeof value === "number" &&
     Number.isFinite(value)
-  )
     ? value
     : undefined;
+}
+
+function sanitizeInteger(
+  value: unknown,
+  fallback = 0,
+): number {
+  const numericValue = sanitizeNumber(
+    value,
+    fallback,
+  );
+
+  return Math.trunc(numericValue);
 }
 
 function sanitizePositiveInteger(
   value: unknown,
   fallback = 0,
 ): number {
-  const numericValue =
-    sanitizeNumber(value, fallback);
+  const numericValue = sanitizeNumber(
+    value,
+    fallback,
+  );
 
   if (numericValue <= 0) {
     return fallback;
@@ -191,11 +214,9 @@ function sanitizePicks(
       sanitizeStringRecord(playerPicks);
 
     if (
-      Object.keys(cleanPlayerPicks).length >
-      0
+      Object.keys(cleanPlayerPicks).length > 0
     ) {
-      cleaned[playerId] =
-        cleanPlayerPicks;
+      cleaned[playerId] = cleanPlayerPicks;
     }
 
     return cleaned;
@@ -254,10 +275,7 @@ function sanitizeWeeklyPlayerScoringResult(
   }
 
   const outcome =
-    sanitizeWeeklyScoringOutcome(
-      value.outcome,
-    );
-
+    sanitizeWeeklyScoringOutcome(value.outcome);
   const matchupType =
     sanitizeWeeklyScoringMatchupType(
       value.matchupType,
@@ -267,12 +285,10 @@ function sanitizeWeeklyPlayerScoringResult(
     !outcome ||
     !matchupType ||
     typeof value.playerId !== "string" ||
-    typeof value.playerName !==
-      "string" ||
+    typeof value.playerName !== "string" ||
     typeof value.nflTeam !== "string" ||
     typeof value.matchupId !== "string" ||
-    typeof value.opponentName !==
-      "string"
+    typeof value.opponentName !== "string"
   ) {
     return null;
   }
@@ -281,17 +297,14 @@ function sanitizeWeeklyPlayerScoringResult(
     sanitizeOptionalNumber(
       value.seasonEligibleCorrectPicks,
     );
-
   const weeklyPrizeEligible =
     sanitizeOptionalBoolean(
       value.weeklyPrizeEligible,
     );
-
   const usedPickerClicker =
     sanitizeOptionalBoolean(
       value.usedPickerClicker,
     );
-
   const pickerClickerFallbackCount =
     sanitizeOptionalNumber(
       value.pickerClickerFallbackCount,
@@ -301,101 +314,61 @@ function sanitizeWeeklyPlayerScoringResult(
     playerId: value.playerId,
     playerName: value.playerName,
     nflTeam: value.nflTeam,
-
     matchupId: value.matchupId,
     matchupType,
-
-    opponentId:
-      sanitizeNullableString(
-        value.opponentId,
-      ),
-
+    opponentId: sanitizeNullableString(
+      value.opponentId,
+    ),
     opponentName: value.opponentName,
-
-    correctPicks:
-      sanitizeNumber(
-        value.correctPicks,
-      ),
-
-    possiblePicks:
-      sanitizeNumber(
-        value.possiblePicks,
-      ),
-
-    missingPicks:
-      sanitizeNumber(
-        value.missingPicks,
-      ),
-
-    ...(seasonEligibleCorrectPicks !==
-    undefined
-      ? {
-          seasonEligibleCorrectPicks,
-        }
+    correctPicks: sanitizeNumber(
+      value.correctPicks,
+    ),
+    possiblePicks: sanitizeNumber(
+      value.possiblePicks,
+    ),
+    missingPicks: sanitizeNumber(
+      value.missingPicks,
+    ),
+    ...(seasonEligibleCorrectPicks !== undefined
+      ? { seasonEligibleCorrectPicks }
       : {}),
-
     ...(weeklyPrizeEligible !== undefined
-      ? {
-          weeklyPrizeEligible,
-        }
+      ? { weeklyPrizeEligible }
       : {}),
-
     ...(usedPickerClicker !== undefined
-      ? {
-          usedPickerClicker,
-        }
+      ? { usedPickerClicker }
       : {}),
-
-    ...(pickerClickerFallbackCount !==
-    undefined
-      ? {
-          pickerClickerFallbackCount,
-        }
+    ...(pickerClickerFallbackCount !== undefined
+      ? { pickerClickerFallbackCount }
       : {}),
-
     outcome,
-
-    leaguePointsAwarded:
-      sanitizeNumber(
-        value.leaguePointsAwarded,
-      ),
+    leaguePointsAwarded: sanitizeNumber(
+      value.leaguePointsAwarded,
+    ),
   };
 }
 
 function sanitizePlayerResults(
   value: unknown,
-): Record<
-  string,
-  WeeklyPlayerScoringResult
-> {
+): Record<string, WeeklyPlayerScoringResult> {
   if (!isRecord(value)) {
     return {};
   }
 
   return Object.entries(value).reduce<
-    Record<
-      string,
-      WeeklyPlayerScoringResult
-    >
-  >(
-    (
-      cleaned,
-      [playerId, playerResult],
-    ) => {
-      const sanitizedResult =
-        sanitizeWeeklyPlayerScoringResult(
-          playerResult,
-        );
+    Record<string, WeeklyPlayerScoringResult>
+  >((cleaned, [playerId, playerResult]) => {
+    const sanitizedResult =
+      sanitizeWeeklyPlayerScoringResult(
+        playerResult,
+      );
 
-      if (sanitizedResult) {
-        cleaned[playerId] =
-          sanitizedResult;
-      }
+    if (sanitizedResult) {
+      cleaned[playerId] = sanitizedResult;
+    }
 
-      return cleaned;
-    },
-    {},
-  );
+    return cleaned;
+  }, {});
 }
 
 function sanitizeFinalizedWeeklyMatchupRecord(
@@ -409,7 +382,6 @@ function sanitizeFinalizedWeeklyMatchupRecord(
     sanitizeWeeklyScoringMatchupType(
       value.matchupType,
     );
-
   const status =
     sanitizeWeeklyScoringMatchupStatus(
       value.status,
@@ -421,10 +393,8 @@ function sanitizeFinalizedWeeklyMatchupRecord(
     typeof value.id !== "string" ||
     typeof value.matchupId !== "string" ||
     typeof value.playerAId !== "string" ||
-    typeof value.playerAName !==
-      "string" ||
-    typeof value.playerATeam !==
-      "string" ||
+    typeof value.playerAName !== "string" ||
+    typeof value.playerATeam !== "string" ||
     typeof value.resultLabel !== "string"
   ) {
     return null;
@@ -437,68 +407,42 @@ function sanitizeFinalizedWeeklyMatchupRecord(
 
   return {
     id: value.id,
-
-    season:
-      sanitizePositiveInteger(
-        value.season,
-      ),
-
-    week:
-      sanitizePositiveInteger(
-        value.week,
-      ),
-
+    season: sanitizePositiveInteger(
+      value.season,
+    ),
+    week: sanitizePositiveInteger(
+      value.week,
+    ),
     matchupId: value.matchupId,
     matchupType,
-
     ...(sourceGameId
-      ? {
-          sourceGameId,
-        }
+      ? { sourceGameId }
       : {}),
-
     playerAId: value.playerAId,
     playerAName: value.playerAName,
     playerATeam: value.playerATeam,
-
-    playerBId:
-      sanitizeNullableString(
-        value.playerBId,
-      ),
-
-    playerBName:
-      sanitizeNullableString(
-        value.playerBName,
-      ),
-
-    playerBTeam:
-      sanitizeNullableString(
-        value.playerBTeam,
-      ),
-
-    playerAScore:
-      sanitizeNumber(
-        value.playerAScore,
-      ),
-
-    playerBScore:
-      sanitizeNumber(
-        value.playerBScore,
-      ),
-
-    possiblePoints:
-      sanitizeNumber(
-        value.possiblePoints,
-      ),
-
-    winnerId:
-      sanitizeNullableString(
-        value.winnerId,
-      ),
-
-    isTie:
-      sanitizeBoolean(value.isTie),
-
+    playerBId: sanitizeNullableString(
+      value.playerBId,
+    ),
+    playerBName: sanitizeNullableString(
+      value.playerBName,
+    ),
+    playerBTeam: sanitizeNullableString(
+      value.playerBTeam,
+    ),
+    playerAScore: sanitizeNumber(
+      value.playerAScore,
+    ),
+    playerBScore: sanitizeNumber(
+      value.playerBScore,
+    ),
+    possiblePoints: sanitizeNumber(
+      value.possiblePoints,
+    ),
+    winnerId: sanitizeNullableString(
+      value.winnerId,
+    ),
+    isTie: sanitizeBoolean(value.isTie),
     status,
     resultLabel: value.resultLabel,
   };
@@ -535,73 +479,48 @@ function sanitizeFinalizedWeeklyScoringRecord(
     return null;
   }
 
-  const season =
-    sanitizePositiveInteger(
-      value.season,
-    );
-
-  const week =
-    sanitizePositiveInteger(
-      value.week,
-    );
+  const season = sanitizePositiveInteger(
+    value.season,
+  );
+  const week = sanitizePositiveInteger(
+    value.week,
+  );
 
   if (season <= 0 || week <= 0) {
     return null;
   }
 
   return {
-    id: sanitizeString(
-      value.id,
-      fallbackId,
-    ),
-
+    id: sanitizeString(value.id, fallbackId),
     season,
     week,
-
-    finalizedAt:
-      sanitizeString(
-        value.finalizedAt,
-      ),
-
-    totalScheduledGames:
-      sanitizeNumber(
-        value.totalScheduledGames,
-      ),
-
-    completedGameCount:
-      sanitizeNumber(
-        value.completedGameCount,
-      ),
-
-    canceledGameCount:
-      sanitizeNumber(
-        value.canceledGameCount,
-      ),
-
-    eligibleScoringGameCount:
-      sanitizeNumber(
-        value.eligibleScoringGameCount,
-      ),
-
-    completedGameIds:
-      sanitizeStringArray(
-        value.completedGameIds,
-      ),
-
-    canceledGameIds:
-      sanitizeStringArray(
-        value.canceledGameIds,
-      ),
-
-    matchups:
-      sanitizeFinalizedWeeklyMatchups(
-        value.matchups,
-      ),
-
-    playerResults:
-      sanitizePlayerResults(
-        value.playerResults,
-      ),
+    finalizedAt: sanitizeString(
+      value.finalizedAt,
+    ),
+    totalScheduledGames: sanitizeNumber(
+      value.totalScheduledGames,
+    ),
+    completedGameCount: sanitizeNumber(
+      value.completedGameCount,
+    ),
+    canceledGameCount: sanitizeNumber(
+      value.canceledGameCount,
+    ),
+    eligibleScoringGameCount: sanitizeNumber(
+      value.eligibleScoringGameCount,
+    ),
+    completedGameIds: sanitizeStringArray(
+      value.completedGameIds,
+    ),
+    canceledGameIds: sanitizeStringArray(
+      value.canceledGameIds,
+    ),
+    matchups: sanitizeFinalizedWeeklyMatchups(
+      value.matchups,
+    ),
+    playerResults: sanitizePlayerResults(
+      value.playerResults,
+    ),
   };
 }
 
@@ -650,32 +569,24 @@ function sanitizePickerClickerAssignment(
     return null;
   }
 
-  const season =
-    sanitizePositiveInteger(
-      value.season,
-    );
-
-  const week =
-    sanitizePositiveInteger(
-      value.week,
-    );
-
-  const cycleNumber =
-    sanitizePositiveInteger(
-      value.cycleNumber,
-      1,
-    );
+  const season = sanitizePositiveInteger(
+    value.season,
+  );
+  const week = sanitizePositiveInteger(
+    value.week,
+  );
+  const cycleNumber = sanitizePositiveInteger(
+    value.cycleNumber,
+    1,
+  );
 
   if (
     season <= 0 ||
     week <= 0 ||
     typeof value.id !== "string" ||
-    typeof value.sourcePlayerId !==
-      "string" ||
-    typeof value.sourcePlayerName !==
-      "string" ||
-    typeof value.sourceNFLTeam !==
-      "string"
+    typeof value.sourcePlayerId !== "string" ||
+    typeof value.sourcePlayerName !== "string" ||
+    typeof value.sourceNFLTeam !== "string"
   ) {
     return null;
   }
@@ -684,22 +595,13 @@ function sanitizePickerClickerAssignment(
     id: value.id,
     season,
     week,
-
-    sourcePlayerId:
-      value.sourcePlayerId,
-
-    sourcePlayerName:
-      value.sourcePlayerName,
-
-    sourceNFLTeam:
-      value.sourceNFLTeam,
-
+    sourcePlayerId: value.sourcePlayerId,
+    sourcePlayerName: value.sourcePlayerName,
+    sourceNFLTeam: value.sourceNFLTeam,
     cycleNumber,
-
-    assignedAt:
-      sanitizeString(
-        value.assignedAt,
-      ),
+    assignedAt: sanitizeString(
+      value.assignedAt,
+    ),
   };
 }
 
@@ -714,16 +616,12 @@ function sanitizePickerClickerFallbackPick(
     sanitizePickerClickerFallbackStatus(
       value.status,
     );
-
-  const season =
-    sanitizePositiveInteger(
-      value.season,
-    );
-
-  const week =
-    sanitizePositiveInteger(
-      value.week,
-    );
+  const season = sanitizePositiveInteger(
+    value.season,
+  );
+  const week = sanitizePositiveInteger(
+    value.week,
+  );
 
   if (
     !status ||
@@ -732,19 +630,16 @@ function sanitizePickerClickerFallbackPick(
     typeof value.id !== "string" ||
     typeof value.gameId !== "string" ||
     typeof value.playerId !== "string" ||
-    typeof value.sourcePlayerId !==
-      "string"
+    typeof value.sourcePlayerId !== "string"
   ) {
     return null;
   }
 
-  const team =
-    sanitizeNullableString(value.team);
+  const team = sanitizeNullableString(
+    value.team,
+  );
 
-  if (
-    status === "copied" &&
-    !team
-  ) {
+  if (status === "copied" && !team) {
     return null;
   }
 
@@ -752,24 +647,17 @@ function sanitizePickerClickerFallbackPick(
     id: value.id,
     season,
     week,
-
     gameId: value.gameId,
     playerId: value.playerId,
-
-    sourcePlayerId:
-      value.sourcePlayerId,
-
+    sourcePlayerId: value.sourcePlayerId,
     team:
       status === "copied"
         ? team
         : null,
-
     status,
-
-    appliedAt:
-      sanitizeString(
-        value.appliedAt,
-      ),
+    appliedAt: sanitizeString(
+      value.appliedAt,
+    ),
   };
 }
 
@@ -792,9 +680,7 @@ function sanitizePickerClickerWeekFallbacks(
       }
 
       const cleanPlayerFallbacks =
-        Object.entries(
-          playerFallbacks,
-        ).reduce<
+        Object.entries(playerFallbacks).reduce<
           Record<
             string,
             PickerClickerFallbackPick
@@ -820,9 +706,8 @@ function sanitizePickerClickerWeekFallbacks(
         );
 
       if (
-        Object.keys(
-          cleanPlayerFallbacks,
-        ).length > 0
+        Object.keys(cleanPlayerFallbacks)
+          .length > 0
       ) {
         cleanedPlayers[playerId] =
           cleanPlayerFallbacks;
@@ -846,16 +731,12 @@ function sanitizePickerClickerWeekState(
     sanitizePickerClickerAssignment(
       value.assignment,
     );
-
-  const season =
-    sanitizePositiveInteger(
-      value.season,
-    );
-
-  const week =
-    sanitizePositiveInteger(
-      value.week,
-    );
+  const season = sanitizePositiveInteger(
+    value.season,
+  );
+  const week = sanitizePositiveInteger(
+    value.week,
+  );
 
   if (
     !assignment ||
@@ -868,35 +749,24 @@ function sanitizePickerClickerWeekState(
   }
 
   return {
-    id: sanitizeString(
-      value.id,
-      fallbackId,
-    ),
-
+    id: sanitizeString(value.id, fallbackId),
     season,
     week,
     assignment,
-
     fallbackPicks:
       sanitizePickerClickerWeekFallbacks(
         value.fallbackPicks,
       ),
-
-    ineligiblePlayerIds:
-      sanitizeStringArray(
-        value.ineligiblePlayerIds,
-      ),
-
-    lockedGameIds:
-      sanitizeStringArray(
-        value.lockedGameIds,
-      ),
-
-    updatedAt:
-      sanitizeString(
-        value.updatedAt,
-        assignment.assignedAt,
-      ),
+    ineligiblePlayerIds: sanitizeStringArray(
+      value.ineligiblePlayerIds,
+    ),
+    lockedGameIds: sanitizeStringArray(
+      value.lockedGameIds,
+    ),
+    updatedAt: sanitizeString(
+      value.updatedAt,
+      assignment.assignedAt,
+    ),
   };
 }
 
@@ -909,26 +779,20 @@ function sanitizePickerClickerHistory(
 
   return Object.entries(value).reduce<
     PickerClickerHistory
-  >(
-    (
-      cleaned,
-      [weekStateId, weekStateValue],
-    ) => {
-      const sanitizedWeekState =
-        sanitizePickerClickerWeekState(
-          weekStateValue,
-          weekStateId,
-        );
+  >((cleaned, [weekStateId, weekStateValue]) => {
+    const sanitizedWeekState =
+      sanitizePickerClickerWeekState(
+        weekStateValue,
+        weekStateId,
+      );
 
-      if (sanitizedWeekState) {
-        cleaned[sanitizedWeekState.id] =
-          sanitizedWeekState;
-      }
+    if (sanitizedWeekState) {
+      cleaned[sanitizedWeekState.id] =
+        sanitizedWeekState;
+    }
 
-      return cleaned;
-    },
-    {},
-  );
+    return cleaned;
+  }, {});
 }
 
 function sanitizeObscureStatCoinFlipResolution(
@@ -939,28 +803,20 @@ function sanitizeObscureStatCoinFlipResolution(
     return null;
   }
 
-  const season =
-    sanitizePositiveInteger(
-      value.season,
-    );
-
-  const week =
-    sanitizePositiveInteger(
-      value.week,
-    );
-
-  const winnerPlayerId =
-    sanitizeString(
-      value.winnerPlayerId,
-    ).trim();
-
+  const season = sanitizePositiveInteger(
+    value.season,
+  );
+  const week = sanitizePositiveInteger(
+    value.week,
+  );
+  const winnerPlayerId = sanitizeString(
+    value.winnerPlayerId,
+  ).trim();
   const eligiblePlayerIds =
     sanitizeStringArray(
       value.eligiblePlayerIds,
     )
-      .map((playerId) =>
-        playerId.trim(),
-      )
+      .map((playerId) => playerId.trim())
       .filter(Boolean)
       .sort();
 
@@ -977,21 +833,14 @@ function sanitizeObscureStatCoinFlipResolution(
   }
 
   return {
-    id: sanitizeString(
-      value.id,
-      fallbackId,
-    ),
-
+    id: sanitizeString(value.id, fallbackId),
     season,
     week,
-
     winnerPlayerId,
     eligiblePlayerIds,
-
-    resolvedAt:
-      sanitizeString(
-        value.resolvedAt,
-      ),
+    resolvedAt: sanitizeString(
+      value.resolvedAt,
+    ),
   };
 }
 
@@ -1016,15 +865,366 @@ function sanitizeObscureStatCoinFlipHistory(
         );
 
       if (sanitizedResolution) {
-        cleaned[
-          sanitizedResolution.id
-        ] = sanitizedResolution;
+        cleaned[sanitizedResolution.id] =
+          sanitizedResolution;
       }
 
       return cleaned;
     },
     {},
   );
+}
+
+function sanitizePlayerRole(
+  value: unknown,
+): PlayerRole | null {
+  if (
+    value === "commissioner" ||
+    value === "backup_commissioner" ||
+    value === "player"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function sanitizePlayerStatus(
+  value: unknown,
+): PlayerStatus | null {
+  if (
+    value === "active" ||
+    value === "inactive"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function sanitizePayoutLedgerDirection(
+  value: unknown,
+): PayoutLedgerDirection | null {
+  if (
+    value === "collection" ||
+    value === "payout"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function sanitizePayoutLedgerEntryStatus(
+  value: unknown,
+): PayoutLedgerEntryStatus | null {
+  if (
+    value === "unpaid" ||
+    value === "paid"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function sanitizePayoutLedgerEntryOrigin(
+  value: unknown,
+): PayoutLedgerEntryOrigin | null {
+  if (
+    value === "automatic" ||
+    value === "manual"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function sanitizePayoutLedgerCategory(
+  value: unknown,
+): PayoutLedgerCategory | null {
+  if (
+    value === "player-buy-in" ||
+    value === "obscure-stat-award" ||
+    value === "division-group-payout" ||
+    value === "afc-winner" ||
+    value === "nfc-winner" ||
+    value === "wild-card-loser" ||
+    value === "divisional-loser" ||
+    value === "conference-loser" ||
+    value === "super-bowl-loser" ||
+    value === "super-bowl-winner" ||
+    value === "biggest-winner" ||
+    value === "biggest-loser" ||
+    value === "last-to-lose" ||
+    value === "adjustment"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function sanitizePayoutLedgerPlayerSnapshot(
+  value: unknown,
+): PayoutLedgerPlayerSnapshot | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const status = sanitizePlayerStatus(
+    value.status,
+  );
+  const role = sanitizePlayerRole(value.role);
+  const playerId = sanitizeString(
+    value.playerId,
+  ).trim();
+  const playerName = sanitizeString(
+    value.playerName,
+  ).trim();
+  const nflTeam = sanitizeString(
+    value.nflTeam,
+  ).trim();
+
+  if (
+    !status ||
+    !role ||
+    !playerId ||
+    !playerName ||
+    !nflTeam
+  ) {
+    return null;
+  }
+
+  return {
+    playerId,
+    playerName,
+    nflTeam,
+    status,
+    role,
+    capturedAt: sanitizeString(
+      value.capturedAt,
+    ),
+  };
+}
+
+function sanitizePayoutLedgerRoster(
+  value: unknown,
+): PayoutLedgerPlayerSnapshot[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seenPlayerIds = new Set<string>();
+
+  return value.reduce<
+    PayoutLedgerPlayerSnapshot[]
+  >((cleaned, rosterValue) => {
+    const snapshot =
+      sanitizePayoutLedgerPlayerSnapshot(
+        rosterValue,
+      );
+
+    if (
+      snapshot &&
+      !seenPlayerIds.has(snapshot.playerId)
+    ) {
+      seenPlayerIds.add(snapshot.playerId);
+      cleaned.push(snapshot);
+    }
+
+    return cleaned;
+  }, []);
+}
+
+function sanitizePayoutLedgerEntry(
+  value: unknown,
+  fallbackId: string,
+): PayoutLedgerEntry | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const season = sanitizePositiveInteger(
+    value.season,
+  );
+  const direction =
+    sanitizePayoutLedgerDirection(
+      value.direction,
+    );
+  const category =
+    sanitizePayoutLedgerCategory(
+      value.category,
+    );
+  const origin =
+    sanitizePayoutLedgerEntryOrigin(
+      value.origin,
+    );
+  const status =
+    sanitizePayoutLedgerEntryStatus(
+      value.status,
+    );
+  const amountCents = sanitizeInteger(
+    value.amountCents,
+  );
+  const id = sanitizeString(
+    value.id,
+    fallbackId,
+  ).trim();
+  const playerId = sanitizeString(
+    value.playerId,
+  ).trim();
+  const playerName = sanitizeString(
+    value.playerName,
+  ).trim();
+  const nflTeam = sanitizeString(
+    value.nflTeam,
+  ).trim();
+  const sourceKey = sanitizeString(
+    value.sourceKey,
+  ).trim();
+  const sourceLabel = sanitizeString(
+    value.sourceLabel,
+  ).trim();
+
+  if (
+    season <= 0 ||
+    !direction ||
+    !category ||
+    !origin ||
+    !status ||
+    amountCents <= 0 ||
+    !id ||
+    !playerId ||
+    !playerName ||
+    !nflTeam ||
+    !sourceKey ||
+    !sourceLabel
+  ) {
+    return null;
+  }
+
+  return {
+    id,
+    season,
+    playerId,
+    playerName,
+    nflTeam,
+    direction,
+    category,
+    origin,
+    amountCents,
+    status,
+    sourceKey,
+    sourceLabel,
+    note: sanitizeString(value.note),
+    createdAt: sanitizeString(
+      value.createdAt,
+    ),
+    updatedAt: sanitizeString(
+      value.updatedAt,
+    ),
+    paidAt:
+      status === "paid"
+        ? sanitizeNullableString(value.paidAt)
+        : null,
+    needsReview: sanitizeBoolean(
+      value.needsReview,
+    ),
+  };
+}
+
+function sanitizePayoutLedgerEntries(
+  value: unknown,
+  season: number,
+): Record<string, PayoutLedgerEntry> {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce<
+    Record<string, PayoutLedgerEntry>
+  >((cleaned, [entryId, entryValue]) => {
+    const entry = sanitizePayoutLedgerEntry(
+      entryValue,
+      entryId,
+    );
+
+    if (entry && entry.season === season) {
+      cleaned[entry.id] = entry;
+    }
+
+    return cleaned;
+  }, {});
+}
+
+function sanitizePayoutLedgerSeasonState(
+  value: unknown,
+  fallbackId: string,
+): PayoutLedgerSeasonState | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const season = sanitizePositiveInteger(
+    value.season,
+  );
+
+  if (season <= 0) {
+    return null;
+  }
+
+  const id = sanitizeString(
+    value.id,
+    fallbackId,
+  ).trim();
+
+  if (!id) {
+    return null;
+  }
+
+  return {
+    id,
+    season,
+    initializedAt: sanitizeString(
+      value.initializedAt,
+    ),
+    updatedAt: sanitizeString(
+      value.updatedAt,
+    ),
+    roster: sanitizePayoutLedgerRoster(
+      value.roster,
+    ),
+    entries: sanitizePayoutLedgerEntries(
+      value.entries,
+      season,
+    ),
+  };
+}
+
+function sanitizePayoutLedgerHistory(
+  value: unknown,
+): PayoutLedgerHistory {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce<
+    PayoutLedgerHistory
+  >((cleaned, [ledgerId, ledgerValue]) => {
+    const ledger =
+      sanitizePayoutLedgerSeasonState(
+        ledgerValue,
+        ledgerId,
+      );
+
+    if (ledger) {
+      cleaned[ledger.id] = ledger;
+    }
+
+    return cleaned;
+  }, {});
 }
 
 function mergeLeagueState<TLeague>(
@@ -1049,16 +1249,16 @@ export function loadPersistedLeagueState<
 >(
   fallbackLeague: TLeague,
 ): LeaguePersistenceState<TLeague> {
-  const fallbackState: LeaguePersistenceState<TLeague> =
-    {
-      league: fallbackLeague,
-      picks: {},
-      activePlayerId: "",
-      gameResults: {},
-      scoringHistory: {},
-      pickerClickerHistory: {},
-      obscureStatCoinFlipHistory: {},
-    };
+  const fallbackState: LeaguePersistenceState<TLeague> = {
+    league: fallbackLeague,
+    picks: {},
+    activePlayerId: "",
+    gameResults: {},
+    scoringHistory: {},
+    pickerClickerHistory: {},
+    obscureStatCoinFlipHistory: {},
+    payoutLedgerHistory: {},
+  };
 
   if (!isBrowserStorageAvailable()) {
     return fallbackState;
@@ -1082,42 +1282,37 @@ export function loadPersistedLeagueState<
     }
 
     return {
-      league:
-        mergeLeagueState(
-          fallbackLeague,
-          parsedSnapshot.league,
-        ),
-
-      picks:
-        sanitizePicks(
-          parsedSnapshot.picks,
-        ),
-
+      league: mergeLeagueState(
+        fallbackLeague,
+        parsedSnapshot.league,
+      ),
+      picks: sanitizePicks(
+        parsedSnapshot.picks,
+      ),
       activePlayerId:
         typeof parsedSnapshot.activePlayerId ===
         "string"
           ? parsedSnapshot.activePlayerId
           : "",
-
-      gameResults:
-        sanitizeStringRecord(
-          parsedSnapshot.gameResults,
-        ),
-
+      gameResults: sanitizeStringRecord(
+        parsedSnapshot.gameResults,
+      ),
       scoringHistory:
         sanitizeWeeklyScoringHistory(
           parsedSnapshot.scoringHistory,
         ),
-
       pickerClickerHistory:
         sanitizePickerClickerHistory(
           parsedSnapshot.pickerClickerHistory,
         ),
-
       obscureStatCoinFlipHistory:
         sanitizeObscureStatCoinFlipHistory(
           parsedSnapshot
             .obscureStatCoinFlipHistory,
+        ),
+      payoutLedgerHistory:
+        sanitizePayoutLedgerHistory(
+          parsedSnapshot.payoutLedgerHistory,
         ),
     };
   } catch {
@@ -1135,30 +1330,21 @@ export function savePersistedLeagueState<
   }
 
   try {
-    const snapshot: StoredLeagueSnapshot<TLeague> =
-      {
-        schemaVersion: SCHEMA_VERSION,
-        savedAt:
-          new Date().toISOString(),
-
-        league: state.league,
-        picks: state.picks,
-
-        activePlayerId:
-          state.activePlayerId,
-
-        gameResults:
-          state.gameResults,
-
-        scoringHistory:
-          state.scoringHistory,
-
-        pickerClickerHistory:
-          state.pickerClickerHistory,
-
-        obscureStatCoinFlipHistory:
-          state.obscureStatCoinFlipHistory,
-      };
+    const snapshot: StoredLeagueSnapshot<TLeague> = {
+      schemaVersion: SCHEMA_VERSION,
+      savedAt: new Date().toISOString(),
+      league: state.league,
+      picks: state.picks,
+      activePlayerId: state.activePlayerId,
+      gameResults: state.gameResults,
+      scoringHistory: state.scoringHistory,
+      pickerClickerHistory:
+        state.pickerClickerHistory,
+      obscureStatCoinFlipHistory:
+        state.obscureStatCoinFlipHistory,
+      payoutLedgerHistory:
+        state.payoutLedgerHistory,
+    };
 
     window.localStorage.setItem(
       STORAGE_KEY,
