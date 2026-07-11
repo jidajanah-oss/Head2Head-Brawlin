@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 
 import FranchiseLogo from "../../components/franchise/FranchiseLogo";
 import {
@@ -9,6 +10,7 @@ import {
   SteelSectionHeader,
   SteelStatCard,
 } from "../../components/steel";
+import { useAuth } from "../../context/AuthContext";
 import { useLeague } from "../../context/LeagueContext";
 import { useNFL } from "../../context/NFLContext";
 import {
@@ -29,9 +31,7 @@ type DashboardTeamWordmarkProps = {
   side: "Away" | "Home";
 };
 
-function getTeamDisplayName(
-  team?: string,
-) {
+function getTeamDisplayName(team?: string) {
   if (!team) {
     return "Pending";
   }
@@ -65,6 +65,8 @@ function DashboardTeamWordmark({
 }
 
 function HomeDashboard() {
+  const { access } = useAuth();
+
   const {
     league,
     picks,
@@ -104,8 +106,8 @@ function HomeDashboard() {
 
   const upcomingGames =
     weekGames.filter((game) => {
-      const label = getStatusLabel(game)
-        .toLowerCase();
+      const label =
+        getStatusLabel(game).toLowerCase();
 
       return (
         !label.includes("live") &&
@@ -198,7 +200,9 @@ function HomeDashboard() {
         secondaryHref="/games"
         rightContent={
           <div className="dashboard-week-card">
-            <span>Current Week</span>
+            <span>
+              Current Week
+            </span>
 
             <strong>
               Week {league.currentWeek}
@@ -229,7 +233,7 @@ function HomeDashboard() {
               : weekGames.length
           }
           helper={`Week ${league.currentWeek} schedule`}
-          icon="📅"
+          icon="🗓️"
         />
 
         <SteelStatCard
@@ -372,7 +376,7 @@ function HomeDashboard() {
             as="div"
             className="dashboard-action-card"
           >
-            <a href="/games">
+            <Link to="/games">
               <span>🏈</span>
 
               <strong>
@@ -383,14 +387,14 @@ function HomeDashboard() {
                 Live games, scores, and
                 kickoff status
               </small>
-            </a>
+            </Link>
           </SteelCard>
 
           <SteelCard
             as="div"
             className="dashboard-action-card"
           >
-            <a href="/picks">
+            <Link to="/picks">
               <span>✅</span>
 
               <strong>
@@ -401,14 +405,14 @@ function HomeDashboard() {
                 Submit this week&apos;s
                 winning card
               </small>
-            </a>
+            </Link>
           </SteelCard>
 
           <SteelCard
             as="div"
             className="dashboard-action-card"
           >
-            <a href="/standings">
+            <Link to="/standings">
               <span>📊</span>
 
               <strong>
@@ -419,25 +423,27 @@ function HomeDashboard() {
                 Track the championship
                 race
               </small>
-            </a>
+            </Link>
           </SteelCard>
 
-          <SteelCard
-            as="div"
-            className="dashboard-action-card"
-          >
-            <a href="/commissioner">
-              <span>⚙️</span>
+          {access.canAccessCommissioner ? (
+            <SteelCard
+              as="div"
+              className="dashboard-action-card"
+            >
+              <Link to="/commissioner">
+                <span>⚙️</span>
 
-              <strong>
-                Commish HQ
-              </strong>
+                <strong>
+                  Commish HQ
+                </strong>
 
-              <small>
-                Manage league operations
-              </small>
-            </a>
-          </SteelCard>
+                <small>
+                  Manage league operations
+                </small>
+              </Link>
+            </SteelCard>
+          ) : null}
         </div>
       </section>
 
@@ -482,7 +488,9 @@ function HomeDashboard() {
             />
 
             <div>
-              <span>Pick Card</span>
+              <span>
+                Pick Card
+              </span>
 
               <strong>
                 {selectedPickCount}/
@@ -529,7 +537,9 @@ function HomeDashboard() {
             />
 
             <div>
-              <span>Record</span>
+              <span>
+                Record
+              </span>
 
               <strong>
                 {leader
