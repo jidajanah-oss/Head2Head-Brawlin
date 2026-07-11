@@ -1,0 +1,1 @@
+export { default as FranchiseLogo } from "./FranchiseLogo";

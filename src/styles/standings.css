@@ -44,6 +44,94 @@
   gap: 14px;
 }
 
+.standings-picker-clicker-card {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  border-color: rgba(245, 197, 66, 0.36);
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(245, 197, 66, 0.18),
+      transparent 36%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.075),
+      rgba(255, 255, 255, 0.025)
+    ),
+    #0d0d0d;
+  box-shadow:
+    inset 0 0 32px rgba(245, 197, 66, 0.05),
+    0 18px 44px rgba(0, 0, 0, 0.3);
+}
+
+.standings-picker-clicker-card::before {
+  content: "PC";
+  position: absolute;
+  top: -18px;
+  right: 10px;
+  color: rgba(245, 197, 66, 0.055);
+  font-size: 7rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: -0.08em;
+  pointer-events: none;
+}
+
+.standings-picker-clicker-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.standings-picker-clicker-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(245, 197, 66, 0.11),
+      rgba(255, 255, 255, 0.025)
+    ),
+    rgba(0, 0, 0, 0.32);
+}
+
+.standings-picker-clicker-body > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.standings-picker-clicker-body span {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.69rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.standings-picker-clicker-body strong {
+  color: #f5c542;
+  font-size: 1.08rem;
+  font-weight: 950;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.standings-picker-clicker-body small {
+  max-width: 760px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .standings-playoff-stack,
 .standings-bracket-stack {
   display: grid;
@@ -54,7 +142,11 @@
 .standings-bracket-card {
   padding: 20px;
   background:
-    radial-gradient(circle at top left, rgba(245, 197, 66, 0.16), transparent 34%),
+    radial-gradient(
+      circle at top left,
+      rgba(245, 197, 66, 0.16),
+      transparent 34%
+    ),
     linear-gradient(135deg, #121212, #070707);
 }
 
@@ -109,7 +201,11 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 18px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.025)
+    ),
     rgba(0, 0, 0, 0.25);
 }
 
@@ -150,7 +246,11 @@
 .standings-playoff-seed-card:first-child {
   border-color: rgba(255, 215, 0, 0.42);
   background:
-    radial-gradient(circle at top left, rgba(255, 215, 0, 0.14), transparent 38%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 215, 0, 0.14),
+      transparent 38%
+    ),
     rgba(0, 0, 0, 0.28);
 }
 
@@ -224,7 +324,11 @@
 
 .standings-bracket-card {
   background:
-    radial-gradient(circle at top right, rgba(245, 197, 66, 0.14), transparent 34%),
+    radial-gradient(
+      circle at top right,
+      rgba(245, 197, 66, 0.14),
+      transparent 34%
+    ),
     linear-gradient(135deg, #121212, #070707);
 }
 
@@ -236,7 +340,11 @@
   border: 1px solid rgba(245, 197, 66, 0.2);
   border-radius: 18px;
   background:
-    radial-gradient(circle at top left, rgba(245, 197, 66, 0.12), transparent 42%),
+    radial-gradient(
+      circle at top left,
+      rgba(245, 197, 66, 0.12),
+      transparent 42%
+    ),
     rgba(0, 0, 0, 0.28);
 }
 
@@ -256,7 +364,11 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 18px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.025)
+    ),
     rgba(0, 0, 0, 0.25);
 }
 
@@ -362,7 +474,11 @@
   padding: 20px;
   border-color: rgba(255, 215, 0, 0.35);
   background:
-    radial-gradient(circle at top, rgba(255, 215, 0, 0.18), transparent 34%),
+    radial-gradient(
+      circle at top,
+      rgba(255, 215, 0, 0.18),
+      transparent 34%
+    ),
     linear-gradient(135deg, #141414, #070707);
 }
 
@@ -382,7 +498,11 @@
   border: 1px solid rgba(245, 197, 66, 0.26);
   border-radius: 18px;
   background:
-    radial-gradient(circle at top, rgba(245, 197, 66, 0.14), transparent 50%),
+    radial-gradient(
+      circle at top,
+      rgba(245, 197, 66, 0.14),
+      transparent 50%
+    ),
     rgba(0, 0, 0, 0.28);
   text-align: center;
 }
@@ -400,7 +520,11 @@
 .standings-matchups-card {
   padding: 20px;
   background:
-    radial-gradient(circle at top left, rgba(245, 197, 66, 0.12), transparent 34%),
+    radial-gradient(
+      circle at top left,
+      rgba(245, 197, 66, 0.12),
+      transparent 34%
+    ),
     linear-gradient(135deg, #121212, #070707);
 }
 
@@ -418,7 +542,11 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 18px;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.07),
+      rgba(255, 255, 255, 0.025)
+    ),
     rgba(0, 0, 0, 0.28);
 }
 
@@ -488,7 +616,11 @@
 .standings-conference-card {
   padding: 20px;
   background:
-    radial-gradient(circle at top right, rgba(245, 197, 66, 0.12), transparent 34%),
+    radial-gradient(
+      circle at top right,
+      rgba(245, 197, 66, 0.12),
+      transparent 34%
+    ),
     linear-gradient(135deg, #121212, #070707);
 }
 
@@ -507,7 +639,11 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.025)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.065),
+      rgba(255, 255, 255, 0.025)
+    ),
     rgba(0, 0, 0, 0.28);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
@@ -556,7 +692,11 @@
 .standings-division-row.is-active-player {
   border-color: rgba(92, 180, 255, 0.42);
   background:
-    radial-gradient(circle at top left, rgba(92, 180, 255, 0.12), transparent 34%),
+    radial-gradient(
+      circle at top left,
+      rgba(92, 180, 255, 0.12),
+      transparent 34%
+    ),
     rgba(0, 0, 0, 0.22);
 }
 
@@ -657,7 +797,11 @@
 .standings-podium-card {
   padding: 20px;
   background:
-    radial-gradient(circle at top right, rgba(255, 215, 0, 0.16), transparent 34%),
+    radial-gradient(
+      circle at top right,
+      rgba(255, 215, 0, 0.16),
+      transparent 34%
+    ),
     linear-gradient(135deg, #121212, #070707);
 }
 
@@ -695,7 +839,11 @@
 .standings-podium-item--1 {
   border-color: rgba(255, 215, 0, 0.45);
   background:
-    radial-gradient(circle at top right, rgba(255, 215, 0, 0.16), transparent 45%),
+    radial-gradient(
+      circle at top right,
+      rgba(255, 215, 0, 0.16),
+      transparent 45%
+    ),
     rgba(255, 255, 255, 0.06);
 }
 
@@ -731,8 +879,16 @@
 .standing-row-v2.top {
   border-color: rgba(255, 215, 0, 0.38);
   background:
-    radial-gradient(circle at top left, rgba(255, 215, 0, 0.12), transparent 32%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 215, 0, 0.12),
+      transparent 32%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.03)
+    ),
     #111111;
 }
 
@@ -806,6 +962,29 @@
 
 .standings-empty-card {
   padding: 18px;
+}
+
+@media (max-width: 540px) {
+  .standings-picker-clicker-body {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+}
+
+@media (max-width: 420px) {
+  .standings-picker-clicker-card {
+    padding: 16px;
+  }
+
+  .standings-picker-clicker-card::before {
+    top: -8px;
+    right: 6px;
+    font-size: 5rem;
+  }
+
+  .standings-picker-clicker-body {
+    padding: 14px;
+  }
 }
 
 @media (min-width: 700px) {

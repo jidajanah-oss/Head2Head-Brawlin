@@ -1,0 +1,176 @@
+.runtime-status-banner {
+  display: grid;
+  gap: 7px;
+  margin: 12px 20px 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 171, 64, 0.42);
+  border-radius: 13px;
+  background: rgba(255, 171, 64, 0.1);
+  color: #ffffff;
+}
+
+.runtime-status-banner--critical {
+  border-color: rgba(255, 101, 101, 0.55);
+  background: rgba(255, 74, 74, 0.12);
+}
+
+.runtime-status-banner > div {
+  display: grid;
+  gap: 3px;
+}
+
+.runtime-status-banner strong {
+  color: #ffc36d;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.runtime-status-banner--critical strong {
+  color: #ffb0b0;
+}
+
+.runtime-status-banner span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.runtime-error-screen {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 22px;
+  background:
+    radial-gradient(
+      circle at top,
+      rgba(245, 197, 66, 0.14),
+      transparent 38%
+    ),
+    #050505;
+  color: #ffffff;
+}
+
+.runtime-error-card,
+.not-found-card {
+  width: min(100%, 680px);
+  padding: 26px;
+  border: 1px solid rgba(245, 197, 66, 0.32);
+  border-radius: 21px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(21, 21, 21, 0.98),
+      rgba(7, 7, 7, 0.99)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 48px rgba(0, 0, 0, 0.36);
+}
+
+.runtime-error-card h1,
+.not-found-card h2 {
+  margin: 5px 0 9px;
+  line-height: 1;
+}
+
+.runtime-error-card p,
+.not-found-card p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.55;
+}
+
+.runtime-error-kicker {
+  color: #f5c542;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.runtime-error-detail {
+  display: grid;
+  gap: 5px;
+  margin: 18px 0;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.runtime-error-detail strong {
+  color: #f5c542;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.runtime-error-detail span {
+  color: rgba(255, 255, 255, 0.65);
+  overflow-wrap: anywhere;
+}
+
+.runtime-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.runtime-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.17);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.runtime-action--primary {
+  border-color: #f5c542;
+  background: #f5c542;
+  color: #111111;
+}
+
+.not-found-card {
+  margin: 0 auto;
+  text-align: center;
+}
+
+.not-found-card code {
+  color: #f5c542;
+  font-family: inherit;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.not-found-card .runtime-action {
+  margin-top: 18px;
+}
+
+@media (max-width: 600px) {
+  .runtime-status-banner {
+    margin-inline: 12px;
+  }
+
+  .runtime-error-card,
+  .not-found-card {
+    padding: 20px;
+    border-radius: 17px;
+  }
+
+  .runtime-error-actions {
+    display: grid;
+  }
+
+  .runtime-action {
+    width: 100%;
+  }
+}

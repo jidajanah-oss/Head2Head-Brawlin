@@ -1,0 +1,605 @@
+.season-closeout-panel {
+  margin: 0 0 28px;
+  padding: 24px;
+  border: 1px solid rgba(245, 197, 66, 0.28);
+  border-radius: 22px;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(245, 197, 66, 0.13),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(18, 18, 18, 0.98),
+      rgba(5, 5, 5, 0.99)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 46px rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+}
+
+.season-closeout-panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 22px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.season-closeout-panel-header h2 {
+  margin: 4px 0 7px;
+  font-size: clamp(1.7rem, 4vw, 2.45rem);
+  line-height: 1;
+}
+
+.season-closeout-panel-header p {
+  max-width: 760px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.67);
+  line-height: 1.5;
+}
+
+.season-closeout-kicker {
+  color: #f5c542;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.season-closeout-archive-count {
+  display: grid;
+  min-width: 132px;
+  justify-items: end;
+  gap: 3px;
+  text-align: right;
+}
+
+.season-closeout-archive-count strong {
+  color: #f5c542;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.season-closeout-archive-count span {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.season-closeout-unavailable {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 30px 20px;
+  border: 1px dashed rgba(245, 197, 66, 0.34);
+  border-radius: 17px;
+  background: rgba(245, 197, 66, 0.055);
+  text-align: center;
+}
+
+.season-closeout-unavailable strong {
+  color: #f5c542;
+  font-size: 1.05rem;
+}
+
+.season-closeout-unavailable p {
+  max-width: 620px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.season-closeout-progress {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.season-closeout-progress > div {
+  display: grid;
+  gap: 4px;
+  min-height: 92px;
+  align-content: center;
+  justify-items: center;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.035);
+  text-align: center;
+}
+
+.season-closeout-progress strong {
+  color: #f5c542;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.season-closeout-progress span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.season-closeout-check-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.season-closeout-check {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 11px;
+  align-items: flex-start;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.season-closeout-check > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 31px;
+  height: 31px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 950;
+}
+
+.season-closeout-check > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.season-closeout-check strong,
+.season-closeout-check p {
+  overflow-wrap: anywhere;
+}
+
+.season-closeout-check p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.57);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.season-closeout-check--passed {
+  border-color: rgba(68, 211, 120, 0.26);
+  background: rgba(68, 211, 120, 0.045);
+}
+
+.season-closeout-check--passed > span {
+  background: rgba(68, 211, 120, 0.14);
+  color: #7ff0a7;
+}
+
+.season-closeout-check--failed {
+  border-color: rgba(255, 171, 64, 0.28);
+  background: rgba(255, 171, 64, 0.045);
+}
+
+.season-closeout-check--failed > span {
+  background: rgba(255, 171, 64, 0.14);
+  color: #ffc36d;
+}
+
+.season-closeout-financial-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.season-closeout-financial-grid--current {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.season-closeout-financial-grid > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.season-closeout-financial-grid span {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.season-closeout-financial-grid strong {
+  color: #f5c542;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.season-closeout-confirmation,
+.season-closeout-override {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 17px;
+}
+
+.season-closeout-confirmation {
+  border: 1px solid rgba(245, 197, 66, 0.3);
+  background: rgba(245, 197, 66, 0.055);
+}
+
+.season-closeout-confirmation p,
+.season-closeout-override p {
+  margin: 5px 0 0;
+  color: rgba(255, 255, 255, 0.63);
+  line-height: 1.45;
+}
+
+.season-closeout-confirmation code {
+  padding: 3px 6px;
+  border: 1px solid rgba(245, 197, 66, 0.28);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.32);
+  color: #f5c542;
+  font-family: inherit;
+  font-weight: 950;
+}
+
+.season-closeout-confirmation label,
+.season-closeout-override label {
+  display: grid;
+  gap: 7px;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.season-closeout-confirmation input,
+.season-closeout-override textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 11px;
+  outline: none;
+  background: #111111;
+  color: #ffffff;
+  font: inherit;
+}
+
+.season-closeout-confirmation input:focus,
+.season-closeout-override textarea:focus {
+  border-color: rgba(245, 197, 66, 0.7);
+  box-shadow: 0 0 0 3px rgba(245, 197, 66, 0.1);
+}
+
+.season-closeout-override {
+  border: 1px solid rgba(255, 116, 116, 0.32);
+  background: rgba(255, 85, 85, 0.06);
+}
+
+.season-closeout-override h3 {
+  margin: 4px 0 0;
+}
+
+.season-closeout-override textarea {
+  min-height: 104px;
+  resize: vertical;
+}
+
+.season-closeout-button {
+  justify-self: start;
+  padding: 10px 14px;
+  border-radius: 11px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.season-closeout-button--primary {
+  border: 1px solid #f5c542;
+  background: #f5c542;
+  color: #101010;
+}
+
+.season-closeout-button--danger {
+  border: 1px solid rgba(255, 116, 116, 0.8);
+  background: rgba(255, 85, 85, 0.16);
+  color: #ffb0b0;
+}
+
+.season-closeout-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.season-closeout-error {
+  margin: 12px 0 0;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 116, 116, 0.32);
+  border-radius: 11px;
+  background: rgba(255, 85, 85, 0.08);
+  color: #ffb0b0;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.season-closeout-archive-card {
+  overflow: hidden;
+  border: 1px solid rgba(68, 211, 120, 0.3);
+  border-radius: 18px;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(68, 211, 120, 0.1),
+      transparent 38%
+    ),
+    rgba(0, 0, 0, 0.28);
+}
+
+.season-closeout-archive-card > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 17px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.season-closeout-archive-card h3 {
+  margin: 4px 0 3px;
+  font-size: 1.35rem;
+}
+
+.season-closeout-archive-card header p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.78rem;
+}
+
+.season-closeout-status {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.season-closeout-status--complete {
+  border: 1px solid rgba(68, 211, 120, 0.36);
+  background: rgba(68, 211, 120, 0.12);
+  color: #7ff0a7;
+}
+
+.season-closeout-status--warning {
+  border: 1px solid rgba(255, 171, 64, 0.4);
+  background: rgba(255, 171, 64, 0.12);
+  color: #ffc36d;
+}
+
+.season-closeout-archive-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px;
+}
+
+.season-closeout-archive-grid > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.season-closeout-archive-grid span {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.season-closeout-archive-grid strong,
+.season-closeout-archive-grid small {
+  overflow-wrap: anywhere;
+}
+
+.season-closeout-archive-grid small {
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.season-closeout-award-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 0 16px 16px;
+}
+
+.season-closeout-award-summary span {
+  padding: 6px 9px;
+  border: 1px solid rgba(245, 197, 66, 0.22);
+  border-radius: 999px;
+  background: rgba(245, 197, 66, 0.065);
+  color: #f5c542;
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+.season-closeout-archive-card
+  .season-closeout-financial-grid {
+  padding: 0 16px 16px;
+}
+
+.season-closeout-override-record,
+.season-closeout-warning-list {
+  margin: 0 16px 16px;
+  padding: 13px;
+  border-radius: 13px;
+}
+
+.season-closeout-override-record {
+  border: 1px solid rgba(255, 171, 64, 0.28);
+  background: rgba(255, 171, 64, 0.06);
+}
+
+.season-closeout-override-record p {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.66);
+  line-height: 1.45;
+}
+
+.season-closeout-warning-list {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(255, 171, 64, 0.26);
+  background: rgba(255, 171, 64, 0.045);
+}
+
+.season-closeout-warning-list > div {
+  display: grid;
+  gap: 3px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.season-closeout-warning-list span {
+  color: #ffc36d;
+  font-weight: 850;
+}
+
+.season-closeout-warning-list small {
+  color: rgba(255, 255, 255, 0.56);
+}
+
+.season-closeout-archive-card > footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.67rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.season-closeout-history {
+  margin-top: 18px;
+  padding-top: 17px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.season-closeout-history h3 {
+  margin: 0 0 10px;
+}
+
+.season-closeout-history > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.season-closeout-history article {
+  display: grid;
+  gap: 3px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.season-closeout-history article strong {
+  color: #f5c542;
+  font-size: 1rem;
+}
+
+.season-closeout-history article span {
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+.season-closeout-history article small {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 1100px) {
+  .season-closeout-financial-grid--current {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .season-closeout-archive-grid,
+  .season-closeout-financial-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .season-closeout-panel {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .season-closeout-panel-header {
+    display: grid;
+  }
+
+  .season-closeout-archive-count {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .season-closeout-progress,
+  .season-closeout-check-grid,
+  .season-closeout-financial-grid,
+  .season-closeout-financial-grid--current,
+  .season-closeout-archive-grid,
+  .season-closeout-history > div {
+    grid-template-columns: 1fr;
+  }
+
+  .season-closeout-archive-card > header {
+    display: grid;
+  }
+}
+
+@media (max-width: 520px) {
+  .season-closeout-panel {
+    padding: 14px;
+  }
+
+  .season-closeout-confirmation,
+  .season-closeout-override {
+    padding: 14px;
+  }
+
+  .season-closeout-button {
+    width: 100%;
+  }
+
+  .season-closeout-archive-card > footer {
+    display: grid;
+  }
+}
