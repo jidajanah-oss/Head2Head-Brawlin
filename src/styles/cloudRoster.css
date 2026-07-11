@@ -1,0 +1,111 @@
+.cloud-roster-panel {
+  margin-bottom: 18px;
+}
+
+.cloud-roster-message {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.cloud-roster-message--error {
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(127, 29, 29, 0.24);
+}
+
+.cloud-roster-message--success {
+  border-color: rgba(74, 222, 128, 0.38);
+  background: rgba(20, 83, 45, 0.24);
+}
+
+.cloud-roster-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.cloud-roster-player {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.cloud-roster-player__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cloud-roster-player__heading h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.cloud-roster-player__heading p {
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.82rem;
+  text-transform: capitalize;
+}
+
+.cloud-roster-email-field {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.cloud-roster-email-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 9px;
+  background: rgba(8, 12, 18, 0.78);
+  color: white;
+  font: inherit;
+}
+
+.cloud-roster-email-field input:focus {
+  outline: 2px solid rgba(245, 190, 45, 0.42);
+  outline-offset: 1px;
+}
+
+.cloud-roster-email-field input:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.cloud-roster-player__details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.78rem;
+}
+
+.cloud-roster-player__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cloud-roster-empty {
+  margin: 16px 0 0;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+@media (min-width: 760px) {
+  .cloud-roster-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -9,6 +9,7 @@ import { LeagueProvider } from "./context/LeagueContext";
 import { SeasonCloseoutProvider } from "./context/SeasonCloseoutContext";
 import { migrateLegacyPlaceholderRoster } from "./engine/placeholderRosterMigration";
 import CloudPlayerSessionSync from "./features/auth/CloudPlayerSessionSync";
+import CloudRosterSync from "./features/auth/CloudRosterSync";
 import "./index.css";
 import "./styles/ui.css";
 
@@ -29,6 +30,7 @@ ReactDOM.createRoot(rootElement).render(
         <SeasonCloseoutProvider>
           <LeagueProvider>
             <CloudPlayerSessionSync />
+            <CloudRosterSync />
             <App />
           </LeagueProvider>
         </SeasonCloseoutProvider>

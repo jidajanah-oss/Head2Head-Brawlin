@@ -24,7 +24,7 @@ type CloudConnectionStatusRow = {
 };
 
 const EXPECTED_SERVICE_NAME = "head2head-brawlin";
-const MINIMUM_SCHEMA_VERSION = 3;
+const MINIMUM_SCHEMA_VERSION = 4;
 
 function isPlayerRole(value: string): value is PlayerRole {
   return (
@@ -142,7 +142,7 @@ export async function verifyCloudConnection(
 
   if (row.schema_version < MINIMUM_SCHEMA_VERSION) {
     throw new Error(
-      "The connected Supabase project is missing the Package 3 runtime migration.",
+      "The connected Supabase project is missing the Package 6 player onboarding migration.",
     );
   }
 }
@@ -169,9 +169,25 @@ function mapCurrentAccountLink(
   };
 }
 
+async function claimPendingInvitation(
+  client: SupabaseClient,
+): Promise<void> {
+  const { error } = await client.rpc(
+    "claim_my_pending_invitation",
+  );
+
+  if (error) {
+    throw new Error(
+      `Unable to claim the pending player invitation: ${error.message}`,
+    );
+  }
+}
+
 export async function loadCurrentAccountLink(
   client: SupabaseClient,
 ): Promise<CloudAccountLink | null> {
+  await claimPendingInvitation(client);
+
   const { data, error } = await client
     .from("current_account_link")
     .select(
