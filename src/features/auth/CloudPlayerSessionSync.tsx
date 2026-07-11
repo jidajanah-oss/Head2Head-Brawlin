@@ -6,42 +6,98 @@ import {
 
 import { useAuth } from "../../context/AuthContext";
 import { useLeague } from "../../context/LeagueContext";
+import type { CloudAccountLink } from "../../engine/authAccessTypes";
 import type { Player } from "../../types/player";
 
-function synchronizeLinkedPlayerRoles(
+function buildLinkedPlayer(
+  accountLink: CloudAccountLink,
+): Player | null {
+  const playerName = accountLink.playerName?.trim();
+  const nflTeam = accountLink.nflTeam?.trim().toUpperCase();
+
+  if (!playerName || !nflTeam) {
+    return null;
+  }
+
+  return {
+    id: accountLink.playerId,
+    name: playerName,
+    nflTeam,
+    status: "active",
+    role: accountLink.role,
+  };
+}
+
+function synchronizeLinkedPlayer(
   players: Player[],
-  linkedPlayerId: string,
-  linkedRole: Player["role"],
+  accountLink: CloudAccountLink,
 ): Player[] {
+  const linkedPlayer = players.find(
+    (player) => player.id === accountLink.playerId,
+  );
+
+  if (!linkedPlayer) {
+    const newLinkedPlayer = buildLinkedPlayer(accountLink);
+    if (!newLinkedPlayer) {
+      return players;
+    }
+
+    const existingPlayers =
+      accountLink.role === "commissioner"
+        ? players.map((player) =>
+            player.role === "commissioner"
+              ? { ...player, role: "player" as const }
+              : player,
+          )
+        : players;
+
+    return [...existingPlayers, newLinkedPlayer];
+  }
+
   let changed = false;
 
-  const nextPlayers = players.map((player) => {
-    let nextRole = player.role;
+  const synchronizedPlayers = players.map((player) => {
+    if (player.id === accountLink.playerId) {
+      const nextName =
+        accountLink.playerName?.trim() || player.name;
+      const nextTeam =
+        accountLink.nflTeam?.trim().toUpperCase() ||
+        player.nflTeam;
 
-    if (player.id === linkedPlayerId) {
-      nextRole = linkedRole;
-    } else if (
-      linkedRole === "commissioner" &&
+      if (
+        player.name === nextName &&
+        player.nflTeam === nextTeam &&
+        player.role === accountLink.role &&
+        player.status === "active"
+      ) {
+        return player;
+      }
+
+      changed = true;
+      return {
+        ...player,
+        name: nextName,
+        nflTeam: nextTeam,
+        role: accountLink.role,
+        status: "active" as const,
+      };
+    }
+
+    if (
+      accountLink.role === "commissioner" &&
       player.role === "commissioner"
     ) {
-      nextRole = "player";
+      changed = true;
+      return {
+        ...player,
+        role: "player" as const,
+      };
     }
 
-    if (nextRole === player.role) {
-      return player;
-    }
-
-    changed = true;
-
-    return {
-      ...player,
-      role: nextRole,
-    };
+    return player;
   });
 
-  return changed
-    ? nextPlayers
-    : players;
+  return changed ? synchronizedPlayers : players;
 }
 
 export default function CloudPlayerSessionSync() {
@@ -50,12 +106,14 @@ export default function CloudPlayerSessionSync() {
     accountLink,
     access,
   } = useAuth();
+
   const {
     league,
     activePlayerId,
     setActivePlayerId,
     setPlayers,
   } = useLeague();
+
   const lastInitialSyncKey = useRef<string | null>(null);
 
   const sessionKey = useMemo(() => {
@@ -82,21 +140,18 @@ export default function CloudPlayerSessionSync() {
       return;
     }
 
-    const linkedPlayerExists = league.players.some(
-      (player) =>
-        player.id === accountLink.playerId,
+    const synchronizedPlayers = synchronizeLinkedPlayer(
+      league.players,
+      accountLink,
+    );
+
+    const linkedPlayerExists = synchronizedPlayers.some(
+      (player) => player.id === accountLink.playerId,
     );
 
     if (!linkedPlayerExists) {
       return;
     }
-
-    const synchronizedPlayers =
-      synchronizeLinkedPlayerRoles(
-        league.players,
-        accountLink.playerId,
-        accountLink.role,
-      );
 
     if (synchronizedPlayers !== league.players) {
       setPlayers(synchronizedPlayers);
@@ -104,16 +159,14 @@ export default function CloudPlayerSessionSync() {
 
     const needsInitialPlayerSync =
       lastInitialSyncKey.current !== sessionKey;
+
     const regularPlayerMustStayLocked =
       accountLink.role === "player" &&
       activePlayerId !== accountLink.playerId;
 
     if (
       activePlayerId !== accountLink.playerId &&
-      (
-        needsInitialPlayerSync ||
-        regularPlayerMustStayLocked
-      )
+      (needsInitialPlayerSync || regularPlayerMustStayLocked)
     ) {
       setActivePlayerId(accountLink.playerId);
     }

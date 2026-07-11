@@ -3,17 +3,18 @@ import ReactDOM from "react-dom/client";
 
 import App from "./App";
 import AppErrorBoundary from "./components/system/AppErrorBoundary";
+import "./components/steel/steel.css";
 import { AuthProvider } from "./context/AuthContext";
 import { LeagueProvider } from "./context/LeagueContext";
 import { SeasonCloseoutProvider } from "./context/SeasonCloseoutContext";
+import { migrateLegacyPlaceholderRoster } from "./engine/placeholderRosterMigration";
 import CloudPlayerSessionSync from "./features/auth/CloudPlayerSessionSync";
-
 import "./index.css";
 import "./styles/ui.css";
-import "./components/steel/steel.css";
 
-const rootElement =
-  document.getElementById("root");
+migrateLegacyPlaceholderRoster();
+
+const rootElement = document.getElementById("root");
 
 if (!rootElement) {
   throw new Error(
