@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 
 import App from "./App";
 import AppErrorBoundary from "./components/system/AppErrorBoundary";
+import { AuthProvider } from "./context/AuthContext";
 import { LeagueProvider } from "./context/LeagueContext";
 import { SeasonCloseoutProvider } from "./context/SeasonCloseoutContext";
 
@@ -22,11 +23,13 @@ if (!rootElement) {
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <AppErrorBoundary>
-      <SeasonCloseoutProvider>
-        <LeagueProvider>
-          <App />
-        </LeagueProvider>
-      </SeasonCloseoutProvider>
+      <AuthProvider>
+        <SeasonCloseoutProvider>
+          <LeagueProvider>
+            <App />
+          </LeagueProvider>
+        </SeasonCloseoutProvider>
+      </AuthProvider>
     </AppErrorBoundary>
   </React.StrictMode>,
 );
