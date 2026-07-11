@@ -1,0 +1,457 @@
+.data-transfer-panel {
+  margin: 0 0 28px;
+  padding: 24px;
+  border: 1px solid rgba(245, 197, 66, 0.28);
+  border-radius: 22px;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(245, 197, 66, 0.13),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(18, 18, 18, 0.98),
+      rgba(5, 5, 5, 0.99)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 46px rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+}
+
+.data-transfer-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 22px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.data-transfer-header h2 {
+  margin: 4px 0 7px;
+  font-size: clamp(1.7rem, 4vw, 2.45rem);
+  line-height: 1;
+}
+
+.data-transfer-header p {
+  max-width: 760px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.67);
+  line-height: 1.5;
+}
+
+.data-transfer-kicker {
+  color: #f5c542;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.data-transfer-header-badge {
+  display: grid;
+  min-width: 132px;
+  justify-items: end;
+  gap: 3px;
+  text-align: right;
+}
+
+.data-transfer-header-badge strong {
+  color: #f5c542;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.data-transfer-header-badge span {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.data-transfer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.data-transfer-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.data-transfer-card--restore {
+  border-color: rgba(245, 197, 66, 0.19);
+}
+
+.data-transfer-card-heading {
+  display: grid;
+  gap: 5px;
+}
+
+.data-transfer-card-heading > span {
+  color: #f5c542;
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.data-transfer-card-heading h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.data-transfer-card-heading p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.79rem;
+  line-height: 1.5;
+}
+
+.data-transfer-included-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.data-transfer-included-list span {
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.data-transfer-included-list span::before {
+  content: "✓";
+  margin-right: 6px;
+  color: #7ff0a7;
+  font-weight: 950;
+}
+
+.data-transfer-button {
+  align-self: flex-start;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.17);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.77rem;
+  font-weight: 900;
+}
+
+.data-transfer-button--primary {
+  border-color: #f5c542;
+  background: #f5c542;
+  color: #111111;
+}
+
+.data-transfer-button--danger {
+  border-color: rgba(255, 116, 116, 0.78);
+  background: rgba(255, 85, 85, 0.15);
+  color: #ffb0b0;
+}
+
+.data-transfer-button--quiet {
+  border-color: transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.data-transfer-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.data-transfer-file-input {
+  display: none;
+}
+
+.data-transfer-file-actions,
+.data-transfer-restore-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.data-transfer-file-name {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.data-transfer-file-name span {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.data-transfer-file-name strong {
+  overflow-wrap: anywhere;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.8rem;
+}
+
+.data-transfer-message {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.data-transfer-message--success {
+  border-color: rgba(68, 211, 120, 0.3);
+  background: rgba(68, 211, 120, 0.08);
+  color: #7ff0a7;
+}
+
+.data-transfer-message--error {
+  border-color: rgba(255, 116, 116, 0.3);
+  background: rgba(255, 85, 85, 0.08);
+  color: #ffb0b0;
+}
+
+.data-transfer-issues {
+  padding: 12px;
+  border: 1px solid rgba(255, 116, 116, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 85, 85, 0.07);
+}
+
+.data-transfer-issues strong {
+  color: #ffb0b0;
+}
+
+.data-transfer-issues ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.75rem;
+}
+
+.data-transfer-review {
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(68, 211, 120, 0.3);
+  border-radius: 18px;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(68, 211, 120, 0.09),
+      transparent 36%
+    ),
+    rgba(0, 0, 0, 0.27);
+}
+
+.data-transfer-review > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 17px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.data-transfer-review h3 {
+  margin: 4px 0 3px;
+  font-size: 1.35rem;
+}
+
+.data-transfer-review header p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.78rem;
+}
+
+.data-transfer-valid-badge {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid rgba(68, 211, 120, 0.36);
+  border-radius: 999px;
+  background: rgba(68, 211, 120, 0.12);
+  color: #7ff0a7;
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.data-transfer-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px;
+}
+
+.data-transfer-summary-grid > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.data-transfer-summary-grid span {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.data-transfer-summary-grid strong,
+.data-transfer-summary-grid small {
+  overflow-wrap: anywhere;
+}
+
+.data-transfer-summary-grid strong {
+  color: #f5c542;
+}
+
+.data-transfer-summary-grid small {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.data-transfer-danger-zone {
+  display: grid;
+  gap: 14px;
+  margin: 0 16px 16px;
+  padding: 16px;
+  border: 1px solid rgba(255, 116, 116, 0.32);
+  border-radius: 15px;
+  background: rgba(255, 85, 85, 0.06);
+}
+
+.data-transfer-danger-zone h4 {
+  margin: 4px 0 5px;
+  font-size: 1.05rem;
+}
+
+.data-transfer-danger-zone p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.79rem;
+  line-height: 1.5;
+}
+
+.data-transfer-acknowledgement {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: flex-start;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.data-transfer-acknowledgement input {
+  margin-top: 2px;
+  accent-color: #f5c542;
+}
+
+.data-transfer-confirmation {
+  display: grid;
+  gap: 7px;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.data-transfer-confirmation code {
+  padding: 3px 6px;
+  border: 1px solid rgba(245, 197, 66, 0.28);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.32);
+  color: #f5c542;
+  font-family: inherit;
+  font-weight: 950;
+}
+
+.data-transfer-confirmation input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 11px;
+  outline: none;
+  background: #111111;
+  color: #ffffff;
+  font: inherit;
+}
+
+.data-transfer-confirmation input:focus {
+  border-color: rgba(245, 197, 66, 0.7);
+  box-shadow: 0 0 0 3px rgba(245, 197, 66, 0.1);
+}
+
+@media (max-width: 900px) {
+  .data-transfer-grid,
+  .data-transfer-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .data-transfer-panel {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .data-transfer-header,
+  .data-transfer-review > header {
+    display: grid;
+  }
+
+  .data-transfer-header-badge {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .data-transfer-included-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .data-transfer-panel {
+    padding: 14px;
+  }
+
+  .data-transfer-card {
+    padding: 14px;
+  }
+
+  .data-transfer-file-actions,
+  .data-transfer-restore-actions {
+    display: grid;
+  }
+
+  .data-transfer-button {
+    width: 100%;
+  }
+}
