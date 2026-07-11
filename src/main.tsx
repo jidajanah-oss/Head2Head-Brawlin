@@ -6,6 +6,7 @@ import AppErrorBoundary from "./components/system/AppErrorBoundary";
 import { AuthProvider } from "./context/AuthContext";
 import { LeagueProvider } from "./context/LeagueContext";
 import { SeasonCloseoutProvider } from "./context/SeasonCloseoutContext";
+import CloudPlayerSessionSync from "./features/auth/CloudPlayerSessionSync";
 
 import "./index.css";
 import "./styles/ui.css";
@@ -26,6 +27,7 @@ ReactDOM.createRoot(rootElement).render(
       <AuthProvider>
         <SeasonCloseoutProvider>
           <LeagueProvider>
+            <CloudPlayerSessionSync />
             <App />
           </LeagueProvider>
         </SeasonCloseoutProvider>
