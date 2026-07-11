@@ -1,9 +1,10 @@
 import {
   BrowserRouter,
+  Navigate,
   Route,
   Routes,
 } from "react-router-dom";
-
+import { useAuth } from "./context/AuthContext";
 import { NFLProvider } from "./context/NFLContext";
 import { ObscureStatProvider } from "./context/ObscureStatContext";
 import { SeasonAwardProvider } from "./context/SeasonAwardContext";
@@ -22,8 +23,7 @@ import Players from "./pages/Players";
 import Standings from "./pages/Standings";
 
 function getRouterBaseName(): string {
-  const baseUrl =
-    import.meta.env.BASE_URL.trim();
+  const baseUrl = import.meta.env.BASE_URL.trim();
 
   if (!baseUrl || baseUrl === "/") {
     return "/";
@@ -37,6 +37,20 @@ function getRouterBaseName(): string {
 
 const ROUTER_BASE_NAME =
   getRouterBaseName();
+
+function CommissionerRoute() {
+  const { status, access } = useAuth();
+
+  if (status === "loading") {
+    return null;
+  }
+
+  if (!access.canAccessCommissioner) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Commissioner />;
+}
 
 function App() {
   return (
@@ -84,7 +98,7 @@ function App() {
 
                 <Route
                   path="commissioner"
-                  element={<Commissioner />}
+                  element={<CommissionerRoute />}
                 />
 
                 <Route

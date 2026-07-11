@@ -2,10 +2,10 @@ import {
   NavLink,
   Outlet,
 } from "react-router-dom";
-
 import RuntimeStatusBanner from "../components/system/RuntimeStatusBanner";
+import { useAuth } from "../context/AuthContext";
 
-const navItems = [
+const standardNavItems = [
   { to: "/", label: "Home" },
   { to: "/games", label: "Games" },
   { to: "/picks", label: "Picks" },
@@ -14,13 +14,20 @@ const navItems = [
     label: "Standings",
   },
   { to: "/players", label: "Me" },
-  {
-    to: "/commissioner",
-    label: "Commish",
-  },
 ];
 
+const commissionerNavItem = {
+  to: "/commissioner",
+  label: "Commish",
+};
+
 function AppLayout() {
+  const { access } = useAuth();
+
+  const navItems = access.canAccessCommissioner
+    ? [...standardNavItems, commissionerNavItem]
+    : standardNavItems;
+
   return (
     <div className="app-shell">
       <header className="app-header">
