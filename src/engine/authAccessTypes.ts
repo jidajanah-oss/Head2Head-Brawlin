@@ -8,6 +8,12 @@ export type CloudAuthStatus =
   | "signed-in-linked"
   | "error";
 
+export type CloudConnectionStatus =
+  | "disabled"
+  | "checking"
+  | "connected"
+  | "error";
+
 export type CloudAuthIdentity = {
   userId: string;
   email: string;
@@ -19,6 +25,10 @@ export type CloudAccountLink = {
   playerId: string;
   role: PlayerRole;
   active: boolean;
+  leagueName?: string;
+  season?: number;
+  playerName?: string;
+  nflTeam?: string;
 };
 
 export type CloudAccessState = {

@@ -1,11 +1,14 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { ReactNode } from "react";
+
 import type {
   Session,
   User,
@@ -16,9 +19,15 @@ import {
   isValidAuthEmail,
   normalizeAuthEmail,
   type CloudAccessState,
+  type CloudAccountLink,
   type CloudAuthIdentity,
   type CloudAuthStatus,
+  type CloudConnectionStatus,
 } from "../engine";
+import {
+  loadCurrentAccountLink,
+  verifyCloudConnection,
+} from "../services/cloudAccountLinkService";
 import {
   getSupabaseAuthRedirectUrl,
   supabaseClient,
@@ -27,19 +36,23 @@ import {
 
 type AuthContextValue = {
   status: CloudAuthStatus;
+  connectionStatus: CloudConnectionStatus;
   configured: boolean;
   missingConfiguration: string[];
   session: Session | null;
   user: User | null;
   identity: CloudAuthIdentity | null;
+  accountLink: CloudAccountLink | null;
   access: CloudAccessState;
   errorMessage: string | null;
+  connectionErrorMessage: string | null;
   magicLinkSentTo: string | null;
   sendMagicLink: (
     email: string,
   ) => Promise<void>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
+  refreshAccountLink: () => Promise<void>;
 };
 
 const AuthContext = createContext<
@@ -61,12 +74,17 @@ function getIdentity(
   };
 }
 
-function getStatusForSession(
+function getStatusForAccount(
   session: Session | null,
+  accountLink: CloudAccountLink | null,
 ): CloudAuthStatus {
-  return session
-    ? "signed-in-unlinked"
-    : "signed-out";
+  if (!session) {
+    return "signed-out";
+  }
+
+  return accountLink
+    ? "signed-in-linked"
+    : "signed-in-unlinked";
 }
 
 export function AuthProvider({
@@ -76,57 +94,143 @@ export function AuthProvider({
 }) {
   const [session, setSession] =
     useState<Session | null>(null);
-
+  const [accountLink, setAccountLink] =
+    useState<CloudAccountLink | null>(null);
   const [status, setStatus] =
     useState<CloudAuthStatus>(
       supabaseConfiguration.configured
         ? "loading"
         : "disabled",
     );
-
+  const [connectionStatus, setConnectionStatus] =
+    useState<CloudConnectionStatus>(
+      supabaseConfiguration.configured
+        ? "checking"
+        : "disabled",
+    );
   const [
     errorMessage,
     setErrorMessage,
   ] = useState<string | null>(null);
-
+  const [
+    connectionErrorMessage,
+    setConnectionErrorMessage,
+  ] = useState<string | null>(null);
   const [
     magicLinkSentTo,
     setMagicLinkSentTo,
   ] = useState<string | null>(null);
+  const sessionSyncRequestId = useRef(0);
+
+  const synchronizeSession = useCallback(
+    async (
+      nextSession: Session | null,
+    ) => {
+      const client = supabaseClient;
+      const requestId =
+        sessionSyncRequestId.current + 1;
+      sessionSyncRequestId.current = requestId;
+
+      setSession(nextSession);
+      setErrorMessage(null);
+
+      if (!client || !nextSession) {
+        setAccountLink(null);
+        setStatus(
+          client
+            ? "signed-out"
+            : "disabled",
+        );
+        return;
+      }
+
+      setStatus("loading");
+
+      try {
+        const nextAccountLink =
+          await loadCurrentAccountLink(client);
+
+        if (
+          requestId !==
+          sessionSyncRequestId.current
+        ) {
+          return;
+        }
+
+        setAccountLink(nextAccountLink);
+        setStatus(
+          getStatusForAccount(
+            nextSession,
+            nextAccountLink,
+          ),
+        );
+      } catch (error) {
+        if (
+          requestId !==
+          sessionSyncRequestId.current
+        ) {
+          return;
+        }
+
+        setAccountLink(null);
+        setStatus("error");
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to load the signed-in account.",
+        );
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const client = supabaseClient;
-
     if (!client) {
       return;
     }
 
     let mounted = true;
 
+    const checkConnection = async () => {
+      try {
+        await verifyCloudConnection(client);
+        if (!mounted) {
+          return;
+        }
+
+        setConnectionStatus("connected");
+        setConnectionErrorMessage(null);
+      } catch (error) {
+        if (!mounted) {
+          return;
+        }
+
+        setConnectionStatus("error");
+        setConnectionErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to reach Supabase.",
+        );
+      }
+    };
+
     const {
       data: { subscription },
-    } =
-      client.auth.onAuthStateChange(
-        (_event, nextSession) => {
-          if (!mounted) {
-            return;
-          }
-
-          setSession(nextSession);
-          setStatus(
-            getStatusForSession(
+    } = client.auth.onAuthStateChange(
+      (_event, nextSession) => {
+        window.setTimeout(() => {
+          if (mounted) {
+            void synchronizeSession(
               nextSession,
-            ),
-          );
-          setErrorMessage(null);
-        },
-      );
+            );
+          }
+        }, 0);
+      },
+    );
 
     const loadSession = async () => {
-      const {
-        data,
-        error,
-      } =
+      const { data, error } =
         await client.auth.getSession();
 
       if (!mounted) {
@@ -139,21 +243,20 @@ export function AuthProvider({
         return;
       }
 
-      setSession(data.session);
-      setStatus(
-        getStatusForSession(
-          data.session,
-        ),
+      await synchronizeSession(
+        data.session,
       );
     };
 
+    void checkConnection();
     void loadSession();
 
     return () => {
       mounted = false;
+      sessionSyncRequestId.current += 1;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [synchronizeSession]);
 
   const user = session?.user ?? null;
 
@@ -166,25 +269,19 @@ export function AuthProvider({
     () =>
       buildCloudAccessState(
         identity,
-        null,
+        accountLink,
       ),
-    [identity],
+    [identity, accountLink],
   );
 
   const refreshSession = async () => {
     const client = supabaseClient;
-
     if (!client) {
       return;
     }
 
-    setStatus("loading");
     setErrorMessage(null);
-
-    const {
-      data,
-      error,
-    } =
+    const { data, error } =
       await client.auth.getSession();
 
     if (error) {
@@ -193,19 +290,19 @@ export function AuthProvider({
       return;
     }
 
-    setSession(data.session);
-    setStatus(
-      getStatusForSession(
-        data.session,
-      ),
+    await synchronizeSession(
+      data.session,
     );
+  };
+
+  const refreshAccountLink = async () => {
+    await synchronizeSession(session);
   };
 
   const sendMagicLink = async (
     email: string,
   ) => {
     const client = supabaseClient;
-
     if (!client) {
       throw new Error(
         "Supabase authentication is not configured.",
@@ -252,13 +349,11 @@ export function AuthProvider({
 
   const signOut = async () => {
     const client = supabaseClient;
-
     if (!client) {
       return;
     }
 
     setErrorMessage(null);
-
     const { error } =
       await client.auth.signOut();
 
@@ -267,15 +362,15 @@ export function AuthProvider({
       throw error;
     }
 
-    setSession(null);
     setMagicLinkSentTo(null);
-    setStatus("signed-out");
+    await synchronizeSession(null);
   };
 
   return (
     <AuthContext.Provider
       value={{
         status,
+        connectionStatus,
         configured:
           supabaseConfiguration.configured,
         missingConfiguration:
@@ -284,12 +379,15 @@ export function AuthProvider({
         session,
         user,
         identity,
+        accountLink,
         access,
         errorMessage,
+        connectionErrorMessage,
         magicLinkSentTo,
         sendMagicLink,
         signOut,
         refreshSession,
+        refreshAccountLink,
       }}
     >
       {children}
