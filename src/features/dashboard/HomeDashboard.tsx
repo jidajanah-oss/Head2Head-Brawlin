@@ -6,7 +6,6 @@ import {
   SteelBadge,
   SteelButton,
   SteelCard,
-  SteelHero,
   SteelSectionHeader,
   SteelStatCard,
 } from "../../components/steel";
@@ -30,6 +29,9 @@ type DashboardTeamWordmarkProps = {
   team: string;
   side: "Away" | "Home";
 };
+
+const LEAGUE_LOGO_PATH =
+  `${import.meta.env.BASE_URL}logos/league/head2head-brawlin.png`;
 
 function getTeamDisplayName(team?: string) {
   if (!team) {
@@ -190,32 +192,67 @@ function HomeDashboard() {
 
   return (
     <main className="dashboard dashboard-v2">
-      <SteelHero
-        eyebrow="Head2Head Brawlin'"
-        title="Steel Edition"
-        subtitle="Premium 2026 Pick'em League Command Center"
-        primaryLabel="Make Picks"
-        primaryHref="/picks"
-        secondaryLabel="Game Center"
-        secondaryHref="/games"
-        rightContent={
-          <div className="dashboard-week-card">
-            <span>
-              Current Week
-            </span>
+      <SteelCard
+        className="dashboard-brand-hero"
+        as="section"
+      >
+        <div className="dashboard-brand-hero__logo-shell">
+          <img
+            className="dashboard-brand-hero__logo"
+            src={LEAGUE_LOGO_PATH}
+            alt="Head2Head Brawlin' Pick Em 2026 league logo"
+          />
+        </div>
 
-            <strong>
-              Week {league.currentWeek}
-            </strong>
+        <div className="dashboard-brand-hero__content">
+          <p className="steel-ui-eyebrow">
+            2026 Pick&apos;em League
+          </p>
 
-            <small>
-              {liveGames.length > 0
-                ? "Games live now"
-                : "Board active"}
-            </small>
+          <h1>
+            League Command Center
+          </h1>
+
+          <p>
+            Make your picks, follow the
+            weekly schedule, and track
+            the championship race.
+          </p>
+
+          <div className="dashboard-brand-hero__actions">
+            <SteelButton
+              href="/picks"
+              size="lg"
+            >
+              Make Picks
+            </SteelButton>
+
+            <SteelButton
+              href="/games"
+              size="lg"
+              variant="secondary"
+            >
+              Game Center
+            </SteelButton>
           </div>
-        }
-      />
+        </div>
+
+        <div className="dashboard-week-card dashboard-brand-hero__week">
+          <span>
+            Current Week
+          </span>
+
+          <strong>
+            Week {league.currentWeek}
+          </strong>
+
+          <small>
+            {liveGames.length > 0
+              ? "Games live now"
+              : "Board active"}
+          </small>
+        </div>
+      </SteelCard>
 
       <section className="dashboard-stat-grid">
         <SteelStatCard
