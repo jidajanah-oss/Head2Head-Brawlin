@@ -1,4 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import type { ChangeEvent } from "react";
 
 import {
@@ -19,43 +24,160 @@ import {
   type PlayerAccountStatus,
 } from "../../services/cloudRosterService";
 import { supabaseClient } from "../../services/supabaseClient";
+import type { PlayerRole } from "../../types/player";
 
-function getStatusLabel(status: PlayerAccountStatus): string {
-  if (status === "linked") return "Linked";
-  if (status === "invitation_pending") return "Invitation pending";
+type ReadinessStatusFilter =
+  | "all"
+  | PlayerAccountStatus;
+
+type ReadinessRoleFilter =
+  | "all"
+  | "league_leadership"
+  | "players";
+
+type ReadinessSummary = {
+  linked: number;
+  invitationPending: number;
+  notLinked: number;
+};
+
+function getStatusLabel(
+  record: PlayerAccountReadiness,
+): string {
+  if (record.accountStatus === "linked") {
+    return "Linked";
+  }
+
+  if (record.accountStatus === "invitation_pending") {
+    return record.lastSentAt
+      ? "Invitation sent"
+      : "Prepared — not sent";
+  }
+
   return "Not linked";
 }
 
 function getStatusVariant(
   status: PlayerAccountStatus,
 ): "success" | "info" | "neutral" {
-  if (status === "linked") return "success";
-  if (status === "invitation_pending") return "info";
+  if (status === "linked") {
+    return "success";
+  }
+
+  if (status === "invitation_pending") {
+    return "info";
+  }
+
   return "neutral";
 }
 
-function formatDate(value: string | undefined): string | null {
-  if (!value) return null;
+function getRoleLabel(role: PlayerRole): string {
+  if (role === "commissioner") {
+    return "Primary Commissioner";
+  }
+
+  if (role === "backup_commissioner") {
+    return "Backup Commissioner";
+  }
+
+  return "Player";
+}
+
+function getRoleRank(role: PlayerRole): number {
+  if (role === "commissioner") {
+    return 0;
+  }
+
+  if (role === "backup_commissioner") {
+    return 1;
+  }
+
+  return 2;
+}
+
+function getPlayerInitials(displayName: string): string {
+  const initials = displayName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+
+  return initials || "H2H";
+}
+
+function formatDate(
+  value: string | undefined,
+): string | null {
+  if (!value) {
+    return null;
+  }
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
 
   return date.toLocaleString();
+}
+
+function getSummary(
+  records: PlayerAccountReadiness[],
+): ReadinessSummary {
+  return records.reduce<ReadinessSummary>(
+    (summary, record) => {
+      if (record.accountStatus === "linked") {
+        summary.linked += 1;
+      } else if (
+        record.accountStatus === "invitation_pending"
+      ) {
+        summary.invitationPending += 1;
+      } else {
+        summary.notLinked += 1;
+      }
+
+      return summary;
+    },
+    {
+      linked: 0,
+      invitationPending: 0,
+      notLinked: 0,
+    },
+  );
 }
 
 export default function PlayerAccountReadinessPanel() {
   const { status, accountLink, access } = useAuth();
   const { league } = useLeague();
-  const [records, setRecords] = useState<PlayerAccountReadiness[]>([]);
-  const [emailDrafts, setEmailDrafts] = useState<Record<string, string>>(
-    {},
-  );
+
+  const [records, setRecords] = useState<
+    PlayerAccountReadiness[]
+  >([]);
+
+  const [emailDrafts, setEmailDrafts] = useState<
+    Record<string, string>
+  >({});
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] =
+    useState<ReadinessStatusFilter>("all");
+  const [roleFilter, setRoleFilter] =
+    useState<ReadinessRoleFilter>("all");
+
   const [loading, setLoading] = useState(false);
-  const [busyPlayerId, setBusyPlayerId] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(
-    null,
-  );
+  const [busyPlayerId, setBusyPlayerId] = useState<
+    string | null
+  >(null);
+
+  const [errorMessage, setErrorMessage] = useState<
+    string | null
+  >(null);
+
+  const [successMessage, setSuccessMessage] = useState<
+    string | null
+  >(null);
 
   const rosterKey = useMemo(
     () =>
@@ -74,7 +196,12 @@ export default function PlayerAccountReadinessPanel() {
 
   const refresh = useCallback(async () => {
     const client = supabaseClient;
-    if (!client || !accountLink || !access.canManageAccounts) {
+
+    if (
+      !client ||
+      !accountLink ||
+      !access.canManageAccounts
+    ) {
       return;
     }
 
@@ -88,19 +215,24 @@ export default function PlayerAccountReadinessPanel() {
         league.players,
       );
 
-      const nextRecords = await loadPlayerAccountReadiness(
-        client,
-        accountLink.leagueId,
-      );
+      const nextRecords =
+        await loadPlayerAccountReadiness(
+          client,
+          accountLink.leagueId,
+        );
 
       setRecords(nextRecords);
+
       setEmailDrafts((current) => {
         const next = { ...current };
+
         for (const record of nextRecords) {
           if (!(record.playerId in next)) {
-            next[record.playerId] = record.email ?? "";
+            next[record.playerId] =
+              record.email ?? "";
           }
         }
+
         return next;
       });
     } catch (error) {
@@ -134,6 +266,90 @@ export default function PlayerAccountReadinessPanel() {
     status,
   ]);
 
+  const summary = useMemo(
+    () => getSummary(records),
+    [records],
+  );
+
+  const filteredRecords = useMemo(() => {
+    const normalizedSearch = searchTerm
+      .trim()
+      .toLowerCase();
+
+    return [...records]
+      .filter((record) => {
+        if (
+          statusFilter !== "all" &&
+          record.accountStatus !== statusFilter
+        ) {
+          return false;
+        }
+
+        if (
+          roleFilter === "league_leadership" &&
+          record.role === "player"
+        ) {
+          return false;
+        }
+
+        if (
+          roleFilter === "players" &&
+          record.role !== "player"
+        ) {
+          return false;
+        }
+
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        const draftEmail =
+          emailDrafts[record.playerId] ??
+          record.email ??
+          "";
+
+        const searchableText = [
+          record.displayName,
+          record.nflTeam,
+          getRoleLabel(record.role),
+          draftEmail,
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        return searchableText.includes(
+          normalizedSearch,
+        );
+      })
+      .sort((left, right) => {
+        const roleDifference =
+          getRoleRank(left.role) -
+          getRoleRank(right.role);
+
+        if (roleDifference !== 0) {
+          return roleDifference;
+        }
+
+        return left.displayName.localeCompare(
+          right.displayName,
+        );
+      });
+  }, [
+    emailDrafts,
+    records,
+    roleFilter,
+    searchTerm,
+    statusFilter,
+  ]);
+
+  const leadershipRecords = filteredRecords.filter(
+    (record) => record.role !== "player",
+  );
+
+  const playerRecords = filteredRecords.filter(
+    (record) => record.role === "player",
+  );
+
   if (
     status !== "signed-in-linked" ||
     !accountLink ||
@@ -147,9 +363,26 @@ export default function PlayerAccountReadinessPanel() {
     setSuccessMessage(null);
   };
 
-  const handlePrepare = async (record: PlayerAccountReadiness) => {
+  const handleEmailChange = (
+    playerId: string,
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const nextEmail = event.target.value;
+
+    setEmailDrafts((current) => ({
+      ...current,
+      [playerId]: nextEmail,
+    }));
+  };
+
+  const handlePrepare = async (
+    record: PlayerAccountReadiness,
+  ) => {
     const client = supabaseClient;
-    if (!client) return;
+
+    if (!client) {
+      return;
+    }
 
     clearMessages();
     setBusyPlayerId(record.playerId);
@@ -161,9 +394,11 @@ export default function PlayerAccountReadinessPanel() {
         record.playerId,
         emailDrafts[record.playerId] ?? "",
       );
+
       setSuccessMessage(
         `Invitation prepared for ${record.displayName}. Nothing has been emailed yet.`,
       );
+
       await refresh();
     } catch (error) {
       setErrorMessage(
@@ -176,18 +411,38 @@ export default function PlayerAccountReadinessPanel() {
     }
   };
 
-  const handleSend = async (record: PlayerAccountReadiness) => {
+  const handleSend = async (
+    record: PlayerAccountReadiness,
+  ) => {
     const client = supabaseClient;
-    if (!client || !record.invitationId) return;
+
+    if (!client || !record.invitationId) {
+      return;
+    }
+
+    const targetEmail =
+      emailDrafts[record.playerId]?.trim() ||
+      record.email ||
+      "";
+
+    const approved = window.confirm(
+      `Send the Head2Head Brawlin' login invitation to ${record.displayName} at ${targetEmail}?\n\nThis action will send an email now.`,
+    );
+
+    if (!approved) {
+      return;
+    }
 
     clearMessages();
     setBusyPlayerId(record.playerId);
 
     try {
-      const result = await sendPlayerAccountInvitation(
-        client,
-        record.invitationId,
-      );
+      const result =
+        await sendPlayerAccountInvitation(
+          client,
+          record.invitationId,
+        );
+
       setSuccessMessage(result.message);
       await refresh();
     } catch (error) {
@@ -201,9 +456,22 @@ export default function PlayerAccountReadinessPanel() {
     }
   };
 
-  const handleRevoke = async (record: PlayerAccountReadiness) => {
+  const handleRevoke = async (
+    record: PlayerAccountReadiness,
+  ) => {
     const client = supabaseClient;
-    if (!client || !record.invitationId) return;
+
+    if (!client || !record.invitationId) {
+      return;
+    }
+
+    const approved = window.confirm(
+      `Revoke the pending invitation for ${record.displayName}?`,
+    );
+
+    if (!approved) {
+      return;
+    }
 
     clearMessages();
     setBusyPlayerId(record.playerId);
@@ -213,13 +481,16 @@ export default function PlayerAccountReadinessPanel() {
         client,
         record.invitationId,
       );
+
       setSuccessMessage(
         `Pending invitation revoked for ${record.displayName}.`,
       );
+
       setEmailDrafts((current) => ({
         ...current,
         [record.playerId]: "",
       }));
+
       await refresh();
     } catch (error) {
       setErrorMessage(
@@ -232,139 +503,384 @@ export default function PlayerAccountReadinessPanel() {
     }
   };
 
+  const renderRecord = (
+    record: PlayerAccountReadiness,
+  ) => {
+    const isBusy =
+      busyPlayerId === record.playerId;
+
+    const isLinked =
+      record.accountStatus === "linked";
+
+    const isPending =
+      record.accountStatus ===
+      "invitation_pending";
+
+    const hasDraftEmail = Boolean(
+      emailDrafts[record.playerId]?.trim(),
+    );
+
+    const linkedAt = formatDate(record.linkedAt);
+    const preparedAt = formatDate(
+      record.invitationCreatedAt,
+    );
+    const sentAt = formatDate(record.lastSentAt);
+    const expiresAt = formatDate(
+      record.invitationExpiresAt,
+    );
+
+    return (
+      <article
+        className={[
+          "cloud-roster-player",
+          record.role !== "player"
+            ? "cloud-roster-player--leadership"
+            : "",
+          isLinked
+            ? "cloud-roster-player--linked"
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        key={record.playerId}
+      >
+        <div className="cloud-roster-player__heading">
+          <div className="cloud-roster-player__identity">
+            <span
+              aria-hidden="true"
+              className="cloud-roster-player__initials"
+            >
+              {getPlayerInitials(
+                record.displayName,
+              )}
+            </span>
+
+            <div>
+              <h3>{record.displayName}</h3>
+
+              <p>
+                {record.nflTeam} ·{" "}
+                {getRoleLabel(record.role)}
+              </p>
+            </div>
+          </div>
+
+          <SteelBadge
+            variant={getStatusVariant(
+              record.accountStatus,
+            )}
+          >
+            {getStatusLabel(record)}
+          </SteelBadge>
+        </div>
+
+        <div className="cloud-roster-player__tags">
+          <span>
+            {record.playerStatus === "active"
+              ? "Active roster"
+              : "Inactive roster"}
+          </span>
+
+          {record.role !== "player" ? (
+            <span className="cloud-roster-player__role-tag">
+              League leadership
+            </span>
+          ) : null}
+        </div>
+
+        <label className="cloud-roster-email-field">
+          <span>Login email</span>
+
+          <input
+            autoComplete="off"
+            disabled={isBusy || isLinked}
+            onChange={(event) =>
+              handleEmailChange(
+                record.playerId,
+                event,
+              )
+            }
+            placeholder="player@example.com"
+            type="email"
+            value={
+              emailDrafts[record.playerId] ?? ""
+            }
+          />
+        </label>
+
+        <div className="cloud-roster-player__details">
+          {isLinked ? (
+            <span>
+              Account linked
+              {linkedAt ? ` · ${linkedAt}` : ""}
+            </span>
+          ) : null}
+
+          {isPending && !sentAt ? (
+            <span>
+              Prepared only — no email sent
+              {preparedAt
+                ? ` · ${preparedAt}`
+                : ""}
+            </span>
+          ) : null}
+
+          {sentAt ? (
+            <span>Invitation sent: {sentAt}</span>
+          ) : null}
+
+          {expiresAt && isPending ? (
+            <span>Expires: {expiresAt}</span>
+          ) : null}
+        </div>
+
+        {!isLinked ? (
+          <div className="cloud-roster-player__actions">
+            <SteelButton
+              disabled={
+                isBusy || !hasDraftEmail
+              }
+              onClick={() => {
+                void handlePrepare(record);
+              }}
+              size="sm"
+              type="button"
+              variant="secondary"
+            >
+              {isPending
+                ? "Update invitation"
+                : "Prepare invitation"}
+            </SteelButton>
+
+            {isPending && !record.lastSentAt ? (
+              <SteelButton
+                disabled={isBusy}
+                onClick={() => {
+                  void handleSend(record);
+                }}
+                size="sm"
+                type="button"
+                variant="primary"
+              >
+                Send invitation email
+              </SteelButton>
+            ) : null}
+
+            {isPending ? (
+              <SteelButton
+                disabled={isBusy}
+                onClick={() => {
+                  void handleRevoke(record);
+                }}
+                size="sm"
+                type="button"
+                variant="danger"
+              >
+                Revoke
+              </SteelButton>
+            ) : null}
+          </div>
+        ) : (
+          <p className="cloud-roster-player__linked-note">
+            This player’s login is connected and ready.
+          </p>
+        )}
+      </article>
+    );
+  };
+
   return (
-    <SteelCard className="cloud-roster-panel" variant="elevated">
+    <SteelCard
+      as="section"
+      className="cloud-roster-panel"
+    >
       <SteelSectionHeader
-        eyebrow="Commissioner Only"
-        title="Player Account Readiness"
-        description="Add names and NFL teams below even when you do not have email addresses. Email is needed only when you are ready to invite that player."
         action={
           <SteelButton
-            type="button"
-            size="sm"
-            variant="secondary"
             disabled={loading}
-            onClick={() => void refresh()}
+            onClick={() => {
+              void refresh();
+            }}
+            size="sm"
+            type="button"
+            variant="secondary"
           >
-            {loading ? "Refreshing..." : "Refresh"}
+            {loading
+              ? "Refreshing..."
+              : "Refresh accounts"}
           </SteelButton>
         }
+        description="Prepare and manage player login invitations without changing the league roster."
+        eyebrow="Cloud Account Administration"
+        title="Player Account Readiness"
       />
 
+      <div className="cloud-roster-safety">
+        <strong>Two-step invitation safety</strong>
+
+        <span>
+          Prepare invitation saves the email but
+          sends nothing. Send invitation email is a
+          separate action with a final confirmation.
+        </span>
+      </div>
+
+      <div className="cloud-roster-summary">
+        <div className="cloud-roster-summary__item cloud-roster-summary__item--linked">
+          <span>Linked</span>
+          <strong>{summary.linked}</strong>
+          <small>Ready to sign in</small>
+        </div>
+
+        <div className="cloud-roster-summary__item cloud-roster-summary__item--pending">
+          <span>Pending</span>
+          <strong>
+            {summary.invitationPending}
+          </strong>
+          <small>Prepared or emailed</small>
+        </div>
+
+        <div className="cloud-roster-summary__item">
+          <span>Not Linked</span>
+          <strong>{summary.notLinked}</strong>
+          <small>No invitation prepared</small>
+        </div>
+
+        <div className="cloud-roster-summary__item">
+          <span>Total Roster</span>
+          <strong>{records.length}</strong>
+          <small>Cloud player records</small>
+        </div>
+      </div>
+
+      <div className="cloud-roster-toolbar">
+        <label className="cloud-roster-toolbar__search">
+          <span>Search accounts</span>
+
+          <input
+            onChange={(event) =>
+              setSearchTerm(event.target.value)
+            }
+            placeholder="Player, NFL team, or email"
+            type="search"
+            value={searchTerm}
+          />
+        </label>
+
+        <label>
+          <span>Account status</span>
+
+          <select
+            onChange={(event) =>
+              setStatusFilter(
+                event.target
+                  .value as ReadinessStatusFilter,
+              )
+            }
+            value={statusFilter}
+          >
+            <option value="all">
+              All statuses
+            </option>
+            <option value="linked">Linked</option>
+            <option value="invitation_pending">
+              Pending
+            </option>
+            <option value="not_linked">
+              Not linked
+            </option>
+          </select>
+        </label>
+
+        <label>
+          <span>Roster role</span>
+
+          <select
+            onChange={(event) =>
+              setRoleFilter(
+                event.target
+                  .value as ReadinessRoleFilter,
+              )
+            }
+            value={roleFilter}
+          >
+            <option value="all">
+              All roles
+            </option>
+            <option value="league_leadership">
+              Commissioners
+            </option>
+            <option value="players">
+              Players
+            </option>
+          </select>
+        </label>
+      </div>
+
       {errorMessage ? (
-        <p className="cloud-roster-message cloud-roster-message--error">
+        <p
+          className="cloud-roster-message cloud-roster-message--error"
+          role="alert"
+        >
           {errorMessage}
         </p>
       ) : null}
 
       {successMessage ? (
-        <p className="cloud-roster-message cloud-roster-message--success">
+        <p
+          aria-live="polite"
+          className="cloud-roster-message cloud-roster-message--success"
+        >
           {successMessage}
         </p>
       ) : null}
 
-      <div className="cloud-roster-list">
-        {records.map((record) => {
-          const isBusy = busyPlayerId === record.playerId;
-          const sentAt = formatDate(record.lastSentAt);
-          const expiresAt = formatDate(record.invitationExpiresAt);
-          const isLinked = record.accountStatus === "linked";
-          const isPending =
-            record.accountStatus === "invitation_pending";
-          const hasDraftEmail = Boolean(
-            emailDrafts[record.playerId]?.trim(),
-          );
+      {leadershipRecords.length > 0 ? (
+        <section className="cloud-roster-group">
+          <div className="cloud-roster-group__heading">
+            <div>
+              <span>Priority Accounts</span>
+              <h3>League Leadership</h3>
+            </div>
 
-          return (
-            <article className="cloud-roster-player" key={record.playerId}>
-              <div className="cloud-roster-player__heading">
-                <div>
-                  <h3>{record.displayName}</h3>
-                  <p>
-                    {record.nflTeam} · {record.role.replaceAll("_", " ")}
-                  </p>
-                </div>
-                <SteelBadge
-                  variant={getStatusVariant(record.accountStatus)}
-                >
-                  {sentAt && isPending
-                    ? "Invitation sent"
-                    : getStatusLabel(record.accountStatus)}
-                </SteelBadge>
-              </div>
+            <SteelBadge variant="gold">
+              {leadershipRecords.length}
+            </SteelBadge>
+          </div>
 
-              <label className="cloud-roster-email-field">
-                Login email
-                <input
-                  type="email"
-                  autoComplete="off"
-                  value={emailDrafts[record.playerId] ?? record.email ?? ""}
-                  placeholder="Add later when available"
-                  disabled={isLinked || isBusy}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setEmailDrafts((current) => ({
-                      ...current,
-                      [record.playerId]: event.target.value,
-                    }))
-                  }
-                />
-              </label>
+          <div className="cloud-roster-list cloud-roster-list--leadership">
+            {leadershipRecords.map(renderRecord)}
+          </div>
+        </section>
+      ) : null}
 
-              <div className="cloud-roster-player__details">
-                {isLinked ? (
-                  <span>
-                    Account linked
-                    {formatDate(record.linkedAt)
-                      ? ` · ${formatDate(record.linkedAt)}`
-                      : ""}
-                  </span>
-                ) : null}
-                {sentAt ? <span>Sent: {sentAt}</span> : null}
-                {expiresAt && isPending ? (
-                  <span>Expires: {expiresAt}</span>
-                ) : null}
-              </div>
+      {playerRecords.length > 0 ? (
+        <section className="cloud-roster-group">
+          <div className="cloud-roster-group__heading">
+            <div>
+              <span>League Roster</span>
+              <h3>Player Accounts</h3>
+            </div>
 
-              {!isLinked ? (
-                <div className="cloud-roster-player__actions">
-                  <SteelButton
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={isBusy || !hasDraftEmail}
-                    onClick={() => void handlePrepare(record)}
-                  >
-                    {isPending ? "Update invitation" : "Prepare invitation"}
-                  </SteelButton>
+            <SteelBadge variant="neutral">
+              {playerRecords.length}
+            </SteelBadge>
+          </div>
 
-                  {isPending && !record.lastSentAt ? (
-                    <SteelButton
-                      type="button"
-                      size="sm"
-                      disabled={isBusy}
-                      onClick={() => void handleSend(record)}
-                    >
-                      Send invitation
-                    </SteelButton>
-                  ) : null}
+          <div className="cloud-roster-list">
+            {playerRecords.map(renderRecord)}
+          </div>
+        </section>
+      ) : null}
 
-                  {isPending ? (
-                    <SteelButton
-                      type="button"
-                      size="sm"
-                      variant="danger"
-                      disabled={isBusy}
-                      onClick={() => void handleRevoke(record)}
-                    >
-                      Revoke
-                    </SteelButton>
-                  ) : null}
-                </div>
-              ) : null}
-            </article>
-          );
-        })}
-      </div>
+      {!loading &&
+      records.length > 0 &&
+      filteredRecords.length === 0 ? (
+        <p className="cloud-roster-empty">
+          No player accounts match the current search
+          and filters.
+        </p>
+      ) : null}
 
       {!loading && records.length === 0 ? (
         <p className="cloud-roster-empty">
