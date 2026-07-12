@@ -51,8 +51,17 @@ export type FutureSeasonReplacementInput = {
   status?: PlayerStatus;
 };
 
-const REQUIRED_ROSTER_SIZE =
-  NFL_TEAM_DATA.length;
+export type FutureSeasonLeadershipInput = {
+  primaryCommissionerSourcePlayerId: string;
+  backupCommissionerSourcePlayerId: string;
+};
+
+export type FutureSeasonTeamSwapInput = {
+  firstSourcePlayerId: string;
+  secondSourcePlayerId: string;
+};
+
+const REQUIRED_ROSTER_SIZE = NFL_TEAM_DATA.length;
 
 function getTimestamp(
   timestamp?: string,
@@ -90,7 +99,17 @@ function toIdToken(value: string): string {
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "player"
+      .replace(/^-+|-+$/g, "") ||
+    "player"
+  );
+}
+
+function isFutureSeasonPlayerActive(
+  player: FutureSeasonPlayerPlan,
+): boolean {
+  return (
+    player.status === "active" &&
+    player.rosterDecision !== "inactive"
   );
 }
 
@@ -104,11 +123,55 @@ function assertPlanEditable(
   }
 }
 
+function getPlayerBySourceIdOrThrow(
+  plan: FutureSeasonPlan,
+  sourcePlayerId: string,
+): FutureSeasonPlayerPlan {
+  const normalizedSourcePlayerId =
+    sourcePlayerId.trim();
+
+  if (!normalizedSourcePlayerId) {
+    throw new Error(
+      "Select a future-season player first.",
+    );
+  }
+
+  const player = plan.players.find(
+    (candidate) =>
+      candidate.sourcePlayerId ===
+      normalizedSourcePlayerId,
+  );
+
+  if (!player) {
+    throw new Error(
+      "The selected player is not part of this future-season plan.",
+    );
+  }
+
+  return player;
+}
+
+function getActivePlayerBySourceIdOrThrow(
+  plan: FutureSeasonPlan,
+  sourcePlayerId: string,
+  inactiveMessage: string,
+): FutureSeasonPlayerPlan {
+  const player = getPlayerBySourceIdOrThrow(
+    plan,
+    sourcePlayerId,
+  );
+
+  if (!isFutureSeasonPlayerActive(player)) {
+    throw new Error(inactiveMessage);
+  }
+
+  return player;
+}
+
 function buildPlayerPlan(
   player: LeagueState["players"][number],
 ): FutureSeasonPlayerPlan {
-  const isActive =
-    player.status === "active";
+  const isActive = player.status === "active";
 
   return {
     playerId: player.id,
@@ -156,7 +219,8 @@ function replacePlayerInPlan(
 
   const playerExists = plan.players.some(
     (player) =>
-      player.sourcePlayerId === sourcePlayerId,
+      player.sourcePlayerId ===
+      sourcePlayerId,
   );
 
   if (!playerExists) {
@@ -192,16 +256,13 @@ export function createFutureSeasonPlan(
   const sourceSeason = parseSeason(
     input.league.settings.season,
   );
-
   const defaultTargetSeason =
     sourceSeason > 0
       ? sourceSeason + 1
       : new Date().getFullYear() + 1;
-
   const targetSeason =
     input.targetSeason ??
     defaultTargetSeason;
-
   const createdAt = getTimestamp(
     input.createdAt,
   );
@@ -216,10 +277,9 @@ export function createFutureSeasonPlan(
     leagueName:
       input.league.settings.leagueName.trim(),
     status: "draft",
-    players:
-      input.league.players.map(
-        buildPlayerPlan,
-      ),
+    players: input.league.players.map(
+      buildPlayerPlan,
+    ),
     createdAt,
     updatedAt: createdAt,
   };
@@ -247,7 +307,6 @@ export function updateFutureSeasonPlanDetails(
 
   const nextSourceSeason =
     plan.sourceSeason;
-
   const nextTargetSeason =
     updates.targetSeason ??
     plan.targetSeason;
@@ -276,17 +335,10 @@ export function updateFutureSeasonPlayerPlan(
   updatedAt?: string,
 ): FutureSeasonPlan {
   const currentPlayer =
-    plan.players.find(
-      (player) =>
-        player.sourcePlayerId ===
-        sourcePlayerId,
+    getPlayerBySourceIdOrThrow(
+      plan,
+      sourcePlayerId,
     );
-
-  if (!currentPlayer) {
-    throw new Error(
-      "The selected player is not part of this future-season plan.",
-    );
-  }
 
   const nextPlayer: FutureSeasonPlayerPlan = {
     ...currentPlayer,
@@ -303,7 +355,7 @@ export function updateFutureSeasonPlayerPlan(
 
   return replacePlayerInPlan(
     plan,
-    sourcePlayerId,
+    currentPlayer.sourcePlayerId,
     nextPlayer,
     updatedAt,
   );
@@ -315,21 +367,14 @@ export function markFutureSeasonPlayerReturning(
   updatedAt?: string,
 ): FutureSeasonPlan {
   const currentPlayer =
-    plan.players.find(
-      (player) =>
-        player.sourcePlayerId ===
-        sourcePlayerId,
+    getPlayerBySourceIdOrThrow(
+      plan,
+      sourcePlayerId,
     );
-
-  if (!currentPlayer) {
-    throw new Error(
-      "The selected player is not part of this future-season plan.",
-    );
-  }
 
   return replacePlayerInPlan(
     plan,
-    sourcePlayerId,
+    currentPlayer.sourcePlayerId,
     {
       ...currentPlayer,
       playerId:
@@ -348,21 +393,14 @@ export function markFutureSeasonPlayerInactive(
   updatedAt?: string,
 ): FutureSeasonPlan {
   const currentPlayer =
-    plan.players.find(
-      (player) =>
-        player.sourcePlayerId ===
-        sourcePlayerId,
+    getPlayerBySourceIdOrThrow(
+      plan,
+      sourcePlayerId,
     );
-
-  if (!currentPlayer) {
-    throw new Error(
-      "The selected player is not part of this future-season plan.",
-    );
-  }
 
   return replacePlayerInPlan(
     plan,
-    sourcePlayerId,
+    currentPlayer.sourcePlayerId,
     {
       ...currentPlayer,
       status: "inactive",
@@ -380,28 +418,21 @@ export function replaceFutureSeasonPlayer(
   updatedAt?: string,
 ): FutureSeasonPlan {
   const currentPlayer =
-    plan.players.find(
-      (player) =>
-        player.sourcePlayerId ===
-        sourcePlayerId,
+    getPlayerBySourceIdOrThrow(
+      plan,
+      sourcePlayerId,
     );
-
-  if (!currentPlayer) {
-    throw new Error(
-      "The selected player is not part of this future-season plan.",
-    );
-  }
-
   const replacementId =
     input.playerId?.trim() ||
     createFutureSeasonReplacementPlayerId(
-      sourcePlayerId,
+      currentPlayer.sourcePlayerId,
       plan.targetSeason,
     );
 
   const replacement: FutureSeasonPlayerPlan = {
     playerId: replacementId,
-    sourcePlayerId,
+    sourcePlayerId:
+      currentPlayer.sourcePlayerId,
     name: input.name.trim(),
     nflTeam: normalizeTeam(
       input.nflTeam ??
@@ -418,9 +449,7 @@ export function replaceFutureSeasonPlayer(
             input.customLogo.trim(),
         }
       : {}),
-    role:
-      input.role ??
-      currentPlayer.role,
+    role: "player",
     status: input.status ?? "active",
     rosterDecision: "replacement",
     preservesCloudLink: false,
@@ -428,8 +457,186 @@ export function replaceFutureSeasonPlayer(
 
   return replacePlayerInPlan(
     plan,
-    sourcePlayerId,
+    currentPlayer.sourcePlayerId,
     replacement,
+    updatedAt,
+  );
+}
+
+export function setFutureSeasonLeadership(
+  plan: FutureSeasonPlan,
+  input: FutureSeasonLeadershipInput,
+  updatedAt?: string,
+): FutureSeasonPlan {
+  assertPlanEditable(plan);
+
+  const primarySourcePlayerId =
+    input.primaryCommissionerSourcePlayerId.trim();
+  const backupSourcePlayerId =
+    input.backupCommissionerSourcePlayerId.trim();
+
+  if (
+    !primarySourcePlayerId ||
+    !backupSourcePlayerId
+  ) {
+    throw new Error(
+      "Select both a primary commissioner and a backup commissioner.",
+    );
+  }
+
+  if (
+    primarySourcePlayerId ===
+    backupSourcePlayerId
+  ) {
+    throw new Error(
+      "The same player cannot be both the primary and backup commissioner.",
+    );
+  }
+
+  const primaryCommissioner =
+    getActivePlayerBySourceIdOrThrow(
+      plan,
+      primarySourcePlayerId,
+      "The selected primary commissioner must be an active future-season owner.",
+    );
+  const backupCommissioner =
+    getActivePlayerBySourceIdOrThrow(
+      plan,
+      backupSourcePlayerId,
+      "The selected backup commissioner must be an active future-season owner.",
+    );
+
+  const primaryEmail =
+    primaryCommissioner.email
+      ?.trim()
+      .toLowerCase();
+  const backupEmail =
+    backupCommissioner.email
+      ?.trim()
+      .toLowerCase();
+
+  if (
+    primaryEmail &&
+    backupEmail &&
+    primaryEmail === backupEmail
+  ) {
+    throw new Error(
+      "The primary and backup commissioners cannot use the same login email.",
+    );
+  }
+
+  return touchPlan(
+    {
+      ...plan,
+      players: plan.players.map((player) => {
+        let role: PlayerRole = "player";
+
+        if (
+          player.sourcePlayerId ===
+          primarySourcePlayerId
+        ) {
+          role = "commissioner";
+        } else if (
+          player.sourcePlayerId ===
+          backupSourcePlayerId
+        ) {
+          role =
+            "backup_commissioner";
+        }
+
+        return {
+          ...player,
+          role,
+        };
+      }),
+    },
+    updatedAt,
+  );
+}
+
+export function swapFutureSeasonPlayerTeams(
+  plan: FutureSeasonPlan,
+  input: FutureSeasonTeamSwapInput,
+  updatedAt?: string,
+): FutureSeasonPlan {
+  assertPlanEditable(plan);
+
+  const firstSourcePlayerId =
+    input.firstSourcePlayerId.trim();
+  const secondSourcePlayerId =
+    input.secondSourcePlayerId.trim();
+
+  if (
+    !firstSourcePlayerId ||
+    !secondSourcePlayerId
+  ) {
+    throw new Error(
+      "Select two active future-season owners to swap franchises.",
+    );
+  }
+
+  if (
+    firstSourcePlayerId ===
+    secondSourcePlayerId
+  ) {
+    throw new Error(
+      "Select two different future-season owners to swap franchises.",
+    );
+  }
+
+  const firstPlayer =
+    getActivePlayerBySourceIdOrThrow(
+      plan,
+      firstSourcePlayerId,
+      "The first franchise owner must be active in the future-season plan.",
+    );
+  const secondPlayer =
+    getActivePlayerBySourceIdOrThrow(
+      plan,
+      secondSourcePlayerId,
+      "The second franchise owner must be active in the future-season plan.",
+    );
+
+  const firstTeam = normalizeTeam(
+    firstPlayer.nflTeam,
+  );
+  const secondTeam = normalizeTeam(
+    secondPlayer.nflTeam,
+  );
+
+  if (!firstTeam || !secondTeam) {
+    throw new Error(
+      "Both selected owners must have an NFL franchise before they can be swapped.",
+    );
+  }
+
+  return touchPlan(
+    {
+      ...plan,
+      players: plan.players.map((player) => {
+        if (
+          player.sourcePlayerId ===
+          firstSourcePlayerId
+        ) {
+          return {
+            ...player,
+            nflTeam: secondTeam,
+          };
+        }
+
+        if (
+          player.sourcePlayerId ===
+          secondSourcePlayerId
+        ) {
+          return {
+            ...player,
+            nflTeam: firstTeam,
+          };
+        }
+
+        return player;
+      }),
+    },
     updatedAt,
   );
 }
@@ -437,8 +644,7 @@ export function replaceFutureSeasonPlayer(
 export function validateFutureSeasonPlan(
   plan: FutureSeasonPlan,
 ): FutureSeasonValidationResult {
-  const issues:
-    FutureSeasonValidationIssue[] = [];
+  const issues: FutureSeasonValidationIssue[] = [];
 
   const addIssue = (
     issue: FutureSeasonValidationIssue,
@@ -471,7 +677,8 @@ export function validateFutureSeasonPlan(
   if (
     Number.isInteger(plan.sourceSeason) &&
     Number.isInteger(plan.targetSeason) &&
-    plan.targetSeason <= plan.sourceSeason
+    plan.targetSeason <=
+      plan.sourceSeason
   ) {
     addIssue({
       code: "target-season-not-later",
@@ -490,10 +697,7 @@ export function validateFutureSeasonPlan(
 
   const activePlayers =
     plan.players.filter(
-      (player) =>
-        player.status === "active" &&
-        player.rosterDecision !==
-          "inactive",
+      isFutureSeasonPlayerActive,
     );
 
   if (
@@ -508,8 +712,10 @@ export function validateFutureSeasonPlan(
     });
   }
 
-  const playerIdOwners =
-    new Map<string, string>();
+  const playerIdOwners = new Map<
+    string,
+    string
+  >();
 
   for (const player of plan.players) {
     const normalizedPlayerId =
@@ -517,7 +723,9 @@ export function validateFutureSeasonPlan(
 
     if (
       normalizedPlayerId &&
-      playerIdOwners.has(normalizedPlayerId)
+      playerIdOwners.has(
+        normalizedPlayerId,
+      )
     ) {
       addIssue({
         code: "duplicate-player-id",
@@ -532,8 +740,10 @@ export function validateFutureSeasonPlan(
     }
   }
 
-  const playerNameOwners =
-    new Map<string, string>();
+  const playerNameOwners = new Map<
+    string,
+    string
+  >();
 
   for (const player of activePlayers) {
     const normalizedName =
@@ -556,12 +766,15 @@ export function validateFutureSeasonPlan(
     }
   }
 
-  const teamOwners =
-    new Map<string, string>();
+  const teamOwners = new Map<
+    string,
+    string
+  >();
 
   for (const player of activePlayers) {
-    const normalizedTeam =
-      normalizeTeam(player.nflTeam);
+    const normalizedTeam = normalizeTeam(
+      player.nflTeam,
+    );
 
     if (
       normalizedTeam &&
@@ -585,7 +798,6 @@ export function validateFutureSeasonPlan(
       normalizeTeam(team.abbreviation),
     ),
   );
-
   const ownsEveryNFLTeam =
     teamOwners.size ===
       recognizedTeams.size &&
@@ -606,7 +818,6 @@ export function validateFutureSeasonPlan(
       (player) =>
         player.role === "commissioner",
     );
-
   const backupCommissioners =
     activePlayers.filter(
       (player) =>
@@ -650,7 +861,6 @@ export function validateFutureSeasonPlan(
     primaryCommissioners[0]?.email
       ?.trim()
       .toLowerCase();
-
   const backupEmail =
     backupCommissioners[0]?.email
       ?.trim()
@@ -686,7 +896,6 @@ export function validateFutureSeasonPlan(
       (player.playerId !==
         player.sourcePlayerId ||
         !player.preservesCloudLink);
-
     const replacementLinkMismatch =
       player.rosterDecision ===
         "replacement" &&
@@ -755,26 +964,20 @@ export function getFutureSeasonPlanSummary(
   plan: FutureSeasonPlan,
 ) {
   const countDecision = (
-    decision:
-      FutureSeasonRosterDecision,
+    decision: FutureSeasonRosterDecision,
   ) =>
     plan.players.filter(
       (player) =>
         player.rosterDecision === decision,
     ).length;
-
   const validation =
     validateFutureSeasonPlan(plan);
 
   return {
     totalPlayers: plan.players.length,
-    activePlayers:
-      plan.players.filter(
-        (player) =>
-          player.status === "active" &&
-          player.rosterDecision !==
-            "inactive",
-      ).length,
+    activePlayers: plan.players.filter(
+      isFutureSeasonPlayerActive,
+    ).length,
     returningPlayers:
       countDecision("returning"),
     replacementPlayers:
@@ -786,8 +989,7 @@ export function getFutureSeasonPlanSummary(
         (player) =>
           player.preservesCloudLink,
       ).length,
-    issueCount:
-      validation.issues.length,
+    issueCount: validation.issues.length,
     ready: validation.ready,
   };
 }

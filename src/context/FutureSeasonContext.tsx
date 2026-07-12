@@ -16,14 +16,18 @@ import {
   markFutureSeasonPlayerReturning,
   reopenFutureSeasonPlan,
   replaceFutureSeasonPlayer,
+  setFutureSeasonLeadership,
+  swapFutureSeasonPlayerTeams,
   updateFutureSeasonPlanDetails,
   updateFutureSeasonPlayerPlan,
   validateFutureSeasonPlan,
 } from "../engine/futureSeasonEngine";
 import type {
+  FutureSeasonLeadershipInput,
   FutureSeasonPlanDetailsUpdate,
   FutureSeasonPlayerPlanUpdate,
   FutureSeasonReplacementInput,
+  FutureSeasonTeamSwapInput,
 } from "../engine/futureSeasonEngine";
 import {
   loadPersistedFutureSeasonState,
@@ -49,50 +53,48 @@ type FutureSeasonContextValue = {
   activePlan: FutureSeasonPlan | null;
   activeValidation: FutureSeasonValidationResult | null;
   activeSummary: FutureSeasonPlanSummary | null;
-
   createPlan: (
     targetSeason?: number,
   ) => FutureSeasonPlan;
-
   setActivePlanId: (
     planId: string | null,
   ) => void;
-
   updatePlanDetails: (
     planId: string,
     updates: FutureSeasonPlanDetailsUpdate,
   ) => void;
-
   updatePlayerPlan: (
     planId: string,
     sourcePlayerId: string,
     updates: FutureSeasonPlayerPlanUpdate,
   ) => void;
-
   markPlayerReturning: (
     planId: string,
     sourcePlayerId: string,
   ) => void;
-
   markPlayerInactive: (
     planId: string,
     sourcePlayerId: string,
   ) => void;
-
   replacePlayer: (
     planId: string,
     sourcePlayerId: string,
     replacement: FutureSeasonReplacementInput,
   ) => void;
-
+  setLeadership: (
+    planId: string,
+    leadership: FutureSeasonLeadershipInput,
+  ) => void;
+  swapPlayerTeams: (
+    planId: string,
+    swap: FutureSeasonTeamSwapInput,
+  ) => void;
   markPlanReady: (
     planId: string,
   ) => void;
-
   reopenPlan: (
     planId: string,
   ) => void;
-
   deletePlan: (
     planId: string,
   ) => void;
@@ -183,11 +185,10 @@ export function FutureSeasonProvider({
   children: ReactNode;
 }) {
   const { league } = useLeague();
-
   const [
     persistenceState,
     setPersistenceState,
-  ] = useState<FutureSeasonPersistenceState>(
+  ] = useState(
     loadPersistedFutureSeasonState,
   );
 
@@ -314,7 +315,6 @@ export function FutureSeasonProvider({
       persistenceState,
       planId,
     );
-
     const nextPlan =
       updateFutureSeasonPlanDetails(
         currentPlan,
@@ -349,7 +349,6 @@ export function FutureSeasonProvider({
       persistenceState,
       planId,
     );
-
     const nextPlan =
       updateFutureSeasonPlayerPlan(
         currentPlan,
@@ -375,7 +374,6 @@ export function FutureSeasonProvider({
       persistenceState,
       planId,
     );
-
     const nextPlan =
       markFutureSeasonPlayerReturning(
         currentPlan,
@@ -400,7 +398,6 @@ export function FutureSeasonProvider({
       persistenceState,
       planId,
     );
-
     const nextPlan =
       markFutureSeasonPlayerInactive(
         currentPlan,
@@ -427,12 +424,59 @@ export function FutureSeasonProvider({
       persistenceState,
       planId,
     );
-
     const nextPlan =
       replaceFutureSeasonPlayer(
         currentPlan,
         sourcePlayerId,
         replacement,
+      );
+
+    setPersistenceState(
+      (previousState) =>
+        replaceStoredPlan(
+          previousState,
+          currentPlan.id,
+          nextPlan,
+        ),
+    );
+  };
+
+  const setLeadership = (
+    planId: string,
+    leadership: FutureSeasonLeadershipInput,
+  ) => {
+    const currentPlan = getPlanOrThrow(
+      persistenceState,
+      planId,
+    );
+    const nextPlan =
+      setFutureSeasonLeadership(
+        currentPlan,
+        leadership,
+      );
+
+    setPersistenceState(
+      (previousState) =>
+        replaceStoredPlan(
+          previousState,
+          currentPlan.id,
+          nextPlan,
+        ),
+    );
+  };
+
+  const swapPlayerTeams = (
+    planId: string,
+    swap: FutureSeasonTeamSwapInput,
+  ) => {
+    const currentPlan = getPlanOrThrow(
+      persistenceState,
+      planId,
+    );
+    const nextPlan =
+      swapFutureSeasonPlayerTeams(
+        currentPlan,
+        swap,
       );
 
     setPersistenceState(
@@ -452,7 +496,6 @@ export function FutureSeasonProvider({
       persistenceState,
       planId,
     );
-
     const nextPlan =
       markFutureSeasonPlanReady(
         currentPlan,
@@ -475,7 +518,6 @@ export function FutureSeasonProvider({
       persistenceState,
       planId,
     );
-
     const nextPlan =
       reopenFutureSeasonPlan(
         currentPlan,
@@ -545,6 +587,8 @@ export function FutureSeasonProvider({
         markPlayerReturning,
         markPlayerInactive,
         replacePlayer,
+        setLeadership,
+        swapPlayerTeams,
         markPlanReady,
         reopenPlan,
         deletePlan,
