@@ -3,6 +3,8 @@ export * from "./authAccessTypes";
 export * from "./dataTransferEngine";
 export * from "./dataTransferTypes";
 export * from "./franchiseLogos";
+export * from "./futureSeasonEngine";
+export * from "./futureSeasonTypes";
 export * from "./gameWeek";
 export * from "./h2hEngine";
 export * from "./nfl";
