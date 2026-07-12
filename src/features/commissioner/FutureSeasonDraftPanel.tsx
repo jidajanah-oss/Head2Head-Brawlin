@@ -173,6 +173,14 @@ function getOwnerOptionLabel(
   return `${player.name} — ${teamInfo?.displayName ?? player.nflTeam}`;
 }
 
+function getTeamDisplayLabel(
+  nflTeam: FutureSeasonPlayerPlan["nflTeam"],
+): string {
+  const teamInfo = getNFLTeamInfo(nflTeam);
+
+  return `${nflTeam} · ${teamInfo?.displayName ?? "NFL Franchise"}`;
+}
+
 export default function FutureSeasonDraftPanel() {
   const { league } = useLeague();
   const {
@@ -341,6 +349,125 @@ export default function FutureSeasonDraftPanel() {
       secondSwapSourcePlayerId,
     ],
   );
+
+
+  const reviewSnapshot = useMemo(() => {
+    if (!activePlan) {
+      return null;
+    }
+
+    const sourcePlayersById = new Map(
+      league.players.map((player) => [
+        player.id,
+        player,
+      ]),
+    );
+    const activeOwners = activePlan.players.filter(
+      isActivePlannedOwner,
+    );
+    const returningPlayers = activePlan.players.filter(
+      (player) =>
+        player.rosterDecision === "returning",
+    );
+    const replacementPlayers = activePlan.players
+      .filter(
+        (player) =>
+          player.rosterDecision ===
+          "replacement",
+      )
+      .sort((left, right) =>
+        left.nflTeam.localeCompare(
+          right.nflTeam,
+        ),
+      );
+    const inactivePlayers = activePlan.players
+      .filter(
+        (player) =>
+          player.rosterDecision === "inactive",
+      )
+      .sort((left, right) =>
+        left.nflTeam.localeCompare(
+          right.nflTeam,
+        ),
+      );
+    const newAccountPlayers = activeOwners
+      .filter(
+        (player) =>
+          !player.preservesCloudLink,
+      )
+      .sort((left, right) =>
+        left.nflTeam.localeCompare(
+          right.nflTeam,
+        ),
+      );
+    const franchiseMoves = activePlan.players.reduce<
+      Array<{
+        sourcePlayerId: string;
+        ownerName: string;
+        fromTeam: FutureSeasonPlayerPlan["nflTeam"];
+        toTeam: FutureSeasonPlayerPlan["nflTeam"];
+      }>
+    >((moves, player) => {
+      const sourcePlayer = sourcePlayersById.get(
+        player.sourcePlayerId,
+      );
+
+      if (
+        !sourcePlayer ||
+        sourcePlayer.nflTeam === player.nflTeam
+      ) {
+        return moves;
+      }
+
+      moves.push({
+        sourcePlayerId: player.sourcePlayerId,
+        ownerName: player.name,
+        fromTeam: sourcePlayer.nflTeam,
+        toTeam: player.nflTeam,
+      });
+
+      return moves;
+    }, []);
+    const primaryCommissioner = activeOwners.find(
+      (player) =>
+        player.role === "commissioner",
+    );
+    const backupCommissioner = activeOwners.find(
+      (player) =>
+        player.role === "backup_commissioner",
+    );
+    const sourcePrimaryCommissioner =
+      league.players.find(
+        (player) =>
+          player.role === "commissioner",
+      );
+    const sourceBackupCommissioner =
+      league.players.find(
+        (player) =>
+          player.role ===
+          "backup_commissioner",
+      );
+    const leadershipChanged =
+      primaryCommissioner?.playerId !==
+        sourcePrimaryCommissioner?.id ||
+      backupCommissioner?.playerId !==
+        sourceBackupCommissioner?.id;
+
+    return {
+      activeOwners,
+      returningPlayers,
+      replacementPlayers,
+      inactivePlayers,
+      newAccountPlayers,
+      franchiseMoves,
+      primaryCommissioner,
+      backupCommissioner,
+      leadershipChanged,
+      preservedCloudLinks: activeOwners.filter(
+        (player) => player.preservesCloudLink,
+      ).length,
+    };
+  }, [activePlan, league.players]);
 
   useEffect(() => {
     setLeagueNameDraft(
@@ -1382,6 +1509,334 @@ export default function FutureSeasonDraftPanel() {
                   </div>
                 </section>
               </div>
+
+              {reviewSnapshot ? (
+                <section className="future-season-draft__review">
+                  <div className="future-season-draft__review-heading">
+                    <div>
+                      <span>Commissioner Review</span>
+                      <h3>
+                        Draft Review &amp; Readiness
+                      </h3>
+                    </div>
+                    <SteelBadge
+                      variant={
+                        activeValidation?.ready
+                          ? "success"
+                          : "danger"
+                      }
+                    >
+                      {activeValidation?.ready
+                        ? "Review Ready"
+                        : "Needs Attention"}
+                    </SteelBadge>
+                  </div>
+
+                  <p className="future-season-draft__review-copy">
+                    Review the planned leadership,
+                    roster decisions, cloud-account
+                    transitions, and franchise moves
+                    before marking this draft ready.
+                    This is a read-only summary and
+                    cannot activate the season.
+                  </p>
+
+                  <div className="future-season-draft__review-summary">
+                    <article>
+                      <span>Leadership</span>
+                      <strong>
+                        {reviewSnapshot.primaryCommissioner
+                          ?.name ?? "Missing primary"}
+                      </strong>
+                      <small>
+                        Primary ·{" "}
+                        {reviewSnapshot.primaryCommissioner
+                          ? getTeamDisplayLabel(
+                              reviewSnapshot
+                                .primaryCommissioner
+                                .nflTeam,
+                            )
+                          : "Unassigned"}
+                      </small>
+                      <strong>
+                        {reviewSnapshot.backupCommissioner
+                          ?.name ?? "Missing backup"}
+                      </strong>
+                      <small>
+                        Backup ·{" "}
+                        {reviewSnapshot.backupCommissioner
+                          ? getTeamDisplayLabel(
+                              reviewSnapshot
+                                .backupCommissioner
+                                .nflTeam,
+                            )
+                          : "Unassigned"}
+                      </small>
+                      <em>
+                        {reviewSnapshot.leadershipChanged
+                          ? "Changed from the live source season"
+                          : "Matches the live source season"}
+                      </em>
+                    </article>
+
+                    <article>
+                      <span>Roster Decisions</span>
+                      <strong>
+                        {
+                          reviewSnapshot
+                            .returningPlayers.length
+                        }{" "}
+                        returning
+                      </strong>
+                      <small>
+                        {
+                          reviewSnapshot
+                            .replacementPlayers.length
+                        }{" "}
+                        replacements
+                      </small>
+                      <small>
+                        {
+                          reviewSnapshot
+                            .inactivePlayers.length
+                        }{" "}
+                        inactive
+                      </small>
+                      <em>
+                        {
+                          reviewSnapshot
+                            .activeOwners.length
+                        }
+                        /32 active owners planned
+                      </em>
+                    </article>
+
+                    <article>
+                      <span>Cloud Account Plan</span>
+                      <strong>
+                        {
+                          reviewSnapshot
+                            .preservedCloudLinks
+                        }{" "}
+                        preserved
+                      </strong>
+                      <small>
+                        {
+                          reviewSnapshot
+                            .newAccountPlayers.length
+                        }{" "}
+                        new account links required
+                      </small>
+                      <small>
+                        No invitations are sent from
+                        this screen.
+                      </small>
+                      <em>
+                        Existing logins never transfer
+                        to replacements
+                      </em>
+                    </article>
+
+                    <article>
+                      <span>Franchise Assignment</span>
+                      <strong>
+                        {
+                          reviewSnapshot
+                            .franchiseMoves.length
+                        }{" "}
+                        planned moves
+                      </strong>
+                      <small>
+                        {
+                          reviewSnapshot.activeOwners
+                            .length
+                        }{" "}
+                        active franchise slots
+                      </small>
+                      <small>
+                        Team logos can be updated for
+                        the new season later.
+                      </small>
+                      <em>
+                        Assignments remain draft-only
+                      </em>
+                    </article>
+                  </div>
+
+                  <div className="future-season-draft__review-changes">
+                    <article>
+                      <div className="future-season-draft__review-change-heading">
+                        <div>
+                          <span>Roster Changes</span>
+                          <h4>
+                            Replacements &amp; Inactive
+                          </h4>
+                        </div>
+                        <SteelBadge
+                          variant={
+                            reviewSnapshot
+                              .inactivePlayers.length > 0
+                              ? "danger"
+                              : reviewSnapshot
+                                    .replacementPlayers
+                                    .length > 0
+                                ? "info"
+                                : "success"
+                          }
+                        >
+                          {
+                            reviewSnapshot
+                              .replacementPlayers.length +
+                            reviewSnapshot
+                              .inactivePlayers.length
+                          }{" "}
+                          Changes
+                        </SteelBadge>
+                      </div>
+
+                      {reviewSnapshot
+                        .replacementPlayers.length === 0 &&
+                      reviewSnapshot.inactivePlayers
+                        .length === 0 ? (
+                        <p className="future-season-draft__review-empty-state">
+                          All 32 source-season owners are
+                          currently planned to return.
+                        </p>
+                      ) : (
+                        <ul className="future-season-draft__review-list">
+                          {reviewSnapshot.replacementPlayers.map(
+                            (player) => {
+                              const sourcePlayer =
+                                league.players.find(
+                                  (candidate) =>
+                                    candidate.id ===
+                                    player.sourcePlayerId,
+                                );
+
+                              return (
+                                <li
+                                  key={`replacement-${player.sourcePlayerId}`}
+                                >
+                                  <div>
+                                    <strong>
+                                      {sourcePlayer?.name ??
+                                        "Original owner"}{" "}
+                                      → {player.name}
+                                    </strong>
+                                    <span>
+                                      {getTeamDisplayLabel(
+                                        player.nflTeam,
+                                      )}
+                                    </span>
+                                  </div>
+                                  <SteelBadge variant="info">
+                                    New Account
+                                  </SteelBadge>
+                                </li>
+                              );
+                            },
+                          )}
+                          {reviewSnapshot.inactivePlayers.map(
+                            (player) => (
+                              <li
+                                key={`inactive-${player.sourcePlayerId}`}
+                              >
+                                <div>
+                                  <strong>
+                                    {player.name}
+                                  </strong>
+                                  <span>
+                                    {getTeamDisplayLabel(
+                                      player.nflTeam,
+                                    )}
+                                  </span>
+                                </div>
+                                <SteelBadge variant="danger">
+                                  Needs Replacement
+                                </SteelBadge>
+                              </li>
+                            ),
+                          )}
+                        </ul>
+                      )}
+                    </article>
+
+                    <article>
+                      <div className="future-season-draft__review-change-heading">
+                        <div>
+                          <span>Team Assignment Changes</span>
+                          <h4>Franchise Moves</h4>
+                        </div>
+                        <SteelBadge
+                          variant={
+                            reviewSnapshot
+                              .franchiseMoves.length > 0
+                              ? "gold"
+                              : "success"
+                          }
+                        >
+                          {
+                            reviewSnapshot
+                              .franchiseMoves.length
+                          }{" "}
+                          Moves
+                        </SteelBadge>
+                      </div>
+
+                      {reviewSnapshot.franchiseMoves
+                        .length === 0 ? (
+                        <p className="future-season-draft__review-empty-state">
+                          Every owner currently keeps the
+                          same NFL franchise as the live
+                          source season.
+                        </p>
+                      ) : (
+                        <ul className="future-season-draft__review-list">
+                          {reviewSnapshot.franchiseMoves.map(
+                            (move) => (
+                              <li
+                                key={`move-${move.sourcePlayerId}`}
+                              >
+                                <div>
+                                  <strong>
+                                    {move.ownerName}
+                                  </strong>
+                                  <span>
+                                    {getTeamDisplayLabel(
+                                      move.fromTeam,
+                                    )}{" "}
+                                    →{" "}
+                                    {getTeamDisplayLabel(
+                                      move.toTeam,
+                                    )}
+                                  </span>
+                                </div>
+                                <SteelBadge variant="gold">
+                                  Draft Only
+                                </SteelBadge>
+                              </li>
+                            ),
+                          )}
+                        </ul>
+                      )}
+                    </article>
+                  </div>
+
+                  <div className="future-season-draft__review-safety">
+                    <strong>
+                      Review only — no activation
+                    </strong>
+                    <span>
+                      Marking this plan ready records
+                      planning status only. The live{" "}
+                      {activePlan.sourceSeason} league,
+                      Supabase accounts, invitations,
+                      picks, standings, and payouts stay
+                      unchanged.
+                    </span>
+                  </div>
+                </section>
+              ) : null}
 
               <div className="future-season-draft__validation">
                 <div className="future-season-draft__validation-heading">

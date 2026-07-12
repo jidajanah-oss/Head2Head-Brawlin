@@ -807,6 +807,241 @@
   text-align: center;
 }
 
+
+.future-season-draft__review {
+  margin-top: 18px;
+  padding: 17px;
+  border: 1px solid rgba(96, 165, 250, 0.22);
+  border-radius: 15px;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(96, 165, 250, 0.1),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.045),
+      rgba(255, 255, 255, 0.012)
+    ),
+    rgba(0, 0, 0, 0.24);
+}
+
+.future-season-draft__review-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.future-season-draft__review-heading > div {
+  min-width: 0;
+}
+
+.future-season-draft__review-heading span,
+.future-season-draft__review-change-heading span {
+  display: block;
+  color: #93c5fd;
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.future-season-draft__review-heading h3 {
+  margin: 4px 0 0;
+  color: #ffffff;
+  font-size: 1.1rem;
+  line-height: 1.22;
+}
+
+.future-season-draft__review-copy {
+  max-width: 900px;
+  margin: 13px 0 0;
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.82rem;
+  line-height: 1.58;
+}
+
+.future-season-draft__review-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 11px;
+  margin-top: 15px;
+}
+
+.future-season-draft__review-summary article {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 170px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 13px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.04),
+      rgba(255, 255, 255, 0.01)
+    ),
+    rgba(0, 0, 0, 0.24);
+}
+
+.future-season-draft__review-summary article > span {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.future-season-draft__review-summary strong {
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+  color: #ffffff;
+  font-size: 0.94rem;
+  line-height: 1.35;
+}
+
+.future-season-draft__review-summary small {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.61);
+  font-size: 0.73rem;
+  line-height: 1.45;
+}
+
+.future-season-draft__review-summary em {
+  display: block;
+  margin-top: auto;
+  padding-top: 12px;
+  color: #93c5fd;
+  font-size: 0.71rem;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.future-season-draft__review-changes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 13px;
+}
+
+.future-season-draft__review-changes > article {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 13px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.future-season-draft__review-change-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.future-season-draft__review-change-heading > div {
+  min-width: 0;
+}
+
+.future-season-draft__review-change-heading h4 {
+  margin: 4px 0 0;
+  color: #ffffff;
+  font-size: 0.96rem;
+  line-height: 1.3;
+}
+
+.future-season-draft__review-empty-state {
+  margin: 13px 0 0;
+  padding: 13px;
+  border: 1px dashed rgba(74, 222, 128, 0.26);
+  border-radius: 10px;
+  background: rgba(20, 83, 45, 0.12);
+  color: rgba(220, 252, 231, 0.74);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.future-season-draft__review-list {
+  display: grid;
+  gap: 8px;
+  margin: 13px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.future-season-draft__review-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.future-season-draft__review-list li > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.future-season-draft__review-list strong {
+  overflow-wrap: anywhere;
+  color: #ffffff;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.future-season-draft__review-list span {
+  overflow-wrap: anywhere;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.71rem;
+  line-height: 1.4;
+}
+
+.future-season-draft__review-list .steel-ui-badge {
+  flex: 0 0 auto;
+}
+
+.future-season-draft__review-safety {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 13px;
+  padding: 13px 14px;
+  border: 1px solid rgba(245, 197, 66, 0.26);
+  border-radius: 12px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(245, 197, 66, 0.1),
+      rgba(245, 197, 66, 0.015)
+    ),
+    rgba(0, 0, 0, 0.24);
+}
+
+.future-season-draft__review-safety strong {
+  flex: 0 0 auto;
+  color: #f5c542;
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.future-season-draft__review-safety span {
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
 @media (min-width: 720px) {
   .future-season-draft__roster-grid {
     grid-template-columns: repeat(
@@ -835,6 +1070,14 @@
 }
 
 @media (max-width: 1100px) {
+  .future-season-draft__review-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .future-season-draft__review-changes {
+    grid-template-columns: 1fr;
+  }
+
   .future-season-draft__planning-grid {
     grid-template-columns: 1fr;
   }
@@ -867,7 +1110,10 @@
   .future-season-draft__details-heading,
   .future-season-draft__validation-heading,
   .future-season-draft__planning-heading,
-  .future-season-draft__roster-heading {
+  .future-season-draft__roster-heading,
+  .future-season-draft__review-heading,
+  .future-season-draft__review-change-heading,
+  .future-season-draft__review-safety {
     align-items: stretch;
     flex-direction: column;
   }
@@ -879,6 +1125,10 @@
   .future-season-draft__planning-heading
     > .steel-ui-badge,
   .future-season-draft__roster-heading
+    > .steel-ui-badge,
+  .future-season-draft__review-heading
+    > .steel-ui-badge,
+  .future-season-draft__review-change-heading
     > .steel-ui-badge {
     align-self: flex-start;
   }
@@ -914,7 +1164,20 @@
   .future-season-draft__details-heading small {
     text-align: left;
   }
+  .future-season-draft__review-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .future-season-draft__review-summary article {
+    min-height: 0;
+  }
+
+  .future-season-draft__review-list li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
+
 
 @media (max-width: 520px) {
   .future-season-draft__empty {
