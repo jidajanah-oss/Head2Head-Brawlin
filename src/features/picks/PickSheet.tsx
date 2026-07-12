@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import FranchiseLogo from "../../components/franchise/FranchiseLogo";
 import {
@@ -11,12 +15,16 @@ import {
 import { useLeague } from "../../context/LeagueContext";
 import { useNFL } from "../../context/NFLContext";
 import {
+  clearPlayerPickerClickerSelection,
   getEffectivePlayerPick,
   getNFLTeamDisplayName,
   getPickerClickerWeekId,
   getPlayerPickerClickerFallbackCount,
+  getPlayerSelectedPickerClickerCount,
+  isPlayerPickerClickerSelected,
   isPlayerWeeklyPrizeEligible,
   PickLockEngine,
+  selectPlayerPickerClicker,
   type EffectivePickSource,
 } from "../../engine";
 import {
@@ -42,41 +50,82 @@ type TeamPickOptionProps = {
   onSelect: () => void;
 };
 
+type PickerClickerOptionProps = {
+  selected: boolean;
+  disabled: boolean;
+  disabledReason: string | null;
+  sourcePlayerName: string | null;
+  onSelect: () => void;
+};
+
 function getTeamDisplayName(team: string) {
   return getNFLTeamDisplayName(team);
 }
 
 function getPickBadgeVariant(
   locked: boolean,
-  selected?: string
+  hasSelection: boolean
 ) {
-  if (locked && !selected) return "danger";
-  if (selected) return "success";
+  if (locked && !hasSelection) {
+    return "danger";
+  }
+
+  if (hasSelection) {
+    return "success";
+  }
+
   return "gold";
 }
 
 function getPickBadgeLabel(
   locked: boolean,
-  selected?: string,
-  pickSource?: EffectivePickSource
+  hasSelection: boolean,
+  pickSource: EffectivePickSource
 ) {
   if (
-    selected &&
-    pickSource === "picker-clicker"
+    hasSelection &&
+    pickSource === "picker-clicker-selected"
   ) {
     return "Picker Clicker";
   }
 
-  if (selected) return "Picked";
-  if (locked) return "No Pick";
+  if (
+    hasSelection &&
+    pickSource === "picker-clicker"
+  ) {
+    return "Auto PC";
+  }
+
+  if (hasSelection) {
+    return "Picked";
+  }
+
+  if (locked) {
+    return "No Pick";
+  }
 
   return "Open";
 }
 
 function formatSelectedPick(
-  selected?: string,
-  pickSource?: EffectivePickSource
+  selected: string | undefined,
+  pickSource: EffectivePickSource,
+  locked: boolean
 ) {
+  if (
+    pickSource === "picker-clicker-selected"
+  ) {
+    if (!selected) {
+      return locked
+        ? "Picker Clicker • source had no pick"
+        : "Picker Clicker • source pick pending";
+    }
+
+    return `Picker Clicker → ${selected} • ${getTeamDisplayName(
+      selected
+    )}`;
+  }
+
   if (!selected) {
     return "—";
   }
@@ -86,7 +135,7 @@ function formatSelectedPick(
   )}`;
 
   if (pickSource === "picker-clicker") {
-    return `${pickLabel} • PC`;
+    return `${pickLabel} • Auto PC`;
   }
 
   return pickLabel;
@@ -101,11 +150,12 @@ function TeamPickOption({
   onSelect,
 }: TeamPickOptionProps) {
   const displayName = getTeamDisplayName(team);
-
   const statusLabel = selected
     ? pickSource === "picker-clicker"
-      ? "Picker Clicker"
-      : "Selected"
+      ? "Automatic PC"
+      : pickSource === "picker-clicker-selected"
+        ? "Picker Clicker"
+        : "Selected • tap to clear"
     : disabled
       ? "No Pick"
       : "Tap to pick";
@@ -116,10 +166,14 @@ function TeamPickOption({
         selected ? "is-selected" : ""
       } ${
         selected &&
-        pickSource === "picker-clicker"
+        (pickSource === "picker-clicker" ||
+          pickSource ===
+            "picker-clicker-selected")
           ? "is-picker-clicker"
           : ""
-      } ${disabled ? "is-disabled" : ""}`.trim()}
+      } ${
+        disabled ? "is-disabled" : ""
+      }`.trim()}
       disabled={disabled}
       onClick={onSelect}
       type="button"
@@ -146,6 +200,43 @@ function TeamPickOption({
   );
 }
 
+function PickerClickerOption({
+  selected,
+  disabled,
+  disabledReason,
+  sourcePlayerName,
+  onSelect,
+}: PickerClickerOptionProps) {
+  const statusLabel = selected
+    ? "Selected • tap to clear"
+    : disabled
+      ? disabledReason ?? "Unavailable"
+      : sourcePlayerName
+        ? `Copy ${sourcePlayerName}`
+        : "Copy weekly source";
+
+  return (
+    <button
+      className={`picker-clicker-option-v2 ${
+        selected ? "is-selected" : ""
+      } ${
+        disabled ? "is-disabled" : ""
+      }`.trim()}
+      disabled={disabled}
+      onClick={onSelect}
+      type="button"
+    >
+      <span className="picker-clicker-option-kicker">
+        Third choice
+      </span>
+
+      <strong>Picker Clicker</strong>
+
+      <small>{statusLabel}</small>
+    </button>
+  );
+}
+
 function PickSheet() {
   const {
     league,
@@ -153,6 +244,7 @@ function PickSheet() {
     setPick,
     activePlayerId,
     pickerClickerHistory,
+    upsertPickerClickerWeekState,
   } = useLeague();
 
   const {
@@ -164,8 +256,15 @@ function PickSheet() {
     error,
   } = useNFL();
 
-  const [activeFilter, setActiveFilter] =
-    useState<PickFilter>("all");
+  const [
+    activeFilter,
+    setActiveFilter,
+  ] = useState<PickFilter>("all");
+
+  const [
+    pickerClickerMessage,
+    setPickerClickerMessage,
+  ] = useState<string | null>(null);
 
   useEffect(() => {
     if (week !== league.currentWeek) {
@@ -175,6 +274,13 @@ function PickSheet() {
     league.currentWeek,
     setWeek,
     week,
+  ]);
+
+  useEffect(() => {
+    setPickerClickerMessage(null);
+  }, [
+    activePlayerId,
+    league.currentWeek,
   ]);
 
   const games =
@@ -208,6 +314,14 @@ function PickSheet() {
         )
       : 0;
 
+  const activeSelectedPickerClickerCount =
+    activePlayerId
+      ? getPlayerSelectedPickerClickerCount(
+          activePlayerId,
+          pickerClickerWeekState
+        )
+      : 0;
+
   const activePlayerWeeklyPrizeEligible =
     activePlayerId
       ? isPlayerWeeklyPrizeEligible(
@@ -216,11 +330,28 @@ function PickSheet() {
         )
       : true;
 
+  const activePlayerIsPickerClickerSource =
+    Boolean(
+      activePlayerId &&
+        pickerClickerAssignment &&
+        activePlayerId ===
+          pickerClickerAssignment.sourcePlayerId
+    );
+
   const pickRows = useMemo(
     () =>
       games.map((game) => {
         const locked =
           PickLockEngine.isPickLocked(game);
+
+        const playerSelectedPickerClicker =
+          activePlayerId
+            ? isPlayerPickerClickerSelected(
+                pickerClickerWeekState,
+                activePlayerId,
+                game.id
+              )
+            : false;
 
         const effectivePick =
           activePlayerId
@@ -241,11 +372,19 @@ function PickSheet() {
                 weeklyPrizeEligible: true,
               };
 
+        const selected =
+          effectivePick.team ?? undefined;
+
+        const hasSelection =
+          playerSelectedPickerClicker ||
+          Boolean(selected);
+
         return {
           game,
           locked,
-          selected:
-            effectivePick.team ?? undefined,
+          selected,
+          hasSelection,
+          playerSelectedPickerClicker,
           pickSource:
             effectivePick.source,
           statusLabel:
@@ -263,7 +402,7 @@ function PickSheet() {
   const totalGames = pickRows.length;
 
   const pickedCount = pickRows.filter(
-    (row) => row.selected
+    (row) => row.hasSelection
   ).length;
 
   const lockedCount = pickRows.filter(
@@ -277,7 +416,7 @@ function PickSheet() {
   const missingCount = pickRows.filter(
     (row) =>
       !row.locked &&
-      !row.selected
+      !row.hasSelection
   ).length;
 
   const filteredRows = pickRows.filter(
@@ -291,13 +430,13 @@ function PickSheet() {
       }
 
       if (activeFilter === "picked") {
-        return Boolean(row.selected);
+        return row.hasSelection;
       }
 
       if (activeFilter === "missing") {
         return (
           !row.locked &&
-          !row.selected
+          !row.hasSelection
         );
       }
 
@@ -353,11 +492,140 @@ function PickSheet() {
       return;
     }
 
+    const game = games.find(
+      (currentGame) =>
+        currentGame.id === gameId
+    );
+
+    const hasSelectedPickerClicker =
+      Boolean(
+        game &&
+          pickerClickerWeekState &&
+          isPlayerPickerClickerSelected(
+            pickerClickerWeekState,
+            activePlayerId,
+            gameId
+          )
+      );
+
+    if (
+      game &&
+      pickerClickerWeekState &&
+      hasSelectedPickerClicker
+    ) {
+      try {
+        const nextWeekState =
+          clearPlayerPickerClickerSelection({
+            weekState:
+              pickerClickerWeekState,
+            playerId: activePlayerId,
+            game,
+          });
+
+        upsertPickerClickerWeekState(
+          nextWeekState
+        );
+      } catch (selectionError) {
+        setPickerClickerMessage(
+          selectionError instanceof Error
+            ? selectionError.message
+            : "Unable to change this Picker Clicker choice."
+        );
+        return;
+      }
+    }
+
+    const currentManualPick =
+      picks[activePlayerId]?.[gameId] ?? "";
+
+    if (
+      !hasSelectedPickerClicker &&
+      currentManualPick === team
+    ) {
+      setPick(
+        activePlayerId,
+        gameId,
+        ""
+      );
+
+      setPickerClickerMessage(null);
+      return;
+    }
+
     setPick(
       activePlayerId,
       gameId,
       team
     );
+
+    setPickerClickerMessage(null);
+  };
+
+  const handlePickerClickerPick = (
+    gameId: string,
+    locked: boolean
+  ) => {
+    if (
+      !activePlayerId ||
+      locked ||
+      !pickerClickerWeekState
+    ) {
+      return;
+    }
+
+    const game = games.find(
+      (currentGame) =>
+        currentGame.id === gameId
+    );
+
+    if (!game) {
+      setPickerClickerMessage(
+        "Unable to find this game."
+      );
+      return;
+    }
+
+    try {
+      const alreadySelected =
+        isPlayerPickerClickerSelected(
+          pickerClickerWeekState,
+          activePlayerId,
+          gameId
+        );
+
+      const nextWeekState =
+        alreadySelected
+          ? clearPlayerPickerClickerSelection({
+              weekState:
+                pickerClickerWeekState,
+              playerId: activePlayerId,
+              game,
+            })
+          : selectPlayerPickerClicker({
+              weekState:
+                pickerClickerWeekState,
+              playerId: activePlayerId,
+              game,
+            });
+
+      setPick(
+        activePlayerId,
+        gameId,
+        ""
+      );
+
+      upsertPickerClickerWeekState(
+        nextWeekState
+      );
+
+      setPickerClickerMessage(null);
+    } catch (selectionError) {
+      setPickerClickerMessage(
+        selectionError instanceof Error
+          ? selectionError.message
+          : "Unable to select Picker Clicker."
+      );
+    }
   };
 
   return (
@@ -450,6 +718,35 @@ function PickSheet() {
 
           <div className="picks-picker-clicker-copy">
             <span>
+              Player-selected status
+            </span>
+
+            <strong>
+              {activeSelectedPickerClickerCount >
+              0
+                ? `${activeSelectedPickerClickerCount} game${
+                    activeSelectedPickerClickerCount ===
+                    1
+                      ? ""
+                      : "s"
+                  } using Picker Clicker`
+                : activePlayerIsPickerClickerSource
+                  ? "You are this week’s source"
+                  : "No Picker Clicker choices yet"}
+            </strong>
+
+            <small>
+              Choosing Picker Clicker before lock
+              counts as a submitted pick and keeps
+              weekly prize eligibility. A completely
+              untouched game still uses the automatic
+              fallback and makes the player
+              prize-ineligible.
+            </small>
+          </div>
+
+          <div className="picks-picker-clicker-copy">
+            <span>
               Automatic fallback status
             </span>
 
@@ -464,13 +761,21 @@ function PickSheet() {
             </strong>
 
             <small>
-              Missing locked picks copy the
-              weekly source player. When the
-              source also has no pick, the game
-              counts as incorrect.
+              Missing locked picks copy the weekly
+              source player. When the source also has
+              no pick, the game counts as incorrect.
             </small>
           </div>
         </div>
+
+        {pickerClickerMessage ? (
+          <p
+            className="picks-picker-clicker-message"
+            role="alert"
+          >
+            {pickerClickerMessage}
+          </p>
+        ) : null}
       </SteelCard>
 
       <section className="picks-stat-grid">
@@ -482,7 +787,7 @@ function PickSheet() {
               : totalGames
           }
           helper={`Week ${league.currentWeek} schedule`}
-          icon="🏈"
+          icon=""
         />
 
         <SteelStatCard
@@ -515,7 +820,7 @@ function PickSheet() {
               : lockedCount
           }
           helper="Pick windows closed"
-          icon="🔒"
+          icon=""
         />
       </section>
 
@@ -535,6 +840,7 @@ function PickSheet() {
               type="button"
             >
               <span>{filter.label}</span>
+
               <strong>{filter.count}</strong>
             </button>
           ))}
@@ -587,6 +893,8 @@ function PickSheet() {
             game,
             locked,
             selected,
+            hasSelection,
+            playerSelectedPickerClicker,
             pickSource,
             statusLabel,
           }) => {
@@ -594,15 +902,33 @@ function PickSheet() {
               locked ||
               !activePlayerId;
 
+            const pickerClickerDisabledReason =
+              !pickerClickerWeekState
+                ? "Weekly source unavailable"
+                : activePlayerIsPickerClickerSource
+                  ? "Source cannot copy self"
+                  : locked
+                    ? "Game locked"
+                    : !activePlayerId
+                      ? "Select a player"
+                      : null;
+
+            const pickerClickerDisabled =
+              Boolean(
+                pickerClickerDisabledReason
+              );
+
             return (
               <SteelCard
                 className={`picks-card-v2 ${
-                  selected
+                  hasSelection
                     ? "has-selection"
                     : ""
                 } ${
                   pickSource ===
-                  "picker-clicker"
+                    "picker-clicker" ||
+                  pickSource ===
+                    "picker-clicker-selected"
                     ? "has-picker-clicker"
                     : ""
                 } ${
@@ -617,12 +943,12 @@ function PickSheet() {
                   <SteelBadge
                     variant={getPickBadgeVariant(
                       locked,
-                      selected
+                      hasSelection
                     )}
                   >
                     {getPickBadgeLabel(
                       locked,
-                      selected,
+                      hasSelection,
                       pickSource
                     )}
                   </SteelBadge>
@@ -650,12 +976,14 @@ function PickSheet() {
                       )
                     }
                     selected={
+                      !playerSelectedPickerClicker &&
                       selected ===
-                      game.awayTeam
+                        game.awayTeam
                     }
                     pickSource={
+                      !playerSelectedPickerClicker &&
                       selected ===
-                      game.awayTeam
+                        game.awayTeam
                         ? pickSource
                         : "missing"
                     }
@@ -677,17 +1005,43 @@ function PickSheet() {
                       )
                     }
                     selected={
+                      !playerSelectedPickerClicker &&
                       selected ===
-                      game.homeTeam
+                        game.homeTeam
                     }
                     pickSource={
+                      !playerSelectedPickerClicker &&
                       selected ===
-                      game.homeTeam
+                        game.homeTeam
                         ? pickSource
                         : "missing"
                     }
                     side="home"
                     team={game.homeTeam}
+                  />
+                </div>
+
+                <div className="picker-clicker-choice-row">
+                  <PickerClickerOption
+                    selected={
+                      playerSelectedPickerClicker
+                    }
+                    disabled={
+                      pickerClickerDisabled
+                    }
+                    disabledReason={
+                      pickerClickerDisabledReason
+                    }
+                    sourcePlayerName={
+                      pickerClickerAssignment?.sourcePlayerName ??
+                      null
+                    }
+                    onSelect={() =>
+                      handlePickerClickerPick(
+                        game.id,
+                        locked
+                      )
+                    }
                   />
                 </div>
 
@@ -718,7 +1072,8 @@ function PickSheet() {
                     <strong>
                       {formatSelectedPick(
                         selected,
-                        pickSource
+                        pickSource,
+                        locked
                       )}
                     </strong>
                   </div>
@@ -726,26 +1081,53 @@ function PickSheet() {
 
                 <p className="picks-status-v2">
                   {pickSource ===
-                    "picker-clicker" ? (
+                  "picker-clicker" ? (
                     <strong>
-                      🖱️ Automatic pick:{" "}
+                      Automatic pick:{" "}
                       {formatSelectedPick(
                         selected,
-                        pickSource
+                        pickSource,
+                        locked
                       )}
                     </strong>
+                  ) : pickSource ===
+                    "picker-clicker-selected" ? (
+                    selected ? (
+                      <strong>
+                        Picker Clicker selected:{" "}
+                        {formatSelectedPick(
+                          selected,
+                          pickSource,
+                          locked
+                        )}
+                      </strong>
+                    ) : locked ? (
+                      <span>
+                        Picker Clicker was selected,
+                        but the weekly source made no
+                        pick. This game counts as
+                        incorrect.
+                      </span>
+                    ) : (
+                      <strong>
+                        Picker Clicker selected. This
+                        game will follow{" "}
+                        {pickerClickerAssignment?.sourcePlayerName ??
+                          "the weekly source"}.
+                      </strong>
+                    )
                   ) : selected ? (
                     <strong>
                       Pick:{" "}
                       {formatSelectedPick(
                         selected,
-                        pickSource
+                        pickSource,
+                        locked
                       )}
                     </strong>
                   ) : locked ? (
                     <span>
-                      ❌ No pick counted for this
-                      game
+                      ❌ No pick counted for this game
                     </span>
                   ) : (
                     <span>
