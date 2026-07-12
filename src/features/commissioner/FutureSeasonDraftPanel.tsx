@@ -3,7 +3,10 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { ChangeEvent } from "react";
+import type {
+  ChangeEvent,
+  FormEvent,
+} from "react";
 
 import FranchiseLogo from "../../components/franchise/FranchiseLogo";
 import {
@@ -18,6 +21,7 @@ import { useLeague } from "../../context/LeagueContext";
 import {
   getNFLTeamInfo,
   type FutureSeasonPlanStatus,
+  type FutureSeasonPlayerPlan,
   type FutureSeasonRosterDecision,
   type FutureSeasonValidationIssue,
 } from "../../engine";
@@ -28,6 +32,14 @@ import "../../styles/futureSeasonDraft.css";
 type RosterDecisionFilter =
   | "all"
   | FutureSeasonRosterDecision;
+
+type ReplacementDraft = {
+  sourcePlayerId: string;
+  name: string;
+  email: string;
+  customLogo: string;
+  role: PlayerRole;
+};
 
 function parseSeason(
   value: string | number,
@@ -131,6 +143,19 @@ function getIssueKey(
   ].join("-");
 }
 
+function getNextTargetSeason(
+  sourceSeason: number,
+  targetSeasons: number[],
+): number {
+  const latestSeason = targetSeasons.reduce(
+    (latest, season) =>
+      Math.max(latest, season),
+    sourceSeason,
+  );
+
+  return latestSeason + 1;
+}
+
 export default function FutureSeasonDraftPanel() {
   const { league } = useLeague();
 
@@ -143,6 +168,10 @@ export default function FutureSeasonDraftPanel() {
     createPlan,
     setActivePlanId,
     updatePlanDetails,
+    updatePlayerPlan,
+    markPlayerReturning,
+    markPlayerInactive,
+    replacePlayer,
     markPlanReady,
     reopenPlan,
     deletePlan,
@@ -163,6 +192,11 @@ export default function FutureSeasonDraftPanel() {
 
   const [decisionFilter, setDecisionFilter] =
     useState<RosterDecisionFilter>("all");
+
+  const [
+    replacementDraft,
+    setReplacementDraft,
+  ] = useState<ReplacementDraft | null>(null);
 
   const [busyAction, setBusyAction] =
     useState<string | null>(null);
@@ -187,6 +221,8 @@ export default function FutureSeasonDraftPanel() {
               : new Date().getFullYear() + 1,
           ),
     );
+
+    setReplacementDraft(null);
   }, [
     activePlan?.id,
     activePlan?.leagueName,
@@ -295,8 +331,13 @@ export default function FutureSeasonDraftPanel() {
   };
 
   const handleCreatePlan = () => {
+    const targetSeason = getNextTargetSeason(
+      sourceSeason,
+      plans.map((plan) => plan.targetSeason),
+    );
+
     runAction("create", () => {
-      const plan = createPlan();
+      const plan = createPlan(targetSeason);
 
       setSuccessMessage(
         `${plan.targetSeason} planning draft created. The live ${plan.sourceSeason} season was not changed.`,
@@ -390,6 +431,231 @@ export default function FutureSeasonDraftPanel() {
       );
     });
   };
+
+  const openReplacementEditor = (
+    player: FutureSeasonPlayerPlan,
+  ) => {
+    clearMessages();
+
+    setReplacementDraft({
+      sourcePlayerId: player.sourcePlayerId,
+      name:
+        player.rosterDecision ===
+        "replacement"
+          ? player.name
+          : "",
+      email:
+        player.rosterDecision ===
+        "replacement"
+          ? player.email ?? ""
+          : "",
+      customLogo:
+        player.rosterDecision ===
+        "replacement"
+          ? player.customLogo ?? ""
+          : "",
+      role: player.role,
+    });
+  };
+
+  const closeReplacementEditor = () => {
+    setReplacementDraft(null);
+  };
+
+  const handleReplacementFieldChange = (
+    field: keyof Omit<
+      ReplacementDraft,
+      "sourcePlayerId"
+    >,
+    value: string,
+  ) => {
+    setReplacementDraft((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [field]: value,
+      };
+    });
+  };
+
+  const handleReplacementSubmit = (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    if (
+      !activePlan ||
+      !replacementDraft
+    ) {
+      return;
+    }
+
+    const player = activePlan.players.find(
+      (candidate) =>
+        candidate.sourcePlayerId ===
+        replacementDraft.sourcePlayerId,
+    );
+
+    if (!player) {
+      setErrorMessage(
+        "The selected future-season player could not be found.",
+      );
+
+      return;
+    }
+
+    const replacementName =
+      replacementDraft.name.trim();
+
+    if (!replacementName) {
+      setErrorMessage(
+        "Enter the replacement player’s name.",
+      );
+
+      return;
+    }
+
+    runAction(
+      `replace-${player.sourcePlayerId}`,
+      () => {
+        replacePlayer(
+          activePlan.id,
+          player.sourcePlayerId,
+          {
+            playerId:
+              player.rosterDecision ===
+              "replacement"
+                ? player.playerId
+                : undefined,
+            name: replacementName,
+            nflTeam: player.nflTeam,
+            email:
+              replacementDraft.email.trim() ||
+              undefined,
+            customLogo:
+              replacementDraft.customLogo.trim() ||
+              undefined,
+            role: replacementDraft.role,
+            status: "active",
+          },
+        );
+
+        setReplacementDraft(null);
+
+        setSuccessMessage(
+          `${replacementName} is planned as the ${player.nflTeam} replacement. The previous player’s cloud login will not transfer.`,
+        );
+      },
+    );
+  };
+
+  const handleMarkPlayerInactive = (
+    player: FutureSeasonPlayerPlan,
+  ) => {
+    if (!activePlan) {
+      return;
+    }
+
+    const approved = window.confirm(
+      `Mark ${player.name} inactive for ${activePlan.targetSeason}?\n\nThe ${player.nflTeam} franchise will need a replacement before the plan can be marked ready.`,
+    );
+
+    if (!approved) {
+      return;
+    }
+
+    runAction(
+      `inactive-${player.sourcePlayerId}`,
+      () => {
+        markPlayerInactive(
+          activePlan.id,
+          player.sourcePlayerId,
+        );
+
+        if (
+          replacementDraft?.sourcePlayerId ===
+          player.sourcePlayerId
+        ) {
+          setReplacementDraft(null);
+        }
+
+        setSuccessMessage(
+          `${player.name} is marked inactive for ${activePlan.targetSeason}. The live ${activePlan.sourceSeason} roster was not changed.`,
+        );
+      },
+    );
+  };
+
+  const handleRestoreReturningPlayer = (
+    player: FutureSeasonPlayerPlan,
+  ) => {
+    if (!activePlan) {
+      return;
+    }
+
+    runAction(
+      `returning-${player.sourcePlayerId}`,
+      () => {
+        if (
+          player.rosterDecision ===
+          "replacement"
+        ) {
+          const sourcePlayer =
+            league.players.find(
+              (candidate) =>
+                candidate.id ===
+                player.sourcePlayerId,
+            );
+
+          if (!sourcePlayer) {
+            throw new Error(
+              "The original live-season player could not be found.",
+            );
+          }
+
+          updatePlayerPlan(
+            activePlan.id,
+            player.sourcePlayerId,
+            {
+              playerId: sourcePlayer.id,
+              name: sourcePlayer.name,
+              nflTeam: sourcePlayer.nflTeam,
+              email: sourcePlayer.email,
+              customLogo:
+                sourcePlayer.customLogo,
+              role: sourcePlayer.role,
+              status: "active",
+              rosterDecision: "returning",
+              preservesCloudLink: true,
+            },
+          );
+        } else {
+          markPlayerReturning(
+            activePlan.id,
+            player.sourcePlayerId,
+          );
+        }
+
+        if (
+          replacementDraft?.sourcePlayerId ===
+          player.sourcePlayerId
+        ) {
+          setReplacementDraft(null);
+        }
+
+        setSuccessMessage(
+          `The original ${player.nflTeam} owner is restored as returning for ${activePlan.targetSeason}.`,
+        );
+      },
+    );
+  };
+
+  const editingDisabled =
+    busyAction !== null ||
+    activePlan?.status === "activated";
 
   return (
     <SteelCard
@@ -604,6 +870,7 @@ export default function FutureSeasonDraftPanel() {
                 <div className="future-season-draft__details-heading">
                   <div>
                     <span>Draft Information</span>
+
                     <h3>
                       {activePlan.targetSeason} Season
                     </h3>
@@ -622,11 +889,7 @@ export default function FutureSeasonDraftPanel() {
                     <span>League name</span>
 
                     <input
-                      disabled={
-                        busyAction !== null ||
-                        activePlan.status ===
-                          "activated"
-                      }
+                      disabled={editingDisabled}
                       onChange={(event) =>
                         setLeagueNameDraft(
                           event.target.value,
@@ -641,11 +904,7 @@ export default function FutureSeasonDraftPanel() {
                     <span>Target season</span>
 
                     <input
-                      disabled={
-                        busyAction !== null ||
-                        activePlan.status ===
-                          "activated"
-                      }
+                      disabled={editingDisabled}
                       min={
                         activePlan.sourceSeason + 1
                       }
@@ -660,11 +919,7 @@ export default function FutureSeasonDraftPanel() {
                   </label>
 
                   <SteelButton
-                    disabled={
-                      busyAction !== null ||
-                      activePlan.status ===
-                        "activated"
-                    }
+                    disabled={editingDisabled}
                     onClick={handleSaveDetails}
                     size="md"
                     type="button"
@@ -680,9 +935,7 @@ export default function FutureSeasonDraftPanel() {
                   <div>
                     <span>Safety Review</span>
 
-                    <h3>
-                      Draft Validation
-                    </h3>
+                    <h3>Draft Validation</h3>
                   </div>
 
                   <SteelBadge
@@ -723,8 +976,7 @@ export default function FutureSeasonDraftPanel() {
                 )}
 
                 <div className="future-season-draft__validation-actions">
-                  {activePlan.status ===
-                  "ready" ? (
+                  {activePlan.status === "ready" ? (
                     <SteelButton
                       disabled={
                         busyAction !== null
@@ -760,11 +1012,9 @@ export default function FutureSeasonDraftPanel() {
 
               <div className="future-season-draft__roster-heading">
                 <div>
-                  <span>Future Roster Preview</span>
+                  <span>Future Roster Editor</span>
 
-                  <h3>
-                    Franchise Owners
-                  </h3>
+                  <h3>Franchise Owners</h3>
                 </div>
 
                 <SteelBadge variant="neutral">
@@ -826,12 +1076,22 @@ export default function FutureSeasonDraftPanel() {
                       player.nflTeam,
                     );
 
+                  const isEditingReplacement =
+                    replacementDraft
+                      ?.sourcePlayerId ===
+                    player.sourcePlayerId;
+
                   return (
                     <article
                       className={[
                         "future-season-player",
                         `future-season-player--${player.rosterDecision}`,
-                      ].join(" ")}
+                        isEditingReplacement
+                          ? "future-season-player--editing"
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                       key={player.sourcePlayerId}
                     >
                       <div className="future-season-player__heading">
@@ -901,6 +1161,217 @@ export default function FutureSeasonDraftPanel() {
                             : "Not transferred"}
                         </strong>
                       </div>
+
+                      <div className="future-season-player__actions">
+                        {player.rosterDecision !==
+                        "returning" ? (
+                          <SteelButton
+                            disabled={editingDisabled}
+                            onClick={() =>
+                              handleRestoreReturningPlayer(
+                                player,
+                              )
+                            }
+                            size="sm"
+                            type="button"
+                            variant="secondary"
+                          >
+                            {player.rosterDecision ===
+                            "replacement"
+                              ? "Restore Original"
+                              : "Restore Returning"}
+                          </SteelButton>
+                        ) : null}
+
+                        {player.rosterDecision !==
+                        "inactive" ? (
+                          <SteelButton
+                            disabled={editingDisabled}
+                            onClick={() =>
+                              handleMarkPlayerInactive(
+                                player,
+                              )
+                            }
+                            size="sm"
+                            type="button"
+                            variant="danger"
+                          >
+                            Mark Inactive
+                          </SteelButton>
+                        ) : null}
+
+                        <SteelButton
+                          disabled={editingDisabled}
+                          onClick={() =>
+                            openReplacementEditor(
+                              player,
+                            )
+                          }
+                          size="sm"
+                          type="button"
+                          variant={
+                            player.rosterDecision ===
+                            "replacement"
+                              ? "primary"
+                              : "secondary"
+                          }
+                        >
+                          {player.rosterDecision ===
+                          "replacement"
+                            ? "Edit Replacement"
+                            : "Replace Player"}
+                        </SteelButton>
+                      </div>
+
+                      {isEditingReplacement &&
+                      replacementDraft ? (
+                        <form
+                          className="future-season-player__replacement-form"
+                          onSubmit={
+                            handleReplacementSubmit
+                          }
+                        >
+                          <div className="future-season-player__replacement-heading">
+                            <div>
+                              <span>
+                                Replacement owner
+                              </span>
+
+                              <strong>
+                                {player.nflTeam} remains
+                                assigned
+                              </strong>
+                            </div>
+
+                            <SteelBadge variant="info">
+                              New Account
+                            </SteelBadge>
+                          </div>
+
+                          <label>
+                            <span>Player name</span>
+
+                            <input
+                              autoFocus
+                              onChange={(event) =>
+                                handleReplacementFieldChange(
+                                  "name",
+                                  event.target.value,
+                                )
+                              }
+                              placeholder="Replacement player name"
+                              type="text"
+                              value={
+                                replacementDraft.name
+                              }
+                            />
+                          </label>
+
+                          <label>
+                            <span>
+                              Login email — optional
+                            </span>
+
+                            <input
+                              onChange={(event) =>
+                                handleReplacementFieldChange(
+                                  "email",
+                                  event.target.value,
+                                )
+                              }
+                              placeholder="replacement@example.com"
+                              type="email"
+                              value={
+                                replacementDraft.email
+                              }
+                            />
+                          </label>
+
+                          <label>
+                            <span>
+                              Custom logo path — optional
+                            </span>
+
+                            <input
+                              onChange={(event) =>
+                                handleReplacementFieldChange(
+                                  "customLogo",
+                                  event.target.value,
+                                )
+                              }
+                              placeholder="/logos/franchises/example.png"
+                              type="text"
+                              value={
+                                replacementDraft.customLogo
+                              }
+                            />
+                          </label>
+
+                          <label>
+                            <span>League role</span>
+
+                            <select
+                              onChange={(event) =>
+                                handleReplacementFieldChange(
+                                  "role",
+                                  event.target
+                                    .value as PlayerRole,
+                                )
+                              }
+                              value={
+                                replacementDraft.role
+                              }
+                            >
+                              <option value="player">
+                                Player
+                              </option>
+
+                              <option value="commissioner">
+                                Primary Commissioner
+                              </option>
+
+                              <option value="backup_commissioner">
+                                Backup Commissioner
+                              </option>
+                            </select>
+                          </label>
+
+                          <p>
+                            The replacement receives a
+                            new player ID. The prior
+                            player’s cloud login and
+                            account link will not
+                            transfer.
+                          </p>
+
+                          <div className="future-season-player__replacement-actions">
+                            <SteelButton
+                              disabled={
+                                busyAction !== null
+                              }
+                              size="sm"
+                              type="submit"
+                              variant="primary"
+                            >
+                              Save Replacement
+                            </SteelButton>
+
+                            <SteelButton
+                              disabled={
+                                busyAction !== null
+                              }
+                              onClick={
+                                closeReplacementEditor
+                              }
+                              size="sm"
+                              type="button"
+                              variant="secondary"
+                            >
+                              Cancel
+                            </SteelButton>
+                          </div>
+                        </form>
+                      ) : null}
                     </article>
                   );
                 })}

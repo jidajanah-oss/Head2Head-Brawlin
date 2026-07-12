@@ -139,7 +139,8 @@
 
 .future-season-draft__toolbar label,
 .future-season-draft__details-fields label,
-.future-season-draft__roster-toolbar label {
+.future-season-draft__roster-toolbar label,
+.future-season-player__replacement-form label {
   display: grid;
   min-width: 0;
   gap: 7px;
@@ -164,7 +165,9 @@
 .future-season-draft__toolbar select,
 .future-season-draft__details-fields input,
 .future-season-draft__roster-toolbar input,
-.future-season-draft__roster-toolbar select {
+.future-season-draft__roster-toolbar select,
+.future-season-player__replacement-form input,
+.future-season-player__replacement-form select {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
@@ -180,12 +183,14 @@
 }
 
 .future-season-draft__toolbar select,
-.future-season-draft__roster-toolbar select {
+.future-season-draft__roster-toolbar select,
+.future-season-player__replacement-form select {
   cursor: pointer;
 }
 
 .future-season-draft__toolbar select option,
-.future-season-draft__roster-toolbar select option {
+.future-season-draft__roster-toolbar select option,
+.future-season-player__replacement-form select option {
   background: #111827;
   color: #ffffff;
 }
@@ -193,25 +198,32 @@
 .future-season-draft__toolbar select:hover,
 .future-season-draft__details-fields input:hover,
 .future-season-draft__roster-toolbar input:hover,
-.future-season-draft__roster-toolbar select:hover {
+.future-season-draft__roster-toolbar select:hover,
+.future-season-player__replacement-form input:hover,
+.future-season-player__replacement-form select:hover {
   border-color: rgba(245, 197, 66, 0.38);
 }
 
 .future-season-draft__toolbar select:focus,
 .future-season-draft__details-fields input:focus,
 .future-season-draft__roster-toolbar input:focus,
-.future-season-draft__roster-toolbar select:focus {
+.future-season-draft__roster-toolbar select:focus,
+.future-season-player__replacement-form input:focus,
+.future-season-player__replacement-form select:focus {
   border-color: rgba(245, 197, 66, 0.76);
   box-shadow: 0 0 0 3px rgba(245, 197, 66, 0.12);
 }
 
 .future-season-draft__details-fields input:disabled,
-.future-season-draft__toolbar select:disabled {
+.future-season-draft__toolbar select:disabled,
+.future-season-player__replacement-form input:disabled,
+.future-season-player__replacement-form select:disabled {
   cursor: not-allowed;
   opacity: 0.62;
 }
 
-.future-season-draft__roster-toolbar input::placeholder {
+.future-season-draft__roster-toolbar input::placeholder,
+.future-season-player__replacement-form input::placeholder {
   color: rgba(255, 255, 255, 0.37);
 }
 
@@ -404,6 +416,10 @@
       rgba(255, 255, 255, 0.012)
     ),
     rgba(0, 0, 0, 0.25);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
 .future-season-player::before {
@@ -437,6 +453,13 @@
 
 .future-season-player--inactive::before {
   background: #f87171;
+}
+
+.future-season-player--editing {
+  border-color: rgba(245, 197, 66, 0.68);
+  box-shadow:
+    0 0 0 3px rgba(245, 197, 66, 0.08),
+    0 18px 38px rgba(0, 0, 0, 0.28);
 }
 
 .future-season-player__heading {
@@ -503,8 +526,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: auto;
-  padding-top: 13px;
+  margin-top: 12px;
 }
 
 .future-season-player__link span {
@@ -531,6 +553,97 @@
 .future-season-player--inactive
   .future-season-player__link strong {
   color: #fca5a5;
+}
+
+.future-season-player__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 14px;
+}
+
+.future-season-player__actions
+  .steel-ui-button {
+  flex: 1 1 125px;
+  justify-content: center;
+}
+
+.future-season-player__replacement-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 15px;
+  padding: 15px;
+  border: 1px solid rgba(96, 165, 250, 0.32);
+  border-radius: 13px;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(59, 130, 246, 0.13),
+      transparent 38%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(59, 130, 246, 0.08),
+      rgba(255, 255, 255, 0.015)
+    ),
+    rgba(0, 0, 0, 0.3);
+}
+
+.future-season-player__replacement-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.future-season-player__replacement-heading > div {
+  min-width: 0;
+}
+
+.future-season-player__replacement-heading span {
+  display: block;
+  color: #93c5fd;
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.future-season-player__replacement-heading strong {
+  display: block;
+  margin-top: 4px;
+  color: #ffffff;
+  font-size: 0.87rem;
+  line-height: 1.35;
+}
+
+.future-season-player__replacement-form
+  > p {
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 10px;
+  background: rgba(30, 64, 175, 0.13);
+  color: rgba(219, 234, 254, 0.82);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.future-season-player__replacement-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.future-season-player__replacement-actions
+  .steel-ui-button {
+  flex: 1 1 140px;
+  justify-content: center;
 }
 
 .future-season-draft__no-results {
@@ -670,12 +783,26 @@
     justify-self: start;
   }
 
-  .future-season-player__link {
+  .future-season-player__link,
+  .future-season-player__replacement-heading {
     align-items: flex-start;
     flex-direction: column;
   }
 
   .future-season-player__link strong {
     text-align: left;
+  }
+
+  .future-season-player__actions,
+  .future-season-player__replacement-actions {
+    flex-direction: column;
+  }
+
+  .future-season-player__actions
+    .steel-ui-button,
+  .future-season-player__replacement-actions
+    .steel-ui-button {
+    flex: none;
+    width: 100%;
   }
 }
