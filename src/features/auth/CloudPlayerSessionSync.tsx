@@ -6,98 +6,28 @@ import {
 
 import { useAuth } from "../../context/AuthContext";
 import { useLeague } from "../../context/LeagueContext";
-import type { CloudAccountLink } from "../../engine/authAccessTypes";
+import { loadCloudLeagueRoster } from "../../services/cloudLeagueRosterService";
+import { supabaseClient } from "../../services/supabaseClient";
 import type { Player } from "../../types/player";
 
-function buildLinkedPlayer(
-  accountLink: CloudAccountLink,
-): Player | null {
-  const playerName = accountLink.playerName?.trim();
-  const nflTeam = accountLink.nflTeam?.trim().toUpperCase();
-
-  if (!playerName || !nflTeam) {
-    return null;
-  }
-
-  return {
-    id: accountLink.playerId,
-    name: playerName,
-    nflTeam,
-    status: "active",
-    role: accountLink.role,
-  };
-}
-
-function synchronizeLinkedPlayer(
+function getRosterSignature(
   players: Player[],
-  accountLink: CloudAccountLink,
-): Player[] {
-  const linkedPlayer = players.find(
-    (player) => player.id === accountLink.playerId,
+): string {
+  return JSON.stringify(
+    [...players]
+      .sort((left, right) =>
+        left.id.localeCompare(right.id),
+      )
+      .map((player) => ({
+        id: player.id,
+        name: player.name,
+        nflTeam: player.nflTeam,
+        role: player.role,
+        status: player.status,
+        customLogo:
+          player.customLogo ?? null,
+      })),
   );
-
-  if (!linkedPlayer) {
-    const newLinkedPlayer = buildLinkedPlayer(accountLink);
-    if (!newLinkedPlayer) {
-      return players;
-    }
-
-    const existingPlayers =
-      accountLink.role === "commissioner"
-        ? players.map((player) =>
-            player.role === "commissioner"
-              ? { ...player, role: "player" as const }
-              : player,
-          )
-        : players;
-
-    return [...existingPlayers, newLinkedPlayer];
-  }
-
-  let changed = false;
-
-  const synchronizedPlayers = players.map((player) => {
-    if (player.id === accountLink.playerId) {
-      const nextName =
-        accountLink.playerName?.trim() || player.name;
-      const nextTeam =
-        accountLink.nflTeam?.trim().toUpperCase() ||
-        player.nflTeam;
-
-      if (
-        player.name === nextName &&
-        player.nflTeam === nextTeam &&
-        player.role === accountLink.role &&
-        player.status === "active"
-      ) {
-        return player;
-      }
-
-      changed = true;
-      return {
-        ...player,
-        name: nextName,
-        nflTeam: nextTeam,
-        role: accountLink.role,
-        status: "active" as const,
-      };
-    }
-
-    if (
-      accountLink.role === "commissioner" &&
-      player.role === "commissioner"
-    ) {
-      changed = true;
-      return {
-        ...player,
-        role: "player" as const,
-      };
-    }
-
-    return player;
-  });
-
-  return changed ? synchronizedPlayers : players;
 }
 
 export default function CloudPlayerSessionSync() {
@@ -114,7 +44,11 @@ export default function CloudPlayerSessionSync() {
     setPlayers,
   } = useLeague();
 
-  const lastInitialSyncKey = useRef<string | null>(null);
+  const lastLoadedSessionKey =
+    useRef<string | null>(null);
+
+  const lastInitialPlayerSyncKey =
+    useRef<string | null>(null);
 
   const sessionKey = useMemo(() => {
     if (!accountLink) {
@@ -130,48 +64,119 @@ export default function CloudPlayerSessionSync() {
   }, [accountLink]);
 
   useEffect(() => {
+    const client = supabaseClient;
+
     if (
+      !client ||
       status !== "signed-in-linked" ||
       !accountLink ||
       !access.isLinked ||
       !sessionKey
     ) {
-      lastInitialSyncKey.current = null;
+      lastLoadedSessionKey.current =
+        null;
+
+      lastInitialPlayerSyncKey.current =
+        null;
+
       return;
     }
-
-    const synchronizedPlayers = synchronizeLinkedPlayer(
-      league.players,
-      accountLink,
-    );
-
-    const linkedPlayerExists = synchronizedPlayers.some(
-      (player) => player.id === accountLink.playerId,
-    );
-
-    if (!linkedPlayerExists) {
-      return;
-    }
-
-    if (synchronizedPlayers !== league.players) {
-      setPlayers(synchronizedPlayers);
-    }
-
-    const needsInitialPlayerSync =
-      lastInitialSyncKey.current !== sessionKey;
-
-    const regularPlayerMustStayLocked =
-      accountLink.role === "player" &&
-      activePlayerId !== accountLink.playerId;
 
     if (
-      activePlayerId !== accountLink.playerId &&
-      (needsInitialPlayerSync || regularPlayerMustStayLocked)
+      lastLoadedSessionKey.current ===
+      sessionKey
     ) {
-      setActivePlayerId(accountLink.playerId);
+      return;
     }
 
-    lastInitialSyncKey.current = sessionKey;
+    let canceled = false;
+
+    const synchronizeSessionRoster =
+      async () => {
+        try {
+          const cloudPlayers =
+            await loadCloudLeagueRoster(
+              client,
+              accountLink.leagueId,
+            );
+
+          if (canceled) {
+            return;
+          }
+
+          const linkedPlayerExists =
+            cloudPlayers.some(
+              (player) =>
+                player.id ===
+                accountLink.playerId,
+            );
+
+          if (!linkedPlayerExists) {
+            throw new Error(
+              "The linked player is missing from the cloud roster.",
+            );
+          }
+
+          const localRosterSignature =
+            getRosterSignature(
+              league.players,
+            );
+
+          const cloudRosterSignature =
+            getRosterSignature(
+              cloudPlayers,
+            );
+
+          const needsInitialPlayerSync =
+            lastInitialPlayerSyncKey.current !==
+            sessionKey;
+
+          const regularPlayerMustStayLocked =
+            accountLink.role ===
+              "player" &&
+            activePlayerId !==
+              accountLink.playerId;
+
+          lastLoadedSessionKey.current =
+            sessionKey;
+
+          lastInitialPlayerSyncKey.current =
+            sessionKey;
+
+          if (
+            localRosterSignature !==
+            cloudRosterSignature
+          ) {
+            setPlayers(cloudPlayers);
+          }
+
+          if (
+            activePlayerId !==
+              accountLink.playerId &&
+            (
+              needsInitialPlayerSync ||
+              regularPlayerMustStayLocked
+            )
+          ) {
+            setActivePlayerId(
+              accountLink.playerId,
+            );
+          }
+        } catch (error) {
+          if (!canceled) {
+            console.error(
+              "Cloud league roster loading failed.",
+              error,
+            );
+          }
+        }
+      };
+
+    void synchronizeSessionRoster();
+
+    return () => {
+      canceled = true;
+    };
   }, [
     access.isLinked,
     accountLink,
@@ -180,6 +185,31 @@ export default function CloudPlayerSessionSync() {
     sessionKey,
     setActivePlayerId,
     setPlayers,
+    status,
+  ]);
+
+  useEffect(() => {
+    if (
+      status !== "signed-in-linked" ||
+      !accountLink ||
+      !sessionKey ||
+      accountLink.role !== "player" ||
+      lastLoadedSessionKey.current !==
+        sessionKey ||
+      activePlayerId ===
+        accountLink.playerId
+    ) {
+      return;
+    }
+
+    setActivePlayerId(
+      accountLink.playerId,
+    );
+  }, [
+    accountLink,
+    activePlayerId,
+    sessionKey,
+    setActivePlayerId,
     status,
   ]);
 
