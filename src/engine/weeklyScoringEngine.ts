@@ -4,7 +4,11 @@ import {
   type HeadToHeadMatchup,
   type HeadToHeadPicks,
 } from "./h2hEngine";
-import type { NFLGame, NFLScore } from "./nfl/NFLTypes";
+import type {
+  NFLGame,
+  NFLScore,
+} from "./nfl/NFLTypes";
+import { getEffectivePlayerPick } from "./pickerClickerEngine";
 import type { PickerClickerWeekState } from "./pickerClickerTypes";
 import {
   getWeeklyScoringRecordId,
@@ -19,20 +23,16 @@ import {
 export type NFLWeekCompletionSummary = {
   season: number;
   week: number;
-
   totalScheduledGames: number;
   completedGameCount: number;
   canceledGameCount: number;
   eligibleScoringGameCount: number;
-
   completedGameIds: string[];
   canceledGameIds: string[];
   eligibleScoringGameIds: string[];
   tiedGameIds: string[];
   pendingGameIds: string[];
-
   gameResults: Record<string, string>;
-
   isComplete: boolean;
 };
 
@@ -58,7 +58,9 @@ type BuildFinalizedWeeklyScoringRecordParams = {
   nflGames: NFLGame[];
   season: number;
   week: number;
-  pickerClickerWeekState?: PickerClickerWeekState | null;
+  pickerClickerWeekState?:
+    | PickerClickerWeekState
+    | null;
   finalizedAt?: string;
 };
 
@@ -117,7 +119,6 @@ function getOpenOpponentName(
   const abbreviation =
     matchup.openOpponentTeamAbbreviation ??
     "OPEN";
-
   const displayName =
     matchup.openOpponentTeamDisplayName ??
     "Open Team";
@@ -129,11 +130,12 @@ function getPlayerPickScore(
   playerId: string,
   picks: HeadToHeadPicks,
   eligibleScoringGameIds: string[],
-  gameResults: Record<string, string>
+  gameResults: Record<string, string>,
+  pickerClickerWeekState:
+    | PickerClickerWeekState
+    | null
+    | undefined
 ): PlayerPickScore {
-  const playerPicks =
-    picks[playerId] ?? {};
-
   let correct = 0;
   let missing = 0;
 
@@ -142,8 +144,16 @@ function getPlayerPickScore(
       gameResults[gameId] ?? ""
     );
 
+    const effectivePick = getEffectivePlayerPick({
+      playerId,
+      gameId,
+      picks,
+      weekState:
+        pickerClickerWeekState ?? null,
+    });
+
     const selectedTeam = normalizeTeam(
-      playerPicks[gameId] ?? ""
+      effectivePick.team ?? ""
     );
 
     if (!selectedTeam) {
@@ -158,8 +168,7 @@ function getPlayerPickScore(
 
   return {
     correct,
-    possible:
-      eligibleScoringGameIds.length,
+    possible: eligibleScoringGameIds.length,
     missing,
   };
 }
@@ -180,8 +189,7 @@ function getPlayerPickerClickerStatus(
   }
 
   const fallbackCount = Object.keys(
-    weekState.fallbackPicks[playerId] ??
-      {}
+    weekState.fallbackPicks[playerId] ?? {}
   ).length;
 
   const weeklyPrizeEligible =
@@ -191,8 +199,7 @@ function getPlayerPickerClickerStatus(
 
   return {
     weeklyPrizeEligible,
-    usedPickerClicker:
-      fallbackCount > 0,
+    usedPickerClicker: fallbackCount > 0,
     fallbackCount,
   };
 }
@@ -205,8 +212,7 @@ function createWeeklyPlayerResult(params: {
   opponentName: string;
   score: PlayerPickScore;
   pickerClickerStatus: PlayerPickerClickerStatus;
-  outcome:
-    WeeklyPlayerScoringResult["outcome"];
+  outcome: WeeklyPlayerScoringResult["outcome"];
   leaguePointsAwarded: number;
 }): WeeklyPlayerScoringResult {
   const {
@@ -219,37 +225,22 @@ function createWeeklyPlayerResult(params: {
     playerId: params.player.id,
     playerName: params.player.name,
     nflTeam: params.player.nflTeam,
-
     matchupId: params.matchup.id,
     matchupType: params.matchupType,
-
-    opponentId:
-      params.opponent?.id ?? null,
-
+    opponentId: params.opponent?.id ?? null,
     opponentName: params.opponentName,
-
-    correctPicks:
-      params.score.correct,
-
-    possiblePicks:
-      params.score.possible,
-
-    missingPicks:
-      params.score.missing,
-
+    correctPicks: params.score.correct,
+    possiblePicks: params.score.possible,
+    missingPicks: params.score.missing,
     seasonEligibleCorrectPicks:
       weeklyPrizeEligible
         ? params.score.correct
         : 0,
-
     weeklyPrizeEligible,
     usedPickerClicker,
-
     pickerClickerFallbackCount:
       fallbackCount,
-
     outcome: params.outcome,
-
     leaguePointsAwarded:
       params.leaguePointsAwarded,
   };
@@ -262,23 +253,17 @@ function createEmptySeasonSummary(
     playerId: player.id,
     playerName: player.name,
     nflTeam: player.nflTeam,
-
     wins: 0,
     losses: 0,
     ties: 0,
-
     leaguePoints: 0,
-
     seasonCorrectPicks: 0,
     headToHeadCorrectPicks: 0,
-
     seasonPossiblePicks: 0,
     seasonMissingPicks: 0,
-
     completedHeadToHeadWeeks: 0,
     byeWeeks: 0,
     openOpponentWeeks: 0,
-
     pickerClickerWeeks: 0,
     weeklyPrizeIneligibleWeeks: 0,
   };
@@ -322,15 +307,11 @@ export function inspectNFLWeekCompletion(
 
   const completedGameIds: string[] = [];
   const canceledGameIds: string[] = [];
-  const eligibleScoringGameIds: string[] =
-    [];
+  const eligibleScoringGameIds: string[] = [];
   const tiedGameIds: string[] = [];
   const pendingGameIds: string[] = [];
-
-  const gameResults: Record<
-    string,
-    string
-  > = {};
+  const gameResults: Record<string, string> =
+    {};
 
   for (const game of weekGames) {
     if (game.status === "canceled") {
@@ -355,45 +336,33 @@ export function inspectNFLWeekCompletion(
       continue;
     }
 
-    const winner =
-      getNFLGameWinner(game);
+    const winner = getNFLGameWinner(game);
 
     if (!winner) {
       pendingGameIds.push(game.id);
       continue;
     }
 
-    eligibleScoringGameIds.push(
-      game.id
-    );
-
+    eligibleScoringGameIds.push(game.id);
     gameResults[game.id] = winner;
   }
 
   return {
     season,
     week,
-
-    totalScheduledGames:
-      weekGames.length,
-
+    totalScheduledGames: weekGames.length,
     completedGameCount:
       completedGameIds.length,
-
     canceledGameCount:
       canceledGameIds.length,
-
     eligibleScoringGameCount:
       eligibleScoringGameIds.length,
-
     completedGameIds,
     canceledGameIds,
     eligibleScoringGameIds,
     tiedGameIds,
     pendingGameIds,
-
     gameResults,
-
     isComplete:
       weekGames.length > 0 &&
       pendingGameIds.length === 0 &&
@@ -423,7 +392,9 @@ export function buildFinalizedWeeklyScoringRecord({
   week,
   pickerClickerWeekState,
   finalizedAt,
-}: BuildFinalizedWeeklyScoringRecordParams): FinalizedWeeklyScoringRecord | null {
+}: BuildFinalizedWeeklyScoringRecordParams):
+  | FinalizedWeeklyScoringRecord
+  | null {
   const completion =
     inspectNFLWeekCompletion(
       nflGames,
@@ -471,7 +442,8 @@ export function buildFinalizedWeeklyScoringRecord({
         matchup.playerA.id,
         picks,
         completion.eligibleScoringGameIds,
-        completion.gameResults
+        completion.gameResults,
+        pickerClickerWeekState
       );
 
     const playerAPickerClickerStatus =
@@ -482,8 +454,7 @@ export function buildFinalizedWeeklyScoringRecord({
 
     if (!matchup.playerB) {
       const isOpenOpponent =
-        matchupType ===
-        "open-opponent";
+        matchupType === "open-opponent";
 
       const opponentName =
         isOpenOpponent
@@ -499,45 +470,31 @@ export function buildFinalizedWeeklyScoringRecord({
         id: `${recordId}-${matchup.id}`,
         season,
         week,
-
         matchupId: matchup.id,
         matchupType,
-
         ...(matchup.sourceGameId
           ? {
               sourceGameId:
                 matchup.sourceGameId,
             }
           : {}),
-
-        playerAId:
-          matchup.playerA.id,
-
-        playerAName:
-          matchup.playerA.name,
-
+        playerAId: matchup.playerA.id,
+        playerAName: matchup.playerA.name,
         playerATeam:
           matchup.playerA.nflTeam,
-
         playerBId: null,
         playerBName: null,
         playerBTeam: null,
-
         playerAScore:
           playerAScore.correct,
-
         playerBScore: 0,
-
         possiblePoints:
           playerAScore.possible,
-
         winnerId: null,
         isTie: false,
-
         status: isOpenOpponent
           ? "open"
           : "bye",
-
         resultLabel,
       });
 
@@ -547,19 +504,14 @@ export function buildFinalizedWeeklyScoringRecord({
         player: matchup.playerA,
         matchup,
         matchupType,
-
         opponent: null,
         opponentName,
-
         score: playerAScore,
-
         pickerClickerStatus:
           playerAPickerClickerStatus,
-
         outcome: isOpenOpponent
           ? "open"
           : "bye",
-
         leaguePointsAwarded: 0,
       });
 
@@ -571,7 +523,8 @@ export function buildFinalizedWeeklyScoringRecord({
         matchup.playerB.id,
         picks,
         completion.eligibleScoringGameIds,
-        completion.gameResults
+        completion.gameResults,
+        pickerClickerWeekState
       );
 
     const playerBPickerClickerStatus =
@@ -604,47 +557,30 @@ export function buildFinalizedWeeklyScoringRecord({
       id: `${recordId}-${matchup.id}`,
       season,
       week,
-
       matchupId: matchup.id,
       matchupType,
-
       ...(matchup.sourceGameId
         ? {
             sourceGameId:
               matchup.sourceGameId,
           }
         : {}),
-
-      playerAId:
-        matchup.playerA.id,
-
-      playerAName:
-        matchup.playerA.name,
-
+      playerAId: matchup.playerA.id,
+      playerAName: matchup.playerA.name,
       playerATeam:
         matchup.playerA.nflTeam,
-
-      playerBId:
-        matchup.playerB.id,
-
-      playerBName:
-        matchup.playerB.name,
-
+      playerBId: matchup.playerB.id,
+      playerBName: matchup.playerB.name,
       playerBTeam:
         matchup.playerB.nflTeam,
-
       playerAScore:
         playerAScore.correct,
-
       playerBScore:
         playerBScore.correct,
-
       possiblePoints:
         completion.eligibleScoringGameCount,
-
       winnerId,
       isTie,
-
       status: "final",
       resultLabel,
     });
@@ -655,23 +591,17 @@ export function buildFinalizedWeeklyScoringRecord({
       player: matchup.playerA,
       matchup,
       matchupType,
-
       opponent: matchup.playerB,
-
       opponentName:
         matchup.playerB.name,
-
       score: playerAScore,
-
       pickerClickerStatus:
         playerAPickerClickerStatus,
-
       outcome: isTie
         ? "tie"
         : playerAWins
           ? "win"
           : "loss",
-
       leaguePointsAwarded: isTie
         ? 1
         : playerAWins
@@ -685,23 +615,17 @@ export function buildFinalizedWeeklyScoringRecord({
       player: matchup.playerB,
       matchup,
       matchupType,
-
       opponent: matchup.playerA,
-
       opponentName:
         matchup.playerA.name,
-
       score: playerBScore,
-
       pickerClickerStatus:
         playerBPickerClickerStatus,
-
       outcome: isTie
         ? "tie"
         : playerAWins
           ? "loss"
           : "win",
-
       leaguePointsAwarded: isTie
         ? 1
         : playerAWins
@@ -714,37 +638,28 @@ export function buildFinalizedWeeklyScoringRecord({
     id: recordId,
     season,
     week,
-
     finalizedAt:
       finalizedAt ??
       new Date().toISOString(),
-
     totalScheduledGames:
       completion.totalScheduledGames,
-
     completedGameCount:
       completion.completedGameCount,
-
     canceledGameCount:
       completion.canceledGameCount,
-
     eligibleScoringGameCount:
       completion.eligibleScoringGameCount,
-
     completedGameIds:
       completion.completedGameIds,
-
     canceledGameIds:
       completion.canceledGameIds,
-
     matchups: finalizedMatchups,
     playerResults,
   };
 }
 
 export function hasFinalizedWeeklyScoringRecord(
-  scoringHistory:
-    WeeklyScoringHistory,
+  scoringHistory: WeeklyScoringHistory,
   season: number,
   week: number
 ) {
@@ -760,10 +675,8 @@ export function hasFinalizedWeeklyScoringRecord(
 }
 
 export function addFinalizedWeeklyScoringRecord(
-  scoringHistory:
-    WeeklyScoringHistory,
-  record:
-    FinalizedWeeklyScoringRecord
+  scoringHistory: WeeklyScoringHistory,
+  record: FinalizedWeeklyScoringRecord
 ): WeeklyScoringHistory {
   if (scoringHistory[record.id]) {
     return scoringHistory;
@@ -802,19 +715,19 @@ export function buildSeasonPlayerScoringSummaries({
       return playerSummaries;
     }, {});
 
-  const weeklyRecords =
-    Object.values(scoringHistory)
-      .filter(
-        (record) =>
-          record.season === season &&
-          (throughWeek === undefined ||
-            record.week <= throughWeek)
-      )
-      .sort(
-        (recordA, recordB) =>
-          recordA.week -
-          recordB.week
-      );
+  const weeklyRecords = Object.values(
+    scoringHistory
+  )
+    .filter(
+      (record) =>
+        record.season === season &&
+        (throughWeek === undefined ||
+          record.week <= throughWeek)
+    )
+    .sort(
+      (recordA, recordB) =>
+        recordA.week - recordB.week
+    );
 
   for (const weeklyRecord of weeklyRecords) {
     for (const playerResult of Object.values(
@@ -864,7 +777,8 @@ export function buildSeasonPlayerScoringSummaries({
 
       if (!weeklyPrizeEligible) {
         summary.weeklyPrizeIneligibleWeeks =
-          (summary.weeklyPrizeIneligibleWeeks ??
+          (summary
+            .weeklyPrizeIneligibleWeeks ??
             0) + 1;
       }
 
@@ -875,10 +789,8 @@ export function buildSeasonPlayerScoringSummaries({
         playerResult.outcome === "win"
       ) {
         summary.wins += 1;
-
         summary.completedHeadToHeadWeeks +=
           1;
-
         continue;
       }
 
@@ -886,10 +798,8 @@ export function buildSeasonPlayerScoringSummaries({
         playerResult.outcome === "loss"
       ) {
         summary.losses += 1;
-
         summary.completedHeadToHeadWeeks +=
           1;
-
         continue;
       }
 
@@ -897,10 +807,8 @@ export function buildSeasonPlayerScoringSummaries({
         playerResult.outcome === "tie"
       ) {
         summary.ties += 1;
-
         summary.completedHeadToHeadWeeks +=
           1;
-
         continue;
       }
 
