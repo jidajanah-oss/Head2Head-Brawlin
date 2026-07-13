@@ -13,6 +13,7 @@ import {
   getNFLTeamDisplayName,
   getNFLTeamInfo,
   getWeeklyScoringRecordId,
+  type WeeklyPlayerScoringResult,
   type WeeklyScoringOutcome,
 } from "../../engine";
 import type {
@@ -120,9 +121,56 @@ function getPlayerTeamDescription(
   return `${teamInfo.conference} • ${teamInfo.division}`;
 }
 
+function getWeeklyPickerClickerLabel(
+  result: WeeklyPlayerScoringResult,
+): string {
+  const automaticCount =
+    result.pickerClickerFallbackCount ?? 0;
+  const selectedCount =
+    result.playerSelectedPickerClickerCount ?? 0;
+
+  if (automaticCount > 0) {
+    return `Automatic • ${automaticCount}`;
+  }
+
+  if (selectedCount > 0) {
+    return `Selected • ${selectedCount}`;
+  }
+
+  return "Not Used";
+}
+
+function getWeeklyPickerClickerHelper(
+  result: WeeklyPlayerScoringResult,
+): string {
+  const automaticCount =
+    result.pickerClickerFallbackCount ?? 0;
+  const selectedCount =
+    result.playerSelectedPickerClickerCount ?? 0;
+
+  if (automaticCount > 0) {
+    return "H2H credit only • award week excluded";
+  }
+
+  if (selectedCount > 0) {
+    return "Normal credit • prize eligible";
+  }
+
+  return "Normal season credit";
+}
+
+function getCountLabel(
+  count: number,
+  singular: string,
+  plural = `${singular}s`,
+) {
+  return `${count} ${
+    count === 1 ? singular : plural
+  }`;
+}
+
 export default function MyFranchiseProfile() {
   const { status, accountLink } = useAuth();
-
   const {
     league,
     scoringHistory,
@@ -209,6 +257,24 @@ export default function MyFranchiseProfile() {
   const leaguePoints =
     seasonSummary?.leaguePoints ?? 0;
 
+  const playerSelectedPickerClickerWeeks =
+    seasonSummary
+      ?.playerSelectedPickerClickerWeeks ?? 0;
+
+  const playerSelectedPickerClickerGames =
+    seasonSummary
+      ?.playerSelectedPickerClickerGames ?? 0;
+
+  const automaticPickerClickerWeeks =
+    seasonSummary
+      ?.automaticPickerClickerWeeks ??
+    seasonSummary?.pickerClickerWeeks ??
+    0;
+
+  const weeklyPrizeIneligibleWeeks =
+    seasonSummary
+      ?.weeklyPrizeIneligibleWeeks ?? 0;
+
   return (
     <div className="my-franchise-profile">
       <SteelHero
@@ -263,14 +329,14 @@ export default function MyFranchiseProfile() {
           label="H2H Record"
           value={recordLabel}
           helper="Wins • Losses • Ties"
-          icon="🏈"
+          icon=""
         />
 
         <SteelStatCard
           label="League Points"
           value={leaguePoints}
           helper="3 win • 1 tie"
-          icon="🏆"
+          icon=""
         />
 
         <SteelStatCard
@@ -284,9 +350,91 @@ export default function MyFranchiseProfile() {
           label="Completed Weeks"
           value={completedWeeks}
           helper={`Through Week ${league.currentWeek}`}
-          icon="📅"
+          icon=""
         />
       </section>
+
+      <SteelCard
+        as="section"
+        className="my-franchise-profile__pc-card"
+      >
+        <SteelSectionHeader
+          eyebrow="Picker Clicker"
+          title="Season Usage & Award Status"
+          description="Player-selected Picker Clicker choices receive normal scoring and award credit. Automatic fallback helps only with the weekly head-to-head matchup."
+          action={
+            <SteelBadge
+              variant={
+                weeklyPrizeIneligibleWeeks > 0
+                  ? "danger"
+                  : "success"
+              }
+            >
+              {weeklyPrizeIneligibleWeeks > 0
+                ? `${weeklyPrizeIneligibleWeeks} Award Week${
+                    weeklyPrizeIneligibleWeeks === 1
+                      ? ""
+                      : "s"
+                  } Excluded`
+                : "All Weeks Eligible"}
+            </SteelBadge>
+          }
+        />
+
+        <div className="my-franchise-profile__pc-grid">
+          <div>
+            <span>Player Selected</span>
+
+            <strong>
+              {getCountLabel(
+                playerSelectedPickerClickerGames,
+                "game",
+              )}
+            </strong>
+
+            <small>
+              {getCountLabel(
+                playerSelectedPickerClickerWeeks,
+                "week",
+              )}{" "}
+              with deliberate third-choice picks
+            </small>
+          </div>
+
+          <div>
+            <span>Automatic Fallback</span>
+
+            <strong>
+              {getCountLabel(
+                automaticPickerClickerWeeks,
+                "week",
+              )}
+            </strong>
+
+            <small>
+              H2H credit only; those weeks do not
+              count toward the season correct-pick
+              award
+            </small>
+          </div>
+
+          <div>
+            <span>Award Weeks Excluded</span>
+
+            <strong>
+              {getCountLabel(
+                weeklyPrizeIneligibleWeeks,
+                "week",
+              )}
+            </strong>
+
+            <small>
+              Only automatic no-pick assistance
+              causes an exclusion
+            </small>
+          </div>
+        </div>
+      </SteelCard>
 
       <SteelCard
         as="section"
@@ -358,7 +506,8 @@ export default function MyFranchiseProfile() {
               <small>
                 {currentWeekResult.outcome === "win"
                   ? "Weekly win"
-                  : currentWeekResult.outcome === "tie"
+                  : currentWeekResult.outcome ===
+                      "tie"
                     ? "Weekly tie"
                     : "No points awarded"}
               </small>
@@ -368,15 +517,15 @@ export default function MyFranchiseProfile() {
               <span>Picker Clicker</span>
 
               <strong>
-                {currentWeekResult.usedPickerClicker
-                  ? "Used"
-                  : "Not Used"}
+                {getWeeklyPickerClickerLabel(
+                  currentWeekResult,
+                )}
               </strong>
 
               <small>
-                {currentWeekResult.usedPickerClicker
-                  ? "H2H credit only"
-                  : "Normal season credit"}
+                {getWeeklyPickerClickerHelper(
+                  currentWeekResult,
+                )}
               </small>
             </div>
           </div>

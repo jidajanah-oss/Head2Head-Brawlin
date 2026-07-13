@@ -50,6 +50,7 @@ type PlayerPickerClickerStatus = {
   weeklyPrizeEligible: boolean;
   usedPickerClicker: boolean;
   fallbackCount: number;
+  playerSelectedCount: number;
 };
 
 type BuildFinalizedWeeklyScoringRecordParams = {
@@ -185,11 +186,18 @@ function getPlayerPickerClickerStatus(
       weeklyPrizeEligible: true,
       usedPickerClicker: false,
       fallbackCount: 0,
+      playerSelectedCount: 0,
     };
   }
 
   const fallbackCount = Object.keys(
     weekState.fallbackPicks[playerId] ?? {}
+  ).length;
+
+  const playerSelectedCount = Object.keys(
+    weekState.playerSelectedPicks?.[
+      playerId
+    ] ?? {}
   ).length;
 
   const weeklyPrizeEligible =
@@ -201,6 +209,7 @@ function getPlayerPickerClickerStatus(
     weeklyPrizeEligible,
     usedPickerClicker: fallbackCount > 0,
     fallbackCount,
+    playerSelectedCount,
   };
 }
 
@@ -219,6 +228,7 @@ function createWeeklyPlayerResult(params: {
     weeklyPrizeEligible,
     usedPickerClicker,
     fallbackCount,
+    playerSelectedCount,
   } = params.pickerClickerStatus;
 
   return {
@@ -240,6 +250,8 @@ function createWeeklyPlayerResult(params: {
     usedPickerClicker,
     pickerClickerFallbackCount:
       fallbackCount,
+    playerSelectedPickerClickerCount:
+      playerSelectedCount,
     outcome: params.outcome,
     leaguePointsAwarded:
       params.leaguePointsAwarded,
@@ -265,6 +277,9 @@ function createEmptySeasonSummary(
     byeWeeks: 0,
     openOpponentWeeks: 0,
     pickerClickerWeeks: 0,
+    automaticPickerClickerWeeks: 0,
+    playerSelectedPickerClickerWeeks: 0,
+    playerSelectedPickerClickerGames: 0,
     weeklyPrizeIneligibleWeeks: 0,
   };
 }
@@ -748,6 +763,11 @@ export function buildSeasonPlayerScoringSummaries({
         playerResult.usedPickerClicker ??
         false;
 
+      const playerSelectedPickerClickerCount =
+        playerResult
+          .playerSelectedPickerClickerCount ??
+        0;
+
       const eligibleCorrectPicks =
         playerResult
           .seasonEligibleCorrectPicks ??
@@ -773,6 +793,27 @@ export function buildSeasonPlayerScoringSummaries({
         summary.pickerClickerWeeks =
           (summary.pickerClickerWeeks ??
             0) + 1;
+
+        summary.automaticPickerClickerWeeks =
+          (summary
+            .automaticPickerClickerWeeks ??
+            0) + 1;
+      }
+
+      if (
+        playerSelectedPickerClickerCount >
+        0
+      ) {
+        summary.playerSelectedPickerClickerWeeks =
+          (summary
+            .playerSelectedPickerClickerWeeks ??
+            0) + 1;
+
+        summary.playerSelectedPickerClickerGames =
+          (summary
+            .playerSelectedPickerClickerGames ??
+            0) +
+          playerSelectedPickerClickerCount;
       }
 
       if (!weeklyPrizeEligible) {
