@@ -3,19 +3,15 @@ import ReactDOM from "react-dom/client";
 
 import App from "./App";
 import AppErrorBoundary from "./components/system/AppErrorBoundary";
-
 import "./components/steel/steel.css";
-
 import { AuthProvider } from "./context/AuthContext";
 import { FutureSeasonProvider } from "./context/FutureSeasonContext";
 import { LeagueProvider } from "./context/LeagueContext";
 import { SeasonCloseoutProvider } from "./context/SeasonCloseoutContext";
-
 import { migrateLegacyPlaceholderRoster } from "./engine/placeholderRosterMigration";
-
+import CloudPickerClickerAssignmentSync from "./features/auth/CloudPickerClickerAssignmentSync";
 import CloudPlayerSessionSync from "./features/auth/CloudPlayerSessionSync";
 import CloudRosterSync from "./features/auth/CloudRosterSync";
-
 import "./index.css";
 import "./styles/ui.css";
 
@@ -38,7 +34,7 @@ ReactDOM.createRoot(rootElement).render(
             <FutureSeasonProvider>
               <CloudPlayerSessionSync />
               <CloudRosterSync />
-
+              <CloudPickerClickerAssignmentSync />
               <App />
             </FutureSeasonProvider>
           </LeagueProvider>
