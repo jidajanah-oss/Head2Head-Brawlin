@@ -8,6 +8,7 @@ import { useAuth } from "./context/AuthContext";
 import { NFLProvider } from "./context/NFLContext";
 import { ObscureStatProvider } from "./context/ObscureStatContext";
 import { SeasonAwardProvider } from "./context/SeasonAwardContext";
+import CloudPlayerPickIntentSync from "./features/auth/CloudPlayerPickIntentSync";
 import ObscureStatPayoutSync from "./features/payouts/ObscureStatPayoutSync";
 import PlayoffPayoutSync from "./features/payouts/PlayoffPayoutSync";
 import SeasonAwardPayoutSync from "./features/payouts/SeasonAwardPayoutSync";
@@ -58,11 +59,11 @@ function App() {
       <ObscureStatProvider>
         <SeasonAwardProvider>
           <PickerClickerSync />
+          <CloudPlayerPickIntentSync />
           <WeeklyScoringSync />
           <ObscureStatPayoutSync />
           <PlayoffPayoutSync />
           <SeasonAwardPayoutSync />
-
           <BrowserRouter
             basename={ROUTER_BASE_NAME}
           >
@@ -75,32 +76,26 @@ function App() {
                   index
                   element={<Dashboard />}
                 />
-
                 <Route
                   path="games"
                   element={<Games />}
                 />
-
                 <Route
                   path="picks"
                   element={<Picks />}
                 />
-
                 <Route
                   path="standings"
                   element={<Standings />}
                 />
-
                 <Route
                   path="players"
                   element={<Players />}
                 />
-
                 <Route
                   path="commissioner"
                   element={<CommissionerRoute />}
                 />
-
                 <Route
                   path="*"
                   element={<NotFound />}
