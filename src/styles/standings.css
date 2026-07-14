@@ -567,13 +567,7 @@
 }
 
 .standings-matchup-player small {
-  display: block;
-  margin-bottom: 4px;
-  color: #f5c542;
-  font-size: 0.68rem;
-  font-weight: 950;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  display: none;
 }
 
 .standings-matchup-player span {
@@ -1175,3 +1169,6 @@
     justify-self: end;
   }
 }
+
+/* Head-to-Head Player Names Only v1
+   NFL team labels are hidden only inside weekly matchup cards. */
