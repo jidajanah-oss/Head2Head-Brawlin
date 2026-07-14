@@ -1,0 +1,196 @@
+.linked-account-reset-panel {
+  display: grid;
+  gap: 1rem;
+  margin: 0 0 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(255, 201, 40, 0.38);
+  border-radius: 1.25rem;
+  background:
+    linear-gradient(135deg, rgba(255, 190, 24, 0.09), transparent 48%),
+    rgba(18, 18, 18, 0.96);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+}
+
+.linked-account-reset-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.linked-account-reset-panel__header h2 {
+  margin: 0.2rem 0 0.35rem;
+  color: #fff;
+  font-size: clamp(1.2rem, 2vw, 1.65rem);
+}
+
+.linked-account-reset-panel__header p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.5;
+}
+
+.linked-account-reset-panel__eyebrow {
+  color: #ffc928 !important;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.linked-account-reset-panel__badge {
+  flex: 0 0 auto;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid rgba(255, 201, 40, 0.38);
+  border-radius: 999px;
+  color: #ffc928;
+  background: rgba(255, 201, 40, 0.08);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.linked-account-reset-panel__warning {
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255, 201, 40, 0.24);
+  border-radius: 0.9rem;
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 201, 40, 0.06);
+  line-height: 1.45;
+}
+
+.linked-account-reset-panel__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: end;
+}
+
+.linked-account-reset-panel__controls label {
+  display: grid;
+  gap: 0.45rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.linked-account-reset-panel__controls select {
+  width: 100%;
+  min-height: 2.85rem;
+  padding: 0 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0.75rem;
+  color: #fff;
+  background: #101419;
+  font: inherit;
+  font-size: 0.94rem;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.linked-account-reset-panel__refresh,
+.linked-account-reset-panel__reset {
+  min-height: 2.85rem;
+  padding: 0.7rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.linked-account-reset-panel__refresh {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.linked-account-reset-panel__reset {
+  justify-self: start;
+  border: 1px solid rgba(255, 92, 78, 0.75);
+  color: #fff;
+  background: linear-gradient(135deg, #a52f27, #651b17);
+}
+
+.linked-account-reset-panel__refresh:disabled,
+.linked-account-reset-panel__reset:disabled,
+.linked-account-reset-panel__controls select:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.linked-account-reset-panel__selection {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.linked-account-reset-panel__selection > div {
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.linked-account-reset-panel__selection span {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.linked-account-reset-panel__selection strong {
+  color: #fff;
+  overflow-wrap: anywhere;
+}
+
+.linked-account-reset-panel__selection small {
+  color: rgba(255, 255, 255, 0.64);
+}
+
+.linked-account-reset-panel__message {
+  margin: 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.75rem;
+  line-height: 1.45;
+}
+
+.linked-account-reset-panel__message--error {
+  border: 1px solid rgba(255, 92, 78, 0.45);
+  color: #ffd0cc;
+  background: rgba(165, 47, 39, 0.18);
+}
+
+.linked-account-reset-panel__message--success {
+  border: 1px solid rgba(72, 201, 119, 0.4);
+  color: #caffdc;
+  background: rgba(31, 122, 66, 0.2);
+}
+
+@media (max-width: 760px) {
+  .linked-account-reset-panel__header,
+  .linked-account-reset-panel__controls {
+    grid-template-columns: 1fr;
+  }
+
+  .linked-account-reset-panel__header {
+    display: grid;
+  }
+
+  .linked-account-reset-panel__badge {
+    justify-self: start;
+  }
+
+  .linked-account-reset-panel__selection {
+    grid-template-columns: 1fr;
+  }
+
+  .linked-account-reset-panel__refresh,
+  .linked-account-reset-panel__reset {
+    width: 100%;
+  }
+}
