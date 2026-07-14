@@ -1064,7 +1064,8 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
-/* Standings Page Priority Order v1 */
+
+/* Standings Matchup Priority and Division Disclosure v1 */
 .standings-page-layout {
   display: flex;
   flex-direction: column;
@@ -1081,7 +1082,7 @@
 .standings-page-layout
   .standings-obscure-stat-portal
   > * {
-  order: 3;
+  order: 4;
 }
 
 .standings-page-layout
@@ -1092,6 +1093,85 @@
 
 .standings-page-layout
   > .standings-v2
-  > .standings-conference-stack {
+  > .standings-matchups-card {
   order: 2;
+}
+
+.standings-page-layout
+  > .standings-v2
+  > .standings-conference-stack {
+  order: 3;
+}
+
+.standings-conference-card {
+  order: 1;
+}
+
+.standings-conference-card.is-active-conference {
+  order: 0;
+}
+
+.standings-division-card {
+  order: 1;
+}
+
+.standings-division-card.is-active-division {
+  order: 0;
+  border-color: rgba(92, 180, 255, 0.48);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(92, 180, 255, 0.08);
+}
+
+.standings-division-toggle {
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+
+.standings-division-toggle::after {
+  content: "Show +";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid rgba(245, 197, 66, 0.28);
+  border-radius: 999px;
+  background: rgba(245, 197, 66, 0.09);
+  color: #f5c542;
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.standings-division-card.is-expanded
+  .standings-division-toggle::after {
+  content: "Hide −";
+}
+
+.standings-division-toggle:focus-visible {
+  border-radius: 14px;
+  box-shadow: 0 0 0 3px rgba(92, 180, 255, 0.3);
+}
+
+.standings-division-card:not(.is-expanded)
+  .standings-division-table,
+.standings-division-card:not(.is-expanded)
+  .standings-open-teams {
+  display: none;
+}
+
+@media (min-width: 780px) {
+  .standings-division-topline {
+    grid-template-columns:
+      minmax(0, 1fr)
+      auto
+      auto;
+  }
+
+  .standings-division-toggle::after {
+    justify-self: end;
+  }
 }
