@@ -1,0 +1,196 @@
+.opponent-reveal-shell {
+  display: grid;
+  margin: 18px 0 0;
+  color: #ffffff;
+}
+
+.opponent-reveal-card {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  overflow: hidden;
+  padding: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(245, 197, 66, 0.16), transparent 38%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
+    #0d0d0d;
+  box-shadow:
+    inset 0 0 32px rgba(245, 197, 66, 0.045),
+    0 18px 44px rgba(0, 0, 0, 0.3);
+}
+
+.opponent-reveal-card::before {
+  position: absolute;
+  top: -18px;
+  right: 10px;
+  color: rgba(245, 197, 66, 0.045);
+  content: "H2H";
+  font-size: clamp(4rem, 13vw, 8rem);
+  font-weight: 950;
+  letter-spacing: -0.08em;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.opponent-reveal-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.opponent-reveal-matchup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.opponent-reveal-matchup > div:not(.opponent-reveal-versus) {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid rgba(245, 197, 66, 0.26);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.opponent-reveal-matchup span,
+.opponent-reveal-submissions span {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.opponent-reveal-matchup strong {
+  color: #f5c542;
+  font-size: 1.08rem;
+  font-weight: 950;
+}
+
+.opponent-reveal-matchup small {
+  color: rgba(255, 255, 255, 0.62);
+  font-weight: 750;
+}
+
+.opponent-reveal-versus {
+  display: grid;
+  place-items: center;
+  color: rgba(245, 197, 66, 0.72);
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+}
+
+.opponent-reveal-submissions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.opponent-reveal-submissions > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.opponent-reveal-waiting,
+.opponent-reveal-message {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 0.84rem;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.opponent-reveal-waiting {
+  border: 1px solid rgba(245, 197, 66, 0.24);
+  background: rgba(245, 197, 66, 0.07);
+  color: #fff3ba;
+}
+
+.opponent-reveal-message {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.opponent-reveal-games {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.opponent-reveal-game {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.opponent-reveal-game-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.opponent-reveal-game-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.opponent-reveal-game-heading strong {
+  color: #ffffff;
+  font-size: 0.96rem;
+  font-weight: 950;
+}
+
+.opponent-reveal-game-heading span,
+.opponent-reveal-game small {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.opponent-reveal-game p {
+  margin: 0;
+  color: #f5c542;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.opponent-reveal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (min-width: 700px) {
+  .opponent-reveal-matchup {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .opponent-reveal-submissions,
+  .opponent-reveal-games {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .opponent-reveal-card {
+    padding: 16px;
+  }
+
+  .opponent-reveal-actions > * {
+    width: 100%;
+  }
+}
