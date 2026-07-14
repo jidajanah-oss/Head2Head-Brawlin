@@ -1064,3 +1064,34 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+/* Standings Page Priority Order v1 */
+.standings-page-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.standings-page-layout > .standings-v2 {
+  display: contents;
+}
+
+.standings-page-layout > .season-awards-board,
+.standings-page-layout > .public-playoff-results,
+.standings-page-layout > .standings-v2 > *,
+.standings-page-layout
+  .standings-obscure-stat-portal
+  > * {
+  order: 3;
+}
+
+.standings-page-layout
+  > .standings-v2
+  > .steel-ui-hero {
+  order: 1;
+}
+
+.standings-page-layout
+  > .standings-v2
+  > .standings-conference-stack {
+  order: 2;
+}

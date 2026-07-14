@@ -55,12 +55,12 @@ function ObscureStatAwardAfterPickerClicker() {
 
 function Standings() {
   return (
-    <>
+    <div className="standings-page-layout">
       <SeasonAwardsBoard />
       <PublicPlayoffResults />
       <StandingsBoard />
       <ObscureStatAwardAfterPickerClicker />
-    </>
+    </div>
   );
 }
 
