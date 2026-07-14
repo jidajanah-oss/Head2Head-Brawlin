@@ -4,13 +4,14 @@ import {
   useRef,
   useState,
 } from "react";
-
 import { useAuth } from "../../context/AuthContext";
 import { useLeague } from "../../context/LeagueContext";
 import { loadCloudLeagueRoster } from "../../services/cloudLeagueRosterService";
 import { syncCloudRoster } from "../../services/cloudRosterService";
 import { supabaseClient } from "../../services/supabaseClient";
 import type { Player } from "../../types/player";
+
+const EXPECTED_FULL_ROSTER_SIZE = 32;
 
 function getRosterSignature(
   players: Player[],
@@ -29,6 +30,60 @@ function getRosterSignature(
         customLogo:
           player.customLogo ?? null,
       })),
+  );
+}
+
+function isCompleteLeagueRoster(
+  players: Player[],
+): boolean {
+  if (
+    players.length !==
+    EXPECTED_FULL_ROSTER_SIZE
+  ) {
+    return false;
+  }
+
+  const playerIds = new Set<string>();
+  const nflTeams = new Set<string>();
+  let activeCommissioners = 0;
+  let activeBackupCommissioners = 0;
+
+  for (const player of players) {
+    const playerId = player.id.trim();
+    const nflTeam =
+      player.nflTeam.trim().toUpperCase();
+
+    if (
+      !playerId ||
+      !/^[A-Z]{2,3}$/.test(nflTeam) ||
+      playerIds.has(playerId) ||
+      nflTeams.has(nflTeam)
+    ) {
+      return false;
+    }
+
+    playerIds.add(playerId);
+    nflTeams.add(nflTeam);
+
+    if (
+      player.status === "active" &&
+      player.role === "commissioner"
+    ) {
+      activeCommissioners += 1;
+    }
+
+    if (
+      player.status === "active" &&
+      player.role ===
+        "backup_commissioner"
+    ) {
+      activeBackupCommissioners += 1;
+    }
+  }
+
+  return (
+    activeCommissioners === 1 &&
+    activeBackupCommissioners === 1
   );
 }
 
@@ -107,11 +162,56 @@ export default function CloudRosterSync() {
     const hydrateCommissionerRoster =
       async () => {
         try {
-          const cloudPlayers =
+          const localPlayers =
+            league.players;
+
+          let cloudPlayers =
             await loadCloudLeagueRoster(
               client,
               accountLink.leagueId,
             );
+
+          if (canceled) {
+            return;
+          }
+
+          if (
+            !isCompleteLeagueRoster(
+              cloudPlayers,
+            )
+          ) {
+            if (
+              !isCompleteLeagueRoster(
+                localPlayers,
+              )
+            ) {
+              throw new Error(
+                "Cloud roster hydration stopped because neither the cloud nor local runtime contains a verified 32-player roster.",
+              );
+            }
+
+            await syncCloudRoster(
+              client,
+              accountLink.leagueId,
+              localPlayers,
+            );
+
+            cloudPlayers =
+              await loadCloudLeagueRoster(
+                client,
+                accountLink.leagueId,
+              );
+
+            if (
+              !isCompleteLeagueRoster(
+                cloudPlayers,
+              )
+            ) {
+              throw new Error(
+                "The cloud roster recovery did not return a verified 32-player roster.",
+              );
+            }
+          }
 
           if (canceled) {
             return;
@@ -154,6 +254,7 @@ export default function CloudRosterSync() {
     access.canManageLeague,
     accountLink,
     hydratedSessionKey,
+    league.players,
     rosterSyncKey,
     sessionKey,
     setPlayers,
@@ -172,6 +273,17 @@ export default function CloudRosterSync() {
       hydratedSessionKey !==
         sessionKey
     ) {
+      return;
+    }
+
+    if (
+      !isCompleteLeagueRoster(
+        league.players,
+      )
+    ) {
+      console.error(
+        "Cloud roster synchronization skipped because the local runtime does not contain a verified 32-player roster.",
+      );
       return;
     }
 
