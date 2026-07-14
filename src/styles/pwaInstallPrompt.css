@@ -1,0 +1,117 @@
+.pwa-install-prompt {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin: 0 auto 14px;
+  width: min(calc(100% - 28px), 1160px);
+  padding: 14px;
+  border: 1px solid rgba(245, 197, 66, 0.5);
+  border-radius: 18px;
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(245, 197, 66, 0.2),
+      transparent 42%
+    ),
+    rgba(5, 5, 5, 0.96);
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.34),
+    inset 0 0 24px rgba(245, 197, 66, 0.05);
+  color: #ffffff;
+}
+
+.pwa-install-prompt__icon {
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgba(245, 197, 66, 0.36);
+  border-radius: 15px;
+  object-fit: cover;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+}
+
+.pwa-install-prompt__content {
+  min-width: 0;
+}
+
+.pwa-install-prompt__eyebrow {
+  margin: 0 0 3px;
+  color: #f5c542;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pwa-install-prompt__content strong {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.pwa-install-prompt__content p:not(.pwa-install-prompt__eyebrow) {
+  margin: 5px 0 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.pwa-install-prompt__actions {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 9px;
+}
+
+.pwa-install-prompt__actions button {
+  min-height: 42px;
+  padding: 10px 15px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.pwa-install-prompt__install {
+  flex: 1;
+  border: 1px solid #f5c542;
+  background: #f5c542;
+  color: #080808;
+}
+
+.pwa-install-prompt__install:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.pwa-install-prompt__dismiss {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.pwa-install-prompt__actions button:focus-visible {
+  outline: 3px solid rgba(245, 197, 66, 0.42);
+  outline-offset: 2px;
+}
+
+@media (min-width: 720px) {
+  .pwa-install-prompt {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding: 16px 18px;
+  }
+
+  .pwa-install-prompt__actions {
+    grid-column: auto;
+  }
+
+  .pwa-install-prompt__install {
+    flex: none;
+  }
+}
+
+@media (display-mode: standalone) {
+  .pwa-install-prompt {
+    display: none;
+  }
+}

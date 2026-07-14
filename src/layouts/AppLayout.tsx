@@ -4,6 +4,7 @@ import {
 } from "react-router-dom";
 import RuntimeStatusBanner from "../components/system/RuntimeStatusBanner";
 import { useAuth } from "../context/AuthContext";
+import PwaInstallPrompt from "../features/pwa/PwaInstallPrompt";
 
 const standardNavItems = [
   { to: "/", label: "Home" },
@@ -23,7 +24,6 @@ const commissionerNavItem = {
 
 function AppLayout() {
   const { access } = useAuth();
-
   const navItems = access.canAccessCommissioner
     ? [...standardNavItems, commissionerNavItem]
     : standardNavItems;
@@ -35,16 +35,13 @@ function AppLayout() {
           <div className="brand-mark">
             H2H
           </div>
-
           <div>
             <p className="brand-kicker">
               Steel Edition
             </p>
-
             <h1>
               Head2Head Brawlin&apos;
             </h1>
-
             <p className="brand-subtitle">
               2026 Pick&apos;em League
             </p>
@@ -53,6 +50,7 @@ function AppLayout() {
       </header>
 
       <RuntimeStatusBanner />
+      <PwaInstallPrompt />
 
       <main className="app-main">
         <Outlet />
