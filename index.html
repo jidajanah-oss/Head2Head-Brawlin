@@ -22,6 +22,38 @@
       name="color-scheme"
       content="dark"
     />
+    <meta
+      name="mobile-web-app-capable"
+      content="yes"
+    />
+    <meta
+      name="apple-mobile-web-app-capable"
+      content="yes"
+    />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta
+      name="apple-mobile-web-app-title"
+      content="H2H Brawlin'"
+    />
+
+    <link
+      rel="manifest"
+      href="%BASE_URL%manifest.webmanifest"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="%BASE_URL%icons/pwa-192x192.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="%BASE_URL%icons/apple-touch-icon.png"
+    />
 
     <title>
       Head2Head Brawlin' — Steel Edition
@@ -35,5 +67,91 @@
       type="module"
       src="/src/main.tsx"
     ></script>
+
+    <script>
+      (() => {
+        if (!("serviceWorker" in navigator)) {
+          return;
+        }
+
+        const isLocalDevelopment =
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1";
+
+        if (isLocalDevelopment) {
+          return;
+        }
+
+        window.addEventListener("load", () => {
+          const baseUrl = "%BASE_URL%";
+          const serviceWorkerUrl = `${baseUrl}sw.js`;
+
+          navigator.serviceWorker
+            .register(serviceWorkerUrl, {
+              scope: baseUrl,
+            })
+            .then((registration) => {
+              const checkForUpdate = () => {
+                registration
+                  .update()
+                  .catch(() => undefined);
+              };
+
+              checkForUpdate();
+
+              window.addEventListener(
+                "online",
+                checkForUpdate,
+              );
+
+              document.addEventListener(
+                "visibilitychange",
+                () => {
+                  if (
+                    document.visibilityState ===
+                    "visible"
+                  ) {
+                    checkForUpdate();
+                  }
+                },
+              );
+
+              registration.addEventListener(
+                "updatefound",
+                () => {
+                  const installingWorker =
+                    registration.installing;
+
+                  if (!installingWorker) {
+                    return;
+                  }
+
+                  installingWorker.addEventListener(
+                    "statechange",
+                    () => {
+                      if (
+                        installingWorker.state ===
+                          "installed" &&
+                        navigator.serviceWorker
+                          .controller
+                      ) {
+                        installingWorker.postMessage({
+                          type: "SKIP_WAITING",
+                        });
+                      }
+                    },
+                  );
+                },
+              );
+            })
+            .catch((error) => {
+              console.warn(
+                "Head2Head Brawlin' app installation support could not start.",
+                error,
+              );
+            });
+        });
+      })();
+    </script>
   </body>
 </html>
