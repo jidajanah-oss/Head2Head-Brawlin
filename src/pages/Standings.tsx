@@ -10,7 +10,7 @@ import StandingsBoard from "../features/standings/StandingsBoard";
 import { useLeague } from "../context/LeagueContext";
 import "../styles/standings.css";
 
-function ObscureStatAwardAfterPickerClicker() {
+function WeeklyAwardsAfterPickerClicker() {
   const [portalTarget, setPortalTarget] =
     useState<HTMLElement | null>(null);
 
@@ -46,7 +46,11 @@ function ObscureStatAwardAfterPickerClicker() {
   }
 
   return createPortal(
-    <ObscureStatAwardCard />,
+    <>
+      <ObscureStatAwardCard />
+      <SeasonAwardsBoard />
+      <PublicPlayoffResults />
+    </>,
     portalTarget,
   );
 }
@@ -312,11 +316,9 @@ function StandingsDivisionOrganizer() {
 function Standings() {
   return (
     <div className="standings-page-layout">
-      <SeasonAwardsBoard />
-      <PublicPlayoffResults />
       <StandingsBoard />
       <StandingsDivisionOrganizer />
-      <ObscureStatAwardAfterPickerClicker />
+      <WeeklyAwardsAfterPickerClicker />
     </div>
   );
 }
