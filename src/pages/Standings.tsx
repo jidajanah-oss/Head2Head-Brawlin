@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import ObscureStatAwardCard from "../features/awards/ObscureStatAwardCard";
 import SeasonAwardsBoard from "../features/awards/SeasonAwardsBoard";
 import PublicPlayoffResults from "../features/playoffs/PublicPlayoffResults";
+import BestDivisionRace from "../features/standings/BestDivisionRace";
 import StandingsBoard from "../features/standings/StandingsBoard";
 import { useLeague } from "../context/LeagueContext";
 import "../styles/standings.css";
@@ -24,7 +25,9 @@ function WeeklyAwardsAfterPickerClicker() {
       return;
     }
 
-    const portalHost = document.createElement("div");
+    const portalHost =
+      document.createElement("div");
+
     portalHost.className =
       "standings-obscure-stat-portal";
     portalHost.style.display = "contents";
@@ -55,6 +58,55 @@ function WeeklyAwardsAfterPickerClicker() {
   );
 }
 
+function BestDivisionRaceAfterDivisions() {
+  const [portalTarget, setPortalTarget] =
+    useState<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    const conferenceCards = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        ".standings-conference-card",
+      ),
+    );
+
+    const lastConferenceCard =
+      conferenceCards[
+        conferenceCards.length - 1
+      ];
+
+    if (!lastConferenceCard) {
+      return;
+    }
+
+    const portalHost =
+      document.createElement("div");
+
+    portalHost.className =
+      "standings-best-division-portal";
+    portalHost.style.display = "contents";
+
+    lastConferenceCard.insertAdjacentElement(
+      "afterend",
+      portalHost,
+    );
+
+    setPortalTarget(portalHost);
+
+    return () => {
+      portalHost.remove();
+    };
+  }, []);
+
+  if (!portalTarget) {
+    return null;
+  }
+
+  return createPortal(
+    <BestDivisionRace />,
+    portalTarget,
+  );
+}
+
 function getDivisionKey(
   card: HTMLElement,
   fallbackIndex: number,
@@ -65,7 +117,10 @@ function getDivisionKey(
     )
     ?.textContent?.trim();
 
-  return divisionLabel || `division-${fallbackIndex}`;
+  return (
+    divisionLabel ||
+    `division-${fallbackIndex}`
+  );
 }
 
 function StandingsDivisionOrganizer() {
@@ -81,8 +136,11 @@ function StandingsDivisionOrganizer() {
       return;
     }
 
-    const expandedDivisionKeys = new Set<string>();
-    let animationFrameId: number | null = null;
+    const expandedDivisionKeys =
+      new Set<string>();
+
+    let animationFrameId: number | null =
+      null;
 
     const synchronizeDivisionCards = () => {
       animationFrameId = null;
@@ -99,11 +157,13 @@ function StandingsDivisionOrganizer() {
         ),
       );
 
-      conferenceCards.forEach((conferenceCard) => {
-        conferenceCard.classList.remove(
-          "is-active-conference",
-        );
-      });
+      conferenceCards.forEach(
+        (conferenceCard) => {
+          conferenceCard.classList.remove(
+            "is-active-conference",
+          );
+        },
+      );
 
       const activeDivisionCard =
         divisionCards.find((divisionCard) =>
@@ -114,7 +174,9 @@ function StandingsDivisionOrganizer() {
 
       if (activeDivisionCard) {
         const activeDivisionIndex =
-          divisionCards.indexOf(activeDivisionCard);
+          divisionCards.indexOf(
+            activeDivisionCard,
+          );
 
         expandedDivisionKeys.add(
           getDivisionKey(
@@ -134,25 +196,34 @@ function StandingsDivisionOrganizer() {
 
       divisionCards.forEach(
         (divisionCard, divisionIndex) => {
-          const divisionKey = getDivisionKey(
-            divisionCard,
-            divisionIndex,
-          );
+          const divisionKey =
+            getDivisionKey(
+              divisionCard,
+              divisionIndex,
+            );
+
           const divisionTopline =
             divisionCard.querySelector<HTMLElement>(
               ".standings-division-topline",
             );
+
           const isActiveDivision =
-            divisionCard === activeDivisionCard;
+            divisionCard ===
+            activeDivisionCard;
+
           const isExpanded =
-            expandedDivisionKeys.has(divisionKey);
+            expandedDivisionKeys.has(
+              divisionKey,
+            );
 
           divisionCard.dataset.divisionKey =
             divisionKey;
+
           divisionCard.classList.toggle(
             "is-active-division",
             isActiveDivision,
           );
+
           divisionCard.classList.toggle(
             "is-expanded",
             isExpanded,
@@ -165,21 +236,29 @@ function StandingsDivisionOrganizer() {
           divisionTopline.classList.add(
             "standings-division-toggle",
           );
+
           divisionTopline.setAttribute(
             "role",
             "button",
           );
+
           divisionTopline.setAttribute(
             "tabindex",
             "0",
           );
+
           divisionTopline.setAttribute(
             "aria-expanded",
             String(isExpanded),
           );
+
           divisionTopline.setAttribute(
             "aria-label",
-            `${isExpanded ? "Collapse" : "Expand"} ${divisionKey} standings`,
+            `${
+              isExpanded
+                ? "Collapse"
+                : "Expand"
+            } ${divisionKey} standings`,
           );
         },
       );
@@ -190,9 +269,10 @@ function StandingsDivisionOrganizer() {
         return;
       }
 
-      animationFrameId = window.requestAnimationFrame(
-        synchronizeDivisionCards,
-      );
+      animationFrameId =
+        window.requestAnimationFrame(
+          synchronizeDivisionCards,
+        );
     };
 
     const toggleDivision = (
@@ -214,10 +294,18 @@ function StandingsDivisionOrganizer() {
         return;
       }
 
-      if (expandedDivisionKeys.has(divisionKey)) {
-        expandedDivisionKeys.delete(divisionKey);
+      if (
+        expandedDivisionKeys.has(
+          divisionKey,
+        )
+      ) {
+        expandedDivisionKeys.delete(
+          divisionKey,
+        );
       } else {
-        expandedDivisionKeys.add(divisionKey);
+        expandedDivisionKeys.add(
+          divisionKey,
+        );
       }
 
       scheduleSynchronization();
@@ -245,7 +333,9 @@ function StandingsDivisionOrganizer() {
       toggleDivision(divisionTopline);
     };
 
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handleKeyDown = (
+      event: KeyboardEvent,
+    ) => {
       if (
         event.key !== "Enter" &&
         event.key !== " "
@@ -286,7 +376,11 @@ function StandingsDivisionOrganizer() {
       subtree: true,
     });
 
-    page.addEventListener("click", handleClick);
+    page.addEventListener(
+      "click",
+      handleClick,
+    );
+
     page.addEventListener(
       "keydown",
       handleKeyDown,
@@ -296,7 +390,12 @@ function StandingsDivisionOrganizer() {
 
     return () => {
       observer.disconnect();
-      page.removeEventListener("click", handleClick);
+
+      page.removeEventListener(
+        "click",
+        handleClick,
+      );
+
       page.removeEventListener(
         "keydown",
         handleKeyDown,
@@ -318,6 +417,7 @@ function Standings() {
     <div className="standings-page-layout">
       <StandingsBoard />
       <StandingsDivisionOrganizer />
+      <BestDivisionRaceAfterDivisions />
       <WeeklyAwardsAfterPickerClicker />
     </div>
   );
