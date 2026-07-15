@@ -82,21 +82,208 @@
           return;
         }
 
+        const UPDATE_SESSION_KEY =
+          "head2head-brawlin.pwa-update-later.v1";
+        const UPDATE_CHECK_INTERVAL_MS =
+          60 * 60 * 1000;
+
+        let refreshingForUpdate = false;
+        let updateBanner = null;
+
+        function updateWasDeferred() {
+          try {
+            return (
+              window.sessionStorage.getItem(
+                UPDATE_SESSION_KEY,
+              ) === "true"
+            );
+          } catch {
+            return false;
+          }
+        }
+
+        function deferUpdateForSession() {
+          try {
+            window.sessionStorage.setItem(
+              UPDATE_SESSION_KEY,
+              "true",
+            );
+          } catch {
+            // The notice can still be dismissed for this page.
+          }
+        }
+
+        function removeUpdateBanner() {
+          if (!updateBanner) {
+            return;
+          }
+
+          updateBanner.remove();
+          updateBanner = null;
+        }
+
+        function showUpdateBanner(registration) {
+          if (
+            updateBanner ||
+            updateWasDeferred() ||
+            !registration.waiting ||
+            !navigator.serviceWorker.controller
+          ) {
+            return;
+          }
+
+          const banner = document.createElement("aside");
+          banner.setAttribute("role", "status");
+          banner.setAttribute("aria-live", "polite");
+          banner.setAttribute(
+            "aria-label",
+            "Head2Head Brawlin app update",
+          );
+          banner.style.cssText = [
+            "position:fixed",
+            "left:max(12px, env(safe-area-inset-left))",
+            "right:max(12px, env(safe-area-inset-right))",
+            "bottom:calc(74px + env(safe-area-inset-bottom))",
+            "z-index:10000",
+            "display:grid",
+            "grid-template-columns:minmax(0,1fr) auto",
+            "align-items:center",
+            "gap:12px",
+            "width:min(680px,calc(100% - 24px))",
+            "margin-inline:auto",
+            "padding:13px",
+            "border:1px solid rgba(245,197,66,.58)",
+            "border-radius:15px",
+            "background:rgba(8,8,8,.98)",
+            "box-shadow:0 16px 40px rgba(0,0,0,.5)",
+            "color:#fff",
+            "font-family:inherit",
+          ].join(";");
+
+          const copy = document.createElement("div");
+          copy.style.cssText =
+            "display:grid;gap:3px;min-width:0";
+
+          const title = document.createElement("strong");
+          title.textContent = "App update ready";
+          title.style.cssText = [
+            "color:#f5c542",
+            "font-size:.78rem",
+            "font-weight:950",
+            "letter-spacing:.04em",
+            "text-transform:uppercase",
+          ].join(";");
+
+          const message = document.createElement("span");
+          message.textContent =
+            "Update now to use the newest version.";
+          message.style.cssText = [
+            "color:rgba(255,255,255,.76)",
+            "font-size:.76rem",
+            "line-height:1.35",
+          ].join(";");
+
+          const actions = document.createElement("div");
+          actions.style.cssText =
+            "display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px";
+
+          const updateButton =
+            document.createElement("button");
+          updateButton.type = "button";
+          updateButton.textContent = "Update App";
+          updateButton.style.cssText = [
+            "min-height:42px",
+            "padding:9px 13px",
+            "border:1px solid #f5c542",
+            "border-radius:11px",
+            "background:#f5c542",
+            "color:#111",
+            "cursor:pointer",
+            "font:inherit",
+            "font-size:.78rem",
+            "font-weight:950",
+          ].join(";");
+
+          const laterButton =
+            document.createElement("button");
+          laterButton.type = "button";
+          laterButton.textContent = "Later";
+          laterButton.style.cssText = [
+            "min-height:42px",
+            "padding:9px 12px",
+            "border:1px solid rgba(255,255,255,.18)",
+            "border-radius:11px",
+            "background:rgba(255,255,255,.06)",
+            "color:#fff",
+            "cursor:pointer",
+            "font:inherit",
+            "font-size:.78rem",
+            "font-weight:900",
+          ].join(";");
+
+          updateButton.addEventListener("click", () => {
+            const waitingWorker = registration.waiting;
+
+            if (!waitingWorker) {
+              window.location.reload();
+              return;
+            }
+
+            refreshingForUpdate = true;
+            updateButton.disabled = true;
+            laterButton.disabled = true;
+            updateButton.textContent = "Updating...";
+
+            waitingWorker.postMessage({
+              type: "SKIP_WAITING",
+            });
+          });
+
+          laterButton.addEventListener("click", () => {
+            deferUpdateForSession();
+            removeUpdateBanner();
+          });
+
+          copy.append(title, message);
+          actions.append(updateButton, laterButton);
+          banner.append(copy, actions);
+
+          document.body.append(banner);
+          updateBanner = banner;
+        }
+
         window.addEventListener("load", () => {
           const baseUrl = "%BASE_URL%";
           const serviceWorkerUrl = `${baseUrl}sw.js`;
 
+          navigator.serviceWorker.addEventListener(
+            "controllerchange",
+            () => {
+              if (!refreshingForUpdate) {
+                return;
+              }
+
+              refreshingForUpdate = false;
+              window.location.reload();
+            },
+          );
+
           navigator.serviceWorker
             .register(serviceWorkerUrl, {
               scope: baseUrl,
+              updateViaCache: "none",
             })
             .then((registration) => {
               const checkForUpdate = () => {
                 registration
                   .update()
+                  .then(() => {
+                    showUpdateBanner(registration);
+                  })
                   .catch(() => undefined);
               };
 
+              showUpdateBanner(registration);
               checkForUpdate();
 
               window.addEventListener(
@@ -114,6 +301,11 @@
                     checkForUpdate();
                   }
                 },
+              );
+
+              window.setInterval(
+                checkForUpdate,
+                UPDATE_CHECK_INTERVAL_MS,
               );
 
               registration.addEventListener(
@@ -135,9 +327,9 @@
                         navigator.serviceWorker
                           .controller
                       ) {
-                        installingWorker.postMessage({
-                          type: "SKIP_WAITING",
-                        });
+                        showUpdateBanner(
+                          registration,
+                        );
                       }
                     },
                   );
@@ -146,7 +338,7 @@
             })
             .catch((error) => {
               console.warn(
-                "Head2Head Brawlin' app installation support could not start.",
+                "Head2Head Brawlin' app update support could not start.",
                 error,
               );
             });

@@ -1,9 +1,13 @@
-const SHELL_CACHE = "head2head-brawlin-shell-v1";
-const RUNTIME_CACHE = "head2head-brawlin-runtime-v1";
-const CACHE_PREFIX = "head2head-brawlin-";
+const SHELL_CACHE =
+  "head2head-brawlin-shell-v2";
+const RUNTIME_CACHE =
+  "head2head-brawlin-runtime-v2";
+const CACHE_PREFIX =
+  "head2head-brawlin-";
 
 const appRoot = new URL("./", self.location.href);
-const appAsset = (path) => new URL(path, appRoot).toString();
+const appAsset = (path) =>
+  new URL(path, appRoot).toString();
 
 const APP_SHELL = [
   appRoot.toString(),
@@ -23,8 +27,7 @@ self.addEventListener("install", (event) => {
         Promise.allSettled(
           APP_SHELL.map((url) => cache.add(url)),
         ),
-      )
-      .then(() => self.skipWaiting()),
+      ),
   );
 });
 
@@ -41,7 +44,9 @@ self.addEventListener("activate", (event) => {
                 cacheName !== SHELL_CACHE &&
                 cacheName !== RUNTIME_CACHE,
             )
-            .map((cacheName) => caches.delete(cacheName)),
+            .map((cacheName) =>
+              caches.delete(cacheName),
+            ),
         ),
       )
       .then(() => self.clients.claim()),
@@ -55,10 +60,13 @@ self.addEventListener("message", (event) => {
 });
 
 async function networkFirstNavigation(request) {
-  const shellCache = await caches.open(SHELL_CACHE);
+  const shellCache =
+    await caches.open(SHELL_CACHE);
 
   try {
-    const response = await fetch(request);
+    const response = await fetch(request, {
+      cache: "no-store",
+    });
 
     if (response.ok) {
       await shellCache.put(
@@ -71,16 +79,22 @@ async function networkFirstNavigation(request) {
   } catch {
     return (
       (await shellCache.match(request)) ??
-      (await shellCache.match(appAsset("index.html"))) ??
-      (await shellCache.match(appRoot.toString())) ??
+      (await shellCache.match(
+        appAsset("index.html"),
+      )) ??
+      (await shellCache.match(
+        appRoot.toString(),
+      )) ??
       Response.error()
     );
   }
 }
 
 async function staleWhileRevalidate(request) {
-  const runtimeCache = await caches.open(RUNTIME_CACHE);
-  const cachedResponse = await runtimeCache.match(request);
+  const runtimeCache =
+    await caches.open(RUNTIME_CACHE);
+  const cachedResponse =
+    await runtimeCache.match(request);
 
   const networkResponsePromise = fetch(request)
     .then(async (response) => {
