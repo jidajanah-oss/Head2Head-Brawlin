@@ -1,10 +1,13 @@
 import {
+  useEffect,
+} from "react";
+import {
   NavLink,
   Outlet,
+  useLocation,
 } from "react-router-dom";
 import RuntimeStatusBanner from "../components/system/RuntimeStatusBanner";
 import { useAuth } from "../context/AuthContext";
-import PwaInstallPrompt from "../features/pwa/PwaInstallPrompt";
 
 const standardNavItems = [
   { to: "/", label: "Home" },
@@ -22,26 +25,61 @@ const commissionerNavItem = {
   label: "Commish",
 };
 
+function RouteScrollReset() {
+  const {
+    pathname,
+    search,
+  } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+
+    const scrollingElement =
+      document.scrollingElement;
+
+    if (scrollingElement) {
+      scrollingElement.scrollTop = 0;
+      scrollingElement.scrollLeft = 0;
+    }
+  }, [pathname, search]);
+
+  return null;
+}
+
 function AppLayout() {
   const { access } = useAuth();
-  const navItems = access.canAccessCommissioner
-    ? [...standardNavItems, commissionerNavItem]
-    : standardNavItems;
+
+  const navItems =
+    access.canAccessCommissioner
+      ? [
+          ...standardNavItems,
+          commissionerNavItem,
+        ]
+      : standardNavItems;
 
   return (
     <div className="app-shell">
+      <RouteScrollReset />
+
       <header className="app-header">
         <div className="brand-lockup">
           <div className="brand-mark">
             H2H
           </div>
+
           <div>
             <p className="brand-kicker">
               Steel Edition
             </p>
+
             <h1>
               Head2Head Brawlin&apos;
             </h1>
+
             <p className="brand-subtitle">
               2026 Pick&apos;em League
             </p>
@@ -50,7 +88,6 @@ function AppLayout() {
       </header>
 
       <RuntimeStatusBanner />
-      <PwaInstallPrompt />
 
       <main className="app-main">
         <Outlet />
