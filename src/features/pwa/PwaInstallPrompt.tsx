@@ -22,6 +22,7 @@ type NavigatorWithStandalone = Navigator & {
 
 const DISMISSAL_STORAGE_KEY =
   "head2head-brawlin.pwa-install-dismissed-at.v1";
+
 const DISMISSAL_DURATION_MS =
   7 * 24 * 60 * 60 * 1000;
 
@@ -112,6 +113,10 @@ export default function PwaInstallPrompt() {
         "(display-mode: standalone)",
       );
 
+    const refreshDismissal = () => {
+      setDismissed(wasRecentlyDismissed());
+    };
+
     const handleDisplayModeChange = () => {
       setInstalled(isStandaloneMode());
     };
@@ -123,15 +128,25 @@ export default function PwaInstallPrompt() {
         event as BeforeInstallPromptEvent;
 
       promptEvent.preventDefault();
-      clearDismissal();
-      setDismissed(false);
       setInstallPrompt(promptEvent);
+      refreshDismissal();
     };
 
     const handleInstalled = () => {
       clearDismissal();
+      setDismissed(false);
       setInstalled(true);
       setInstallPrompt(null);
+    };
+
+    const handleStorageChange = (
+      event: StorageEvent,
+    ) => {
+      if (
+        event.key === DISMISSAL_STORAGE_KEY
+      ) {
+        refreshDismissal();
+      }
     };
 
     displayModeQuery.addEventListener(
@@ -145,6 +160,10 @@ export default function PwaInstallPrompt() {
     window.addEventListener(
       "appinstalled",
       handleInstalled,
+    );
+    window.addEventListener(
+      "storage",
+      handleStorageChange,
     );
 
     return () => {
@@ -160,12 +179,17 @@ export default function PwaInstallPrompt() {
         "appinstalled",
         handleInstalled,
       );
+      window.removeEventListener(
+        "storage",
+        handleStorageChange,
+      );
     };
   }, []);
 
   const dismiss = () => {
     saveDismissal();
     setDismissed(true);
+    setInstallPrompt(null);
   };
 
   const install = async () => {
