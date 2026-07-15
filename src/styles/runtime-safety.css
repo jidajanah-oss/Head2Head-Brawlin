@@ -1,6 +1,6 @@
 .runtime-status-banner {
   display: grid;
-  gap: 7px;
+  gap: 9px;
   margin: 12px 20px 0;
   padding: 12px 14px;
   border: 1px solid rgba(255, 171, 64, 0.42);
@@ -14,9 +14,23 @@
   background: rgba(255, 74, 74, 0.12);
 }
 
-.runtime-status-banner > div {
+.runtime-status-banner--recovered {
+  border-color: rgba(70, 211, 139, 0.5);
+  background: rgba(38, 168, 103, 0.13);
+}
+
+.runtime-status-banner__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.runtime-status-banner__copy {
   display: grid;
   gap: 3px;
+  min-width: 0;
 }
 
 .runtime-status-banner strong {
@@ -30,10 +44,39 @@
   color: #ffb0b0;
 }
 
+.runtime-status-banner--recovered strong {
+  color: #8ff0bc;
+}
+
 .runtime-status-banner span {
   color: rgba(255, 255, 255, 0.72);
   font-size: 0.78rem;
   line-height: 1.4;
+}
+
+.runtime-status-banner__action {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 9px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.runtime-status-banner__action:hover {
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.runtime-status-banner__action:focus-visible {
+  outline: 2px solid #f5c542;
+  outline-offset: 2px;
 }
 
 .runtime-error-screen {
@@ -157,7 +200,18 @@
 
 @media (max-width: 600px) {
   .runtime-status-banner {
-    margin-inline: 12px;
+    margin: 10px 12px 0;
+    padding: 11px 12px;
+  }
+
+  .runtime-status-banner__item {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .runtime-status-banner__action {
+    width: 100%;
   }
 
   .runtime-error-card,
