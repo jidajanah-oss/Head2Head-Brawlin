@@ -1,14 +1,15 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 
 import FranchiseLogo from "../../components/franchise/FranchiseLogo";
 import {
   SteelBadge,
   SteelButton,
   SteelCard,
-  SteelHero,
   SteelSectionHeader,
   SteelStatCard,
 } from "../../components/steel";
+import { useAuth } from "../../context/AuthContext";
 import { useLeague } from "../../context/LeagueContext";
 import { useNFL } from "../../context/NFLContext";
 import {
@@ -29,9 +30,10 @@ type DashboardTeamWordmarkProps = {
   side: "Away" | "Home";
 };
 
-function getTeamDisplayName(
-  team?: string,
-) {
+const LEAGUE_LOGO_PATH =
+  `${import.meta.env.BASE_URL}logos/league/head2head-brawlin.png`;
+
+function getTeamDisplayName(team?: string) {
   if (!team) {
     return "Pending";
   }
@@ -65,6 +67,8 @@ function DashboardTeamWordmark({
 }
 
 function HomeDashboard() {
+  const { access } = useAuth();
+
   const {
     league,
     picks,
@@ -104,8 +108,8 @@ function HomeDashboard() {
 
   const upcomingGames =
     weekGames.filter((game) => {
-      const label = getStatusLabel(game)
-        .toLowerCase();
+      const label =
+        getStatusLabel(game).toLowerCase();
 
       return (
         !label.includes("live") &&
@@ -188,30 +192,67 @@ function HomeDashboard() {
 
   return (
     <main className="dashboard dashboard-v2">
-      <SteelHero
-        eyebrow="Head2Head Brawlin'"
-        title="Steel Edition"
-        subtitle="Premium 2026 Pick'em League Command Center"
-        primaryLabel="Make Picks"
-        primaryHref="/picks"
-        secondaryLabel="Game Center"
-        secondaryHref="/games"
-        rightContent={
-          <div className="dashboard-week-card">
-            <span>Current Week</span>
+      <SteelCard
+        className="dashboard-brand-hero"
+        as="section"
+      >
+        <div className="dashboard-brand-hero__logo-shell">
+          <img
+            className="dashboard-brand-hero__logo"
+            src={LEAGUE_LOGO_PATH}
+            alt="Head2Head Brawlin' Pick Em 2026 league logo"
+          />
+        </div>
 
-            <strong>
-              Week {league.currentWeek}
-            </strong>
+        <div className="dashboard-brand-hero__content">
+          <p className="steel-ui-eyebrow">
+            2026 Pick&apos;em League
+          </p>
 
-            <small>
-              {liveGames.length > 0
-                ? "Games live now"
-                : "Board active"}
-            </small>
+          <h1>
+            League Command Center
+          </h1>
+
+          <p>
+            Make your picks, follow the
+            weekly schedule, and track
+            the championship race.
+          </p>
+
+          <div className="dashboard-brand-hero__actions">
+            <SteelButton
+              href="/picks"
+              size="lg"
+            >
+              Make Picks
+            </SteelButton>
+
+            <SteelButton
+              href="/games"
+              size="lg"
+              variant="secondary"
+            >
+              Game Center
+            </SteelButton>
           </div>
-        }
-      />
+        </div>
+
+        <div className="dashboard-week-card dashboard-brand-hero__week">
+          <span>
+            Current Week
+          </span>
+
+          <strong>
+            Week {league.currentWeek}
+          </strong>
+
+          <small>
+            {liveGames.length > 0
+              ? "Games live now"
+              : "Board active"}
+          </small>
+        </div>
+      </SteelCard>
 
       <section className="dashboard-stat-grid">
         <SteelStatCard
@@ -229,7 +270,7 @@ function HomeDashboard() {
               : weekGames.length
           }
           helper={`Week ${league.currentWeek} schedule`}
-          icon="📅"
+          icon="🗓️"
         />
 
         <SteelStatCard
@@ -372,7 +413,7 @@ function HomeDashboard() {
             as="div"
             className="dashboard-action-card"
           >
-            <a href="/games">
+            <Link to="/games">
               <span>🏈</span>
 
               <strong>
@@ -383,14 +424,14 @@ function HomeDashboard() {
                 Live games, scores, and
                 kickoff status
               </small>
-            </a>
+            </Link>
           </SteelCard>
 
           <SteelCard
             as="div"
             className="dashboard-action-card"
           >
-            <a href="/picks">
+            <Link to="/picks">
               <span>✅</span>
 
               <strong>
@@ -401,14 +442,14 @@ function HomeDashboard() {
                 Submit this week&apos;s
                 winning card
               </small>
-            </a>
+            </Link>
           </SteelCard>
 
           <SteelCard
             as="div"
             className="dashboard-action-card"
           >
-            <a href="/standings">
+            <Link to="/standings">
               <span>📊</span>
 
               <strong>
@@ -419,25 +460,27 @@ function HomeDashboard() {
                 Track the championship
                 race
               </small>
-            </a>
+            </Link>
           </SteelCard>
 
-          <SteelCard
-            as="div"
-            className="dashboard-action-card"
-          >
-            <a href="/commissioner">
-              <span>⚙️</span>
+          {access.canAccessCommissioner ? (
+            <SteelCard
+              as="div"
+              className="dashboard-action-card"
+            >
+              <Link to="/commissioner">
+                <span>⚙️</span>
 
-              <strong>
-                Commish HQ
-              </strong>
+                <strong>
+                  Commish HQ
+                </strong>
 
-              <small>
-                Manage league operations
-              </small>
-            </a>
-          </SteelCard>
+                <small>
+                  Manage league operations
+                </small>
+              </Link>
+            </SteelCard>
+          ) : null}
         </div>
       </section>
 
@@ -482,7 +525,9 @@ function HomeDashboard() {
             />
 
             <div>
-              <span>Pick Card</span>
+              <span>
+                Pick Card
+              </span>
 
               <strong>
                 {selectedPickCount}/
@@ -529,7 +574,9 @@ function HomeDashboard() {
             />
 
             <div>
-              <span>Record</span>
+              <span>
+                Record
+              </span>
 
               <strong>
                 {leader

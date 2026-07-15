@@ -1,12 +1,19 @@
 import {
+  useEffect,
+  useState,
+} from "react";
+import {
   BrowserRouter,
+  Navigate,
   Route,
   Routes,
 } from "react-router-dom";
-
+import StartupLoadingScreen from "./components/system/StartupLoadingScreen";
+import { useAuth } from "./context/AuthContext";
 import { NFLProvider } from "./context/NFLContext";
 import { ObscureStatProvider } from "./context/ObscureStatContext";
 import { SeasonAwardProvider } from "./context/SeasonAwardContext";
+import CloudPlayerPickIntentSync from "./features/auth/CloudPlayerPickIntentSync";
 import ObscureStatPayoutSync from "./features/payouts/ObscureStatPayoutSync";
 import PlayoffPayoutSync from "./features/payouts/PlayoffPayoutSync";
 import SeasonAwardPayoutSync from "./features/payouts/SeasonAwardPayoutSync";
@@ -38,12 +45,27 @@ function getRouterBaseName(): string {
 const ROUTER_BASE_NAME =
   getRouterBaseName();
 
-function App() {
+function CommissionerRoute() {
+  const { status, access } = useAuth();
+
+  if (status === "loading") {
+    return <StartupLoadingScreen />;
+  }
+
+  if (!access.canAccessCommissioner) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Commissioner />;
+}
+
+function AppRuntime() {
   return (
     <NFLProvider>
       <ObscureStatProvider>
         <SeasonAwardProvider>
           <PickerClickerSync />
+          <CloudPlayerPickIntentSync />
           <WeeklyScoringSync />
           <ObscureStatPayoutSync />
           <PlayoffPayoutSync />
@@ -84,7 +106,9 @@ function App() {
 
                 <Route
                   path="commissioner"
-                  element={<Commissioner />}
+                  element={
+                    <CommissionerRoute />
+                  }
                 />
 
                 <Route
@@ -98,6 +122,26 @@ function App() {
       </ObscureStatProvider>
     </NFLProvider>
   );
+}
+
+function App() {
+  const { status } = useAuth();
+  const [
+    startupResolved,
+    setStartupResolved,
+  ] = useState(status !== "loading");
+
+  useEffect(() => {
+    if (status !== "loading") {
+      setStartupResolved(true);
+    }
+  }, [status]);
+
+  if (!startupResolved) {
+    return <StartupLoadingScreen />;
+  }
+
+  return <AppRuntime />;
 }
 
 export default App;

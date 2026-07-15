@@ -556,3 +556,46 @@
     grid-column: auto;
   }
 }
+
+/*
+ * Commissioner HQ phone layout
+ * Scoped to the Commissioner HQ hero so other SteelHero instances
+ * retain their approved desktop and mobile presentation.
+ */
+@media (max-width: 540px) {
+  .commissioner-hq-v2 > .steel-ui-hero {
+    gap: 16px;
+    padding: 24px 18px 20px;
+    border-radius: 22px;
+  }
+
+  .commissioner-hq-v2 > .steel-ui-hero h1 {
+    font-size: clamp(2rem, 9.5vw, 2.65rem);
+    line-height: 1;
+    letter-spacing: -0.045em;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+  }
+
+  .commissioner-hq-v2
+    > .steel-ui-hero
+    .steel-ui-hero-subtitle {
+    margin-top: 8px;
+  }
+
+  .commissioner-hq-v2
+    > .steel-ui-hero
+    .steel-ui-hero-actions {
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .commissioner-hq-v2
+    > .steel-ui-hero
+    .commissioner-hero-panel {
+    width: 100%;
+    min-width: 0;
+    padding: 14px;
+  }
+}

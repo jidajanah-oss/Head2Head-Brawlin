@@ -1,0 +1,387 @@
+.my-franchise-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 20px;
+  color: #ffffff;
+}
+
+.my-franchise-profile__hero {
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 88% 18%,
+      rgba(245, 197, 66, 0.2),
+      transparent 32%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(29, 25, 12, 0.98),
+      rgba(15, 15, 15, 0.98) 48%,
+      rgba(7, 7, 7, 0.99)
+    );
+}
+
+.my-franchise-profile__hero-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  width: min(100%, 390px);
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(245, 197, 66, 0.32);
+  border-radius: 20px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(245, 197, 66, 0.11),
+      rgba(255, 255, 255, 0.025)
+    ),
+    rgba(0, 0, 0, 0.48);
+  box-shadow:
+    0 20px 44px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+}
+
+.my-franchise-profile__logo {
+  grid-row: 1 / span 2;
+  width: 112px;
+  height: 112px;
+  min-width: 112px;
+  min-height: 112px;
+  margin: 0;
+  border-color: rgba(245, 197, 66, 0.5);
+  border-radius: 20px;
+  background:
+    radial-gradient(
+      circle at top,
+      rgba(245, 197, 66, 0.2),
+      transparent 62%
+    ),
+    rgba(0, 0, 0, 0.52);
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.38),
+    inset 0 0 28px rgba(245, 197, 66, 0.09);
+}
+
+.my-franchise-profile__hero-team {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.my-franchise-profile__hero-team span,
+.my-franchise-profile__week-grid span,
+.my-franchise-profile__identity-line span {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.69rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.my-franchise-profile__hero-team strong {
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 1.15rem;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-franchise-profile__hero-team small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.my-franchise-profile__hero-card
+  > .steel-ui-badge {
+  grid-column: 2;
+  justify-self: start;
+}
+
+.my-franchise-profile__stats {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.my-franchise-profile__stats
+  .steel-ui-stat-card {
+  min-width: 0;
+}
+
+.my-franchise-profile__week-card {
+  padding: 20px;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(245, 197, 66, 0.13),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(22, 22, 22, 0.98),
+      rgba(7, 7, 7, 0.99)
+    );
+}
+
+.my-franchise-profile__week-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.my-franchise-profile__week-grid > div {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.055),
+      rgba(255, 255, 255, 0.018)
+    ),
+    rgba(0, 0, 0, 0.24);
+}
+
+.my-franchise-profile__week-grid strong {
+  overflow-wrap: anywhere;
+  color: #ffffff;
+  font-size: 1.05rem;
+  line-height: 1.22;
+}
+
+.my-franchise-profile__week-grid small {
+  color: rgba(255, 255, 255, 0.53);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.my-franchise-profile__week-pending {
+  display: grid;
+  gap: 7px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px dashed rgba(245, 197, 66, 0.32);
+  border-radius: 15px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(245, 197, 66, 0.095),
+      rgba(245, 197, 66, 0.018)
+    ),
+    rgba(0, 0, 0, 0.22);
+}
+
+.my-franchise-profile__week-pending strong {
+  color: #f5c542;
+  font-size: 1rem;
+}
+
+.my-franchise-profile__week-pending span {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.my-franchise-profile__identity-line {
+  display: grid;
+  grid-template-columns:
+    minmax(72px, auto)
+    minmax(90px, auto)
+    minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(245, 197, 66, 0.19);
+  border-radius: 13px;
+  background: rgba(245, 197, 66, 0.055);
+}
+
+.my-franchise-profile__identity-line span {
+  color: #f5c542;
+}
+
+.my-franchise-profile__identity-line strong {
+  color: #ffffff;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.my-franchise-profile__identity-line small {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.76rem;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-franchise-profile--missing {
+  margin-bottom: 18px;
+}
+
+@media (min-width: 680px) {
+  .my-franchise-profile__stats {
+    grid-template-columns: repeat(
+      2,
+      minmax(0, 1fr)
+    );
+  }
+
+  .my-franchise-profile__week-grid {
+    grid-template-columns: repeat(
+      2,
+      minmax(0, 1fr)
+    );
+  }
+}
+
+@media (min-width: 1040px) {
+  .my-franchise-profile__stats {
+    grid-template-columns: repeat(
+      4,
+      minmax(0, 1fr)
+    );
+  }
+
+  .my-franchise-profile__week-grid {
+    grid-template-columns: repeat(
+      4,
+      minmax(0, 1fr)
+    );
+  }
+}
+
+@media (max-width: 760px) {
+  .my-franchise-profile__hero-card {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .my-franchise-profile__hero-card {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .my-franchise-profile__logo {
+    grid-row: auto;
+    width: 132px;
+    height: 132px;
+    min-width: 132px;
+    min-height: 132px;
+  }
+
+  .my-franchise-profile__hero-team {
+    width: 100%;
+  }
+
+  .my-franchise-profile__hero-team strong {
+    white-space: normal;
+  }
+
+  .my-franchise-profile__hero-card
+    > .steel-ui-badge {
+    grid-column: auto;
+    justify-self: center;
+  }
+
+  .my-franchise-profile__identity-line {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .my-franchise-profile__identity-line small {
+    text-align: left;
+    white-space: normal;
+  }
+}
+/* Picker Clicker Results & Award Visibility v1 */
+
+.my-franchise-profile__pc-card {
+  padding: 20px;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(245, 197, 66, 0.16),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(24, 22, 14, 0.98),
+      rgba(7, 7, 7, 0.99)
+    );
+}
+
+.my-franchise-profile__pc-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.my-franchise-profile__pc-grid > div {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  padding: 15px;
+  border: 1px solid rgba(245, 197, 66, 0.2);
+  border-radius: 15px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(245, 197, 66, 0.08),
+      rgba(255, 255, 255, 0.018)
+    ),
+    rgba(0, 0, 0, 0.28);
+}
+
+.my-franchise-profile__pc-grid span {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.69rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.my-franchise-profile__pc-grid strong {
+  overflow-wrap: anywhere;
+  color: #f5c542;
+  font-size: 1.12rem;
+  line-height: 1.22;
+}
+
+.my-franchise-profile__pc-grid small {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.76rem;
+  line-height: 1.48;
+}
+
+@media (min-width: 680px) {
+  .my-franchise-profile__pc-grid {
+    grid-template-columns: repeat(
+      3,
+      minmax(0, 1fr)
+    );
+  }
+}
+
+@media (max-width: 520px) {
+  .my-franchise-profile__pc-card {
+    padding: 16px;
+  }
+}

@@ -1,11 +1,15 @@
 import {
+  useEffect,
+} from "react";
+import {
   NavLink,
   Outlet,
+  useLocation,
 } from "react-router-dom";
-
 import RuntimeStatusBanner from "../components/system/RuntimeStatusBanner";
+import { useAuth } from "../context/AuthContext";
 
-const navItems = [
+const standardNavItems = [
   { to: "/", label: "Home" },
   { to: "/games", label: "Games" },
   { to: "/picks", label: "Picks" },
@@ -14,15 +18,53 @@ const navItems = [
     label: "Standings",
   },
   { to: "/players", label: "Me" },
-  {
-    to: "/commissioner",
-    label: "Commish",
-  },
 ];
 
+const commissionerNavItem = {
+  to: "/commissioner",
+  label: "Commish",
+};
+
+function RouteScrollReset() {
+  const {
+    pathname,
+    search,
+  } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+
+    const scrollingElement =
+      document.scrollingElement;
+
+    if (scrollingElement) {
+      scrollingElement.scrollTop = 0;
+      scrollingElement.scrollLeft = 0;
+    }
+  }, [pathname, search]);
+
+  return null;
+}
+
 function AppLayout() {
+  const { access } = useAuth();
+
+  const navItems =
+    access.canAccessCommissioner
+      ? [
+          ...standardNavItems,
+          commissionerNavItem,
+        ]
+      : standardNavItems;
+
   return (
     <div className="app-shell">
+      <RouteScrollReset />
+
       <header className="app-header">
         <div className="brand-lockup">
           <div className="brand-mark">

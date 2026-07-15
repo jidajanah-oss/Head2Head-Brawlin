@@ -1,0 +1,203 @@
+.cloud-account-panel {
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid rgba(245, 190, 44, 0.42);
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(31, 41, 55, 0.97),
+      rgba(8, 12, 20, 0.98)
+    );
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  color: #f8fafc;
+}
+
+.cloud-account-panel__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.cloud-account-panel__heading h2 {
+  margin: 2px 0 0;
+  font-size: 1.4rem;
+}
+
+.cloud-account-panel__kicker {
+  margin: 0;
+  color: #f5be2c;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cloud-account-panel__status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.cloud-account-panel__status--connected {
+  background: rgba(34, 197, 94, 0.16);
+  color: #86efac;
+}
+
+.cloud-account-panel__status--checking {
+  background: rgba(59, 130, 246, 0.16);
+  color: #93c5fd;
+}
+
+.cloud-account-panel__status--error,
+.cloud-account-panel__status--disabled {
+  background: rgba(239, 68, 68, 0.14);
+  color: #fca5a5;
+}
+
+.cloud-account-panel__form {
+  display: grid;
+  gap: 10px;
+}
+
+.cloud-account-panel__form p,
+.cloud-account-panel__email,
+.cloud-account-panel__account p {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+.cloud-account-panel__form label {
+  color: #f8fafc;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.cloud-account-panel__form input {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.72);
+  color: #f8fafc;
+  font: inherit;
+}
+
+.cloud-account-panel button {
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 1px solid #f5be2c;
+  border-radius: 10px;
+  background: #f5be2c;
+  color: #111827;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.cloud-account-panel button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.cloud-account-panel__button--secondary {
+  border-color: rgba(148, 163, 184, 0.4) !important;
+  background: rgba(15, 23, 42, 0.82) !important;
+  color: #f8fafc !important;
+}
+
+.cloud-account-panel__message {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.76);
+  color: #cbd5e1;
+}
+
+.cloud-account-panel__message--success {
+  border-color: rgba(34, 197, 94, 0.42);
+  color: #bbf7d0;
+}
+
+.cloud-account-panel__message--warning {
+  border-color: rgba(245, 190, 44, 0.46);
+  color: #fde68a;
+}
+
+.cloud-account-panel__message--error {
+  border-color: rgba(239, 68, 68, 0.48);
+  color: #fecaca;
+}
+
+.cloud-account-panel__account {
+  display: grid;
+  gap: 14px;
+}
+
+.cloud-account-panel__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cloud-account-panel__details > div {
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.5);
+}
+
+.cloud-account-panel__details span {
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cloud-account-panel__details strong {
+  color: #f8fafc;
+}
+
+.cloud-account-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .cloud-account-panel__heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cloud-account-panel__status {
+    align-self: flex-start;
+  }
+
+  .cloud-account-panel__details {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud-account-panel__actions button {
+    flex: 1 1 150px;
+  }
+}

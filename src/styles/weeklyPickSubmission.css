@@ -1,0 +1,140 @@
+.weekly-pick-submission-shell {
+  display: grid;
+  margin-bottom: 18px;
+  color: #ffffff;
+}
+
+.weekly-pick-submission-card {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  overflow: hidden;
+  padding: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(245, 197, 66, 0.18), transparent 38%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025)),
+    #0d0d0d;
+  box-shadow:
+    inset 0 0 32px rgba(245, 197, 66, 0.05),
+    0 18px 44px rgba(0, 0, 0, 0.3);
+}
+
+.weekly-pick-submission-card::before {
+  position: absolute;
+  top: -20px;
+  right: 10px;
+  color: rgba(245, 197, 66, 0.05);
+  content: "SUBMIT";
+  font-size: clamp(3.6rem, 11vw, 7rem);
+  font-weight: 950;
+  letter-spacing: -0.08em;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.weekly-pick-submission-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.weekly-pick-submission-player {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid rgba(245, 197, 66, 0.28);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.weekly-pick-submission-player span,
+.weekly-pick-submission-stats span {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.weekly-pick-submission-player strong {
+  color: #f5c542;
+  font-size: 1.08rem;
+  font-weight: 950;
+}
+
+.weekly-pick-submission-player small {
+  color: rgba(255, 255, 255, 0.62);
+  font-weight: 750;
+}
+
+.weekly-pick-submission-stats {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.weekly-pick-submission-stats div {
+  display: grid;
+  gap: 5px;
+  padding: 13px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.weekly-pick-submission-stats strong {
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 950;
+}
+
+.weekly-pick-submission-timestamp,
+.weekly-pick-submission-note,
+.weekly-pick-submission-message {
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.weekly-pick-submission-timestamp {
+  border: 1px solid rgba(95, 214, 142, 0.3);
+  background: rgba(95, 214, 142, 0.09);
+  color: #c9f7da;
+}
+
+.weekly-pick-submission-note {
+  border: 1px solid rgba(245, 197, 66, 0.24);
+  background: rgba(245, 197, 66, 0.07);
+  color: #fff3ba;
+}
+
+.weekly-pick-submission-message {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.weekly-pick-submission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+@media (min-width: 700px) {
+  .weekly-pick-submission-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .weekly-pick-submission-card {
+    padding: 16px;
+  }
+
+  .weekly-pick-submission-actions > * {
+    width: 100%;
+  }
+}
