@@ -1,9 +1,14 @@
 import {
+  useEffect,
+  useState,
+} from "react";
+import {
   BrowserRouter,
   Navigate,
   Route,
   Routes,
 } from "react-router-dom";
+import StartupLoadingScreen from "./components/system/StartupLoadingScreen";
 import { useAuth } from "./context/AuthContext";
 import { NFLProvider } from "./context/NFLContext";
 import { ObscureStatProvider } from "./context/ObscureStatContext";
@@ -24,7 +29,8 @@ import Players from "./pages/Players";
 import Standings from "./pages/Standings";
 
 function getRouterBaseName(): string {
-  const baseUrl = import.meta.env.BASE_URL.trim();
+  const baseUrl =
+    import.meta.env.BASE_URL.trim();
 
   if (!baseUrl || baseUrl === "/") {
     return "/";
@@ -43,7 +49,7 @@ function CommissionerRoute() {
   const { status, access } = useAuth();
 
   if (status === "loading") {
-    return null;
+    return <StartupLoadingScreen />;
   }
 
   if (!access.canAccessCommissioner) {
@@ -53,7 +59,7 @@ function CommissionerRoute() {
   return <Commissioner />;
 }
 
-function App() {
+function AppRuntime() {
   return (
     <NFLProvider>
       <ObscureStatProvider>
@@ -64,6 +70,7 @@ function App() {
           <ObscureStatPayoutSync />
           <PlayoffPayoutSync />
           <SeasonAwardPayoutSync />
+
           <BrowserRouter
             basename={ROUTER_BASE_NAME}
           >
@@ -76,26 +83,34 @@ function App() {
                   index
                   element={<Dashboard />}
                 />
+
                 <Route
                   path="games"
                   element={<Games />}
                 />
+
                 <Route
                   path="picks"
                   element={<Picks />}
                 />
+
                 <Route
                   path="standings"
                   element={<Standings />}
                 />
+
                 <Route
                   path="players"
                   element={<Players />}
                 />
+
                 <Route
                   path="commissioner"
-                  element={<CommissionerRoute />}
+                  element={
+                    <CommissionerRoute />
+                  }
                 />
+
                 <Route
                   path="*"
                   element={<NotFound />}
@@ -107,6 +122,26 @@ function App() {
       </ObscureStatProvider>
     </NFLProvider>
   );
+}
+
+function App() {
+  const { status } = useAuth();
+  const [
+    startupResolved,
+    setStartupResolved,
+  ] = useState(status !== "loading");
+
+  useEffect(() => {
+    if (status !== "loading") {
+      setStartupResolved(true);
+    }
+  }, [status]);
+
+  if (!startupResolved) {
+    return <StartupLoadingScreen />;
+  }
+
+  return <AppRuntime />;
 }
 
 export default App;
