@@ -975,7 +975,17 @@ export default function FutureSeasonDraftPanel() {
     activePlan?.status === "activated";
 
   return (
-    <SteelCard
+    
+<details className="app-collapsible-panel" data-collapsible-panel>
+  <summary className="app-collapsible__summary">
+    <span className="app-collapsible__title">Prepare Next Season</span>
+    <span className="app-collapsible__state">
+      <span className="app-collapsible__open">Open</span>
+      <span className="app-collapsible__close">Close</span>
+    </span>
+  </summary>
+  <div className="app-collapsible__content">
+<SteelCard
       as="section"
       className="future-season-draft"
       variant="gold"
@@ -1916,7 +1926,17 @@ export default function FutureSeasonDraftPanel() {
               </div>
 
               <section className="future-season-draft__roster">
-                <div className="future-season-draft__roster-heading">
+                
+<details className="app-collapsible-panel" data-collapsible-panel>
+  <summary className="app-collapsible__summary">
+    <span className="app-collapsible__title">Franchise Owners</span>
+    <span className="app-collapsible__state">
+      <span className="app-collapsible__open">Open</span>
+      <span className="app-collapsible__close">Close</span>
+    </span>
+  </summary>
+  <div className="app-collapsible__content">
+<div className="future-season-draft__roster-heading">
                   <div>
                     <span>Future Roster Editor</span>
                     <h3>Franchise Owners</h3>
@@ -1925,6 +1945,8 @@ export default function FutureSeasonDraftPanel() {
                     {filteredPlayers.length} shown
                   </SteelBadge>
                 </div>
+  </div>
+</details>
 
                 <div className="future-season-draft__roster-toolbar">
                   <label>
@@ -2246,5 +2268,7 @@ export default function FutureSeasonDraftPanel() {
         </>
       )}
     </SteelCard>
+  </div>
+</details>
   );
 }

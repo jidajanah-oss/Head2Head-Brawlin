@@ -187,3 +187,157 @@
     font-size: 0.72rem;
   }
 }
+
+/* H2H-COLLAPSIBLE-SECTIONS-V2 */
+.app-collapsible-panel {
+  display: block;
+  margin: 0;
+  min-width: 0;
+}
+
+.app-collapsible__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 72px;
+  padding: 18px 20px;
+  border: 1px solid rgba(245, 197, 66, 0.34);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(245, 197, 66, 0.1), transparent 38%),
+    rgba(18, 18, 18, 0.94);
+  color: #fff;
+  cursor: pointer;
+  list-style: none;
+}
+
+.app-collapsible__summary::-webkit-details-marker {
+  display: none;
+}
+
+.app-collapsible__summary:hover {
+  border-color: rgba(245, 197, 66, 0.62);
+}
+
+.app-collapsible__title {
+  min-width: 0;
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  font-weight: 950;
+  line-height: 1.15;
+}
+
+.app-collapsible__state {
+  flex: 0 0 auto;
+  min-width: 78px;
+  padding: 8px 11px;
+  border: 1px solid rgba(245, 197, 66, 0.52);
+  border-radius: 999px;
+  color: #f5c542;
+  background: rgba(245, 197, 66, 0.08);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.app-collapsible__close {
+  display: none;
+}
+
+.app-collapsible-panel[open] > .app-collapsible__summary {
+  margin-bottom: 16px;
+}
+
+.app-collapsible-panel[open]
+  > .app-collapsible__summary
+  .app-collapsible__open {
+  display: none;
+}
+
+.app-collapsible-panel[open]
+  > .app-collapsible__summary
+  .app-collapsible__close {
+  display: inline;
+}
+
+.app-collapsible__content {
+  min-width: 0;
+}
+
+@media (max-width: 620px) {
+  .app-collapsible__summary {
+    min-height: 60px;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .app-collapsible__title {
+    font-size: 1rem;
+  }
+
+  .app-collapsible__state {
+    min-width: 64px;
+    padding: 7px 8px;
+    font-size: 0.58rem;
+  }
+}
+
+/* H2H-COLLAPSIBLE-DUPLICATE-TITLE-FIX-V1
+   Keep the collapsible summary title and hide only the duplicate title
+   rendered by the original section header when the panel is expanded.
+*/
+
+.app-collapsible-panel[open]
+  > .app-collapsible__content
+  > *
+  > h1:first-child,
+.app-collapsible-panel[open]
+  > .app-collapsible__content
+  > *
+  > h2:first-child,
+.app-collapsible-panel[open]
+  > .app-collapsible__content
+  > *
+  > h3:first-child,
+.app-collapsible-panel[open]
+  > .app-collapsible__content
+  > *
+  > :first-child
+  > h1:first-of-type,
+.app-collapsible-panel[open]
+  > .app-collapsible__content
+  > *
+  > :first-child
+  > h2:first-of-type,
+.app-collapsible-panel[open]
+  > .app-collapsible__content
+  > *
+  > :first-child
+  > h3:first-of-type {
+  display: none;
+}
+
+/* H2H-COLLAPSIBLE-STEEL-HEADER-TITLE-FIX-V1
+   Hide only the original SteelSectionHeader title inside an expanded
+   collapsible panel. Eyebrow, subtitle, action badge, and content remain.
+*/
+.app-collapsible-panel[open]
+  > .app-collapsible__content
+  .steel-ui-section-header
+  h2 {
+  display: none;
+}
+
+/* H2H-NESTED-FRANCHISE-COLLAPSE-FIX-V1
+   The future Franchise Owners section is nested inside Prepare Next Season.
+   Its original content follows the nested details element as sibling nodes.
+   Hide those following siblings whenever the nested panel is closed.
+*/
+.app-collapsible-panel
+  .app-collapsible-panel:not([open])
+  ~ * {
+  display: none !important;
+}

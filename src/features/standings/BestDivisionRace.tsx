@@ -235,7 +235,17 @@ function BestDivisionRace() {
       : "Tied Lead";
 
   return (
-    <SteelCard className="best-division-race">
+    
+<details className="app-collapsible-panel" data-collapsible-panel>
+  <summary className="app-collapsible__summary">
+    <span className="app-collapsible__title">Best Division Race</span>
+    <span className="app-collapsible__state">
+      <span className="app-collapsible__open">Open</span>
+      <span className="app-collapsible__close">Close</span>
+    </span>
+  </summary>
+  <div className="app-collapsible__content">
+<SteelCard className="best-division-race">
       <SteelSectionHeader
         eyebrow={`2026 Best Division • Week ${league.currentWeek}`}
         title="Best Division Race"
@@ -368,6 +378,8 @@ function BestDivisionRace() {
         )}
       </div>
     </SteelCard>
+  </div>
+</details>
   );
 }
 

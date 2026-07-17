@@ -690,7 +690,17 @@ export default function PlayerAccountReadinessPanel() {
   };
 
   return (
-    <SteelCard
+    
+<details className="app-collapsible-panel" data-collapsible-panel>
+  <summary className="app-collapsible__summary">
+    <span className="app-collapsible__title">Player Account Readiness</span>
+    <span className="app-collapsible__state">
+      <span className="app-collapsible__open">Open</span>
+      <span className="app-collapsible__close">Close</span>
+    </span>
+  </summary>
+  <div className="app-collapsible__content">
+<SteelCard
       as="section"
       className="cloud-roster-panel"
     >
@@ -888,5 +898,7 @@ export default function PlayerAccountReadinessPanel() {
         </p>
       ) : null}
     </SteelCard>
+  </div>
+</details>
   );
 }

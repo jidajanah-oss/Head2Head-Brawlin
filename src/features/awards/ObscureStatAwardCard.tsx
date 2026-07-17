@@ -450,7 +450,17 @@ function ObscureStatAwardCard({
   };
 
   return (
-    <SteelCard
+    
+<details className="app-collapsible-panel" data-collapsible-panel>
+  <summary className="app-collapsible__summary">
+    <span className="app-collapsible__title">Weekly Obscure Stat</span>
+    <span className="app-collapsible__state">
+      <span className="app-collapsible__open">Open</span>
+      <span className="app-collapsible__close">Close</span>
+    </span>
+  </summary>
+  <div className="app-collapsible__content">
+<SteelCard
       className={classes}
       as="section"
       variant={
@@ -875,6 +885,8 @@ function ObscureStatAwardCard({
         </div>
       </div>
     </SteelCard>
+  </div>
+</details>
   );
 }
 

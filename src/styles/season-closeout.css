@@ -603,3 +603,25 @@
     display: grid;
   }
 }
+
+/* H2H-SEASON-CLOSEOUT-FULL-COLLAPSE-FIX-V1
+   The generated Close and Archive Season details bar is the first direct
+   child of the original season-closeout section. The remaining closeout
+   interface is rendered as following siblings. Hide every following sibling
+   while the details control is closed, and restore them automatically when
+   the details control is opened.
+*/
+.season-closeout
+  > .app-collapsible-panel:not([open])
+  ~ * {
+  display: none !important;
+}
+
+/* H2H-SEASON-CLOSEOUT-FULL-COLLAPSE-FIX-V2
+   Hide the complete closeout body while its title control is closed.
+*/
+.season-closeout-panel
+  > .app-collapsible-panel:not([open])
+  ~ * {
+  display: none !important;
+}

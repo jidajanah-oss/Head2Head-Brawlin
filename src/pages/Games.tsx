@@ -1,3 +1,4 @@
+import "../features/games/gameWeatherEnhancer";
 import GameCenter from "../features/games/GameCenter";
 
 export default function Games() {
