@@ -941,6 +941,123 @@ function StandingsBoard() {
         }
       />
 
+<details className="app-collapsible-panel standings-head-to-head-collapsible" data-collapsible-panel>
+  <summary className="app-collapsible__summary">
+    <span className="app-collapsible__title">Head-to-Head Matchups</span>
+    <span className="app-collapsible__state">
+      <span className="app-collapsible__open">Open</span>
+      <span className="app-collapsible__close">Close</span>
+    </span>
+  </summary>
+  <div className="app-collapsible__content">
+<SteelCard className="standings-matchups-card">
+        <SteelSectionHeader
+          eyebrow={`Week ${league.currentWeek}`}
+          title="Head-to-Head Matchups"
+          description={`${scheduleHelper}. Scores include frozen Picker Clicker fallbacks and remain provisional until the entire NFL week is complete.`}
+          action={
+            <SteelBadge
+              variant={
+                weekCompletion.isComplete
+                  ? "success"
+                  : "gold"
+              }
+            >
+              {weeklyBoardStatus}
+            </SteelBadge>
+          }
+        />
+
+        <div className="standings-matchups-grid">
+          {weeklyMatchups.map(
+            (matchup) => (
+              <article
+                className="standings-matchup-item"
+                key={matchup.id}
+              >
+                <div className="standings-matchup-player">
+                  <div>
+                    <small>
+                      {getMatchupPlayerATeam(
+                        matchup
+                      )}{" "}
+                      •{" "}
+                      {getMatchupPlayerADisplayName(
+                        matchup
+                      )}
+                    </small>
+
+                    <strong>
+                      {matchup.playerA.name}
+                    </strong>
+                  </div>
+
+                  <span>
+                    {matchup.playerAScore}
+                  </span>
+                </div>
+
+                <div className="standings-matchup-center">
+                  <small>
+                    {getMatchupSourceLabel(
+                      matchup
+                    )}
+                  </small>
+
+                  <SteelBadge
+                    variant={
+                      weekCompletion.isComplete
+                        ? "success"
+                        : "neutral"
+                    }
+                  >
+                    {getDisplayedMatchupResult(
+                      matchup,
+                      weekCompletion.isComplete
+                    )}
+                  </SteelBadge>
+                </div>
+
+                <div className="standings-matchup-player is-right">
+                  <div>
+                    <small>
+                      {getMatchupPlayerBTeam(
+                        matchup
+                      )}{" "}
+                      •{" "}
+                      {getMatchupPlayerBDisplayName(
+                        matchup
+                      )}
+                    </small>
+
+                    <strong>
+                      {getMatchupOpponentName(
+                        matchup
+                      )}
+                    </strong>
+                  </div>
+
+                  <span>
+                    {matchup.playerB
+                      ? matchup.playerBScore
+                      : "—"}
+                  </span>
+                </div>
+              </article>
+            )
+          )}
+
+          {weeklyMatchups.length === 0 ? (
+            <SteelCard className="standings-empty-card">
+              No weekly matchups available yet.
+            </SteelCard>
+          ) : null}
+        </div>
+      </SteelCard>
+  </div>
+</details>
+
+
       <section className="standings-stat-grid">
         <SteelStatCard
           label="Franchises"
@@ -1087,111 +1204,7 @@ function StandingsBoard() {
         </div>
       </section>
 
-      <SteelCard className="standings-matchups-card">
-        <SteelSectionHeader
-          eyebrow={`Week ${league.currentWeek}`}
-          title="Head-to-Head Matchups"
-          description={`${scheduleHelper}. Scores include frozen Picker Clicker fallbacks and remain provisional until the entire NFL week is complete.`}
-          action={
-            <SteelBadge
-              variant={
-                weekCompletion.isComplete
-                  ? "success"
-                  : "gold"
-              }
-            >
-              {weeklyBoardStatus}
-            </SteelBadge>
-          }
-        />
-
-        <div className="standings-matchups-grid">
-          {weeklyMatchups.map(
-            (matchup) => (
-              <article
-                className="standings-matchup-item"
-                key={matchup.id}
-              >
-                <div className="standings-matchup-player">
-                  <div>
-                    <small>
-                      {getMatchupPlayerATeam(
-                        matchup
-                      )}{" "}
-                      •{" "}
-                      {getMatchupPlayerADisplayName(
-                        matchup
-                      )}
-                    </small>
-
-                    <strong>
-                      {matchup.playerA.name}
-                    </strong>
-                  </div>
-
-                  <span>
-                    {matchup.playerAScore}
-                  </span>
-                </div>
-
-                <div className="standings-matchup-center">
-                  <small>
-                    {getMatchupSourceLabel(
-                      matchup
-                    )}
-                  </small>
-
-                  <SteelBadge
-                    variant={
-                      weekCompletion.isComplete
-                        ? "success"
-                        : "neutral"
-                    }
-                  >
-                    {getDisplayedMatchupResult(
-                      matchup,
-                      weekCompletion.isComplete
-                    )}
-                  </SteelBadge>
-                </div>
-
-                <div className="standings-matchup-player is-right">
-                  <div>
-                    <small>
-                      {getMatchupPlayerBTeam(
-                        matchup
-                      )}{" "}
-                      •{" "}
-                      {getMatchupPlayerBDisplayName(
-                        matchup
-                      )}
-                    </small>
-
-                    <strong>
-                      {getMatchupOpponentName(
-                        matchup
-                      )}
-                    </strong>
-                  </div>
-
-                  <span>
-                    {matchup.playerB
-                      ? matchup.playerBScore
-                      : "—"}
-                  </span>
-                </div>
-              </article>
-            )
-          )}
-
-          {weeklyMatchups.length === 0 ? (
-            <SteelCard className="standings-empty-card">
-              No weekly matchups available yet.
-            </SteelCard>
-          ) : null}
-        </div>
-      </SteelCard>
-
+      
       <section className="standings-conference-stack">
         {divisionStandings.conferences.map(
           (conference) => (

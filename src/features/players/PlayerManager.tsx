@@ -418,7 +418,17 @@ function PlayerManager() {
       </div>
 
       {canManagePlayers ? (
-        <SteelCard className="player-manager-add-card">
+        
+<details className="app-collapsible-panel" data-collapsible-panel>
+  <summary className="app-collapsible__summary">
+    <span className="app-collapsible__title">Assign NFL Team</span>
+    <span className="app-collapsible__state">
+      <span className="app-collapsible__open">Open</span>
+      <span className="app-collapsible__close">Close</span>
+    </span>
+  </summary>
+  <div className="app-collapsible__content">
+<SteelCard className="player-manager-add-card">
           <SteelSectionHeader
             eyebrow="Add Franchise Owner"
             title="Assign NFL Team"
@@ -563,6 +573,8 @@ function PlayerManager() {
             )}
           </div>
         </SteelCard>
+  </div>
+</details>
       ) : null}
 
       <SteelCard className="player-manager-division-card">
@@ -696,7 +708,17 @@ function PlayerManager() {
         </div>
       </SteelCard>
 
-      <SteelCard className="player-manager-list-card">
+      
+<details className="app-collapsible-panel" data-collapsible-panel>
+  <summary className="app-collapsible__summary">
+    <span className="app-collapsible__title">Franchise Owners</span>
+    <span className="app-collapsible__state">
+      <span className="app-collapsible__open">Open</span>
+      <span className="app-collapsible__close">Close</span>
+    </span>
+  </summary>
+  <div className="app-collapsible__content">
+<SteelCard className="player-manager-list-card">
         <SteelSectionHeader
           eyebrow="Roster"
           title="Franchise Owners"
@@ -890,6 +912,8 @@ function PlayerManager() {
           ) : null}
         </div>
       </SteelCard>
+  </div>
+</details>
     </div>
   );
 }

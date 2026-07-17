@@ -484,7 +484,17 @@ function CommissionerSeasonCloseout() {
 
   return (
     <section className="season-closeout-panel">
-      <header className="season-closeout-panel-header">
+      
+<details className="app-collapsible-panel" data-collapsible-panel>
+  <summary className="app-collapsible__summary">
+    <span className="app-collapsible__title">Close and Archive Season</span>
+    <span className="app-collapsible__state">
+      <span className="app-collapsible__open">Open</span>
+      <span className="app-collapsible__close">Close</span>
+    </span>
+  </summary>
+  <div className="app-collapsible__content">
+<header className="season-closeout-panel-header">
         <div>
           <span className="season-closeout-kicker">
             Season Closeout
@@ -508,6 +518,8 @@ function CommissionerSeasonCloseout() {
           </span>
         </div>
       </header>
+  </div>
+</details>
 
       {!payoutLedger || !evaluation ? (
         <div className="season-closeout-unavailable">

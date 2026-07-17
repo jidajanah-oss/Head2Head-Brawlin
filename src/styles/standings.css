@@ -1172,3 +1172,20 @@
 
 /* Head-to-Head Player Names Only v1
    NFL team labels are hidden only inside weekly matchup cards. */
+
+
+/* H2H-HEAD-TO-HEAD-TOP-REPAIR-V4
+   The Head-to-Head details block is now a direct .standings-v2 child
+   immediately after the page hero.
+*/
+.standings-page-layout
+  > .standings-v2
+  > .standings-head-to-head-collapsible {
+  order: 2 !important;
+}
+
+.standings-page-layout
+  > .standings-v2
+  > .standings-conference-stack {
+  order: 3 !important;
+}
