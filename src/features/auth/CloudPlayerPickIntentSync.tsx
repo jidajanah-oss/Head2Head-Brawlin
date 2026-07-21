@@ -29,6 +29,10 @@ import {
   saveCloudPickerClickerIntent,
 } from "../../services/cloudPlayerPickService";
 import type { CloudPlayerPickIntent } from "../../services/cloudPlayerPickService";
+import {
+  applyLocalSeasonResetIfNeeded,
+  loadLatestCloudSeasonReset,
+} from "../../services/cloudSeasonResetService";
 import { supabaseClient } from "../../services/supabaseClient";
 
 const CLOUD_SYNC_INTERVAL_MS = 15_000;
@@ -544,6 +548,65 @@ export default function CloudPlayerPickIntentSync() {
 
     if (
       !client ||
+      status !== "signed-in-linked" ||
+      !accountLink ||
+      !access.isLinked
+    ) {
+      return;
+    }
+
+    let canceled = false;
+
+    const checkForSeasonReset = async () => {
+      try {
+        const reset =
+          await loadLatestCloudSeasonReset(
+            client,
+            accountLink.leagueId,
+            season,
+          );
+
+        if (
+          canceled ||
+          !reset ||
+          !applyLocalSeasonResetIfNeeded(
+            reset,
+          )
+        ) {
+          return;
+        }
+
+        window.location.reload();
+      } catch {
+        // Reset polling remains silent until the
+        // migration is deployed or connectivity returns.
+      }
+    };
+
+    void checkForSeasonReset();
+
+    const intervalId = window.setInterval(
+      () => {
+        void checkForSeasonReset();
+      },
+      CLOUD_SYNC_INTERVAL_MS,
+    );
+
+    return () => {
+      canceled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [
+    access.isLinked,
+    accountLink,
+    status,
+  ]);
+
+  useEffect(() => {
+    const client = supabaseClient;
+
+    if (
+      !client ||
       !syncKey ||
       status !== "signed-in-linked" ||
       !accountLink ||
@@ -716,7 +779,7 @@ export default function CloudPlayerPickIntentSync() {
             desiredIntents[game.id] =
               changedDuringLoad
                 ? latestIntent
-                : mappedCloudIntent ?? latestIntent;
+                : mappedCloudIntent;
             nextBaseline[game.id] =
               remoteSignature;
           } else if (

@@ -16,6 +16,7 @@ import {
   LAST_REGULAR_SEASON_WEEK,
 } from "../../engine";
 import ObscureStatAwardCard from "../awards/ObscureStatAwardCard";
+import ProtectedSeasonResetCard from "./ProtectedSeasonResetCard";
 
 import "../../styles/setup.css";
 import "../../styles/franchise.css";
@@ -325,6 +326,8 @@ function CommissionerSeasonOperations() {
           NFL game is scored incorrect.
         </p>
       </SteelCard>
+
+      <ProtectedSeasonResetCard />
     </main>
   );
 }
