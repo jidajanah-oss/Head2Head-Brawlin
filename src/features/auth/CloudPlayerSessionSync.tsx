@@ -3,7 +3,6 @@ import {
   useMemo,
   useRef,
 } from "react";
-
 import { useAuth } from "../../context/AuthContext";
 import { useLeague } from "../../context/LeagueContext";
 import { loadCloudLeagueRoster } from "../../services/cloudLeagueRosterService";
@@ -28,6 +27,140 @@ function getRosterSignature(
           player.customLogo ?? null,
       })),
   );
+}
+
+function buildLinkedPlayerFallback(
+  accountLink: {
+    playerId: string;
+    playerName?: string;
+    nflTeam?: string;
+    role: Player["role"];
+  },
+): Player | null {
+  const playerId =
+    accountLink.playerId.trim();
+  const playerName =
+    accountLink.playerName?.trim() ??
+    "";
+  const nflTeam =
+    accountLink.nflTeam
+      ?.trim()
+      .toUpperCase() ?? "";
+
+  if (
+    !playerId ||
+    !playerName ||
+    !/^[A-Z]{2,3}$/.test(nflTeam)
+  ) {
+    return null;
+  }
+
+  return {
+    id: playerId,
+    name: playerName,
+    nflTeam,
+    role: accountLink.role,
+    status: "active",
+  };
+}
+
+function reconcileLinkedPlayer(
+  players: Player[],
+  linkedPlayer: Player,
+): Player[] {
+  const exactMatchIndex =
+    players.findIndex(
+      (player) =>
+        player.id === linkedPlayer.id,
+    );
+
+  if (exactMatchIndex >= 0) {
+    const currentPlayer =
+      players[exactMatchIndex];
+
+    if (
+      currentPlayer.name ===
+        linkedPlayer.name &&
+      currentPlayer.nflTeam ===
+        linkedPlayer.nflTeam &&
+      currentPlayer.role ===
+        linkedPlayer.role &&
+      currentPlayer.status === "active"
+    ) {
+      return players;
+    }
+
+    return players.map(
+      (player, index) =>
+        index === exactMatchIndex
+          ? {
+              ...player,
+              ...linkedPlayer,
+              customLogo:
+                player.customLogo,
+            }
+          : player,
+    );
+  }
+
+  const franchiseMatchIndex =
+    players.findIndex(
+      (player) =>
+        player.nflTeam ===
+        linkedPlayer.nflTeam,
+    );
+
+  if (franchiseMatchIndex >= 0) {
+    const franchisePlayer =
+      players[franchiseMatchIndex];
+
+    return players.map(
+      (player, index) =>
+        index === franchiseMatchIndex
+          ? {
+              ...linkedPlayer,
+              customLogo:
+                franchisePlayer.customLogo,
+            }
+          : player,
+    );
+  }
+
+  const nameMatchIndex =
+    players.findIndex(
+      (player) =>
+        player.name
+          .trim()
+          .toLowerCase() ===
+        linkedPlayer.name
+          .trim()
+          .toLowerCase(),
+    );
+
+  if (nameMatchIndex >= 0) {
+    const namedPlayer =
+      players[nameMatchIndex];
+
+    return players.map(
+      (player, index) =>
+        index === nameMatchIndex
+          ? {
+              ...linkedPlayer,
+              customLogo:
+                namedPlayer.customLogo,
+            }
+          : player,
+    );
+  }
+
+  if (players.length < 32) {
+    return [
+      ...players,
+      linkedPlayer,
+    ];
+  }
+
+  return players;
 }
 
 export default function CloudPlayerSessionSync() {
@@ -63,6 +196,16 @@ export default function CloudPlayerSessionSync() {
     ].join(":");
   }, [accountLink]);
 
+  const linkedPlayerExistsLocally =
+    Boolean(
+      accountLink &&
+        league.players.some(
+          (player) =>
+            player.id ===
+            accountLink.playerId,
+        ),
+    );
+
   useEffect(() => {
     const client = supabaseClient;
 
@@ -75,16 +218,15 @@ export default function CloudPlayerSessionSync() {
     ) {
       lastLoadedSessionKey.current =
         null;
-
       lastInitialPlayerSyncKey.current =
         null;
-
       return;
     }
 
     if (
       lastLoadedSessionKey.current ===
-      sessionKey
+        sessionKey &&
+      linkedPlayerExistsLocally
     ) {
       return;
     }
@@ -93,6 +235,11 @@ export default function CloudPlayerSessionSync() {
 
     const synchronizeSessionRoster =
       async () => {
+        const fallbackPlayer =
+          buildLinkedPlayerFallback(
+            accountLink,
+          );
+
         try {
           const cloudPlayers =
             await loadCloudLeagueRoster(
@@ -104,8 +251,16 @@ export default function CloudPlayerSessionSync() {
             return;
           }
 
+          const reconciledPlayers =
+            fallbackPlayer
+              ? reconcileLinkedPlayer(
+                  cloudPlayers,
+                  fallbackPlayer,
+                )
+              : cloudPlayers;
+
           const linkedPlayerExists =
-            cloudPlayers.some(
+            reconciledPlayers.some(
               (player) =>
                 player.id ===
                 accountLink.playerId,
@@ -113,7 +268,7 @@ export default function CloudPlayerSessionSync() {
 
           if (!linkedPlayerExists) {
             throw new Error(
-              "The linked player is missing from the cloud roster.",
+              "The linked player is missing from both the cloud roster and the trusted account-link profile.",
             );
           }
 
@@ -124,7 +279,7 @@ export default function CloudPlayerSessionSync() {
 
           const cloudRosterSignature =
             getRosterSignature(
-              cloudPlayers,
+              reconciledPlayers,
             );
 
           const needsInitialPlayerSync =
@@ -132,8 +287,7 @@ export default function CloudPlayerSessionSync() {
             sessionKey;
 
           const regularPlayerMustStayLocked =
-            accountLink.role ===
-              "player" &&
+            accountLink.role === "player" &&
             activePlayerId !==
               accountLink.playerId;
 
@@ -147,7 +301,9 @@ export default function CloudPlayerSessionSync() {
             localRosterSignature !==
             cloudRosterSignature
           ) {
-            setPlayers(cloudPlayers);
+            setPlayers(
+              reconciledPlayers,
+            );
           }
 
           if (
@@ -163,12 +319,66 @@ export default function CloudPlayerSessionSync() {
             );
           }
         } catch (error) {
-          if (!canceled) {
-            console.error(
-              "Cloud league roster loading failed.",
-              error,
-            );
+          if (canceled) {
+            return;
           }
+
+          if (fallbackPlayer) {
+            const recoveredPlayers =
+              reconcileLinkedPlayer(
+                league.players,
+                fallbackPlayer,
+              );
+
+            const recovered =
+              recoveredPlayers.some(
+                (player) =>
+                  player.id ===
+                  accountLink.playerId,
+              );
+
+            if (recovered) {
+              lastLoadedSessionKey.current =
+                sessionKey;
+
+              lastInitialPlayerSyncKey.current =
+                sessionKey;
+
+              if (
+                getRosterSignature(
+                  recoveredPlayers,
+                ) !==
+                getRosterSignature(
+                  league.players,
+                )
+              ) {
+                setPlayers(
+                  recoveredPlayers,
+                );
+              }
+
+              if (
+                activePlayerId !==
+                accountLink.playerId
+              ) {
+                setActivePlayerId(
+                  accountLink.playerId,
+                );
+              }
+
+              console.warn(
+                "Cloud roster loading failed, so the linked player profile was recovered from the trusted account link.",
+                error,
+              );
+
+              return;
+            }
+          }
+
+          console.error(
+            "Cloud league roster loading failed.",
+            error,
+          );
         }
       };
 
@@ -182,6 +392,7 @@ export default function CloudPlayerSessionSync() {
     accountLink,
     activePlayerId,
     league.players,
+    linkedPlayerExistsLocally,
     sessionKey,
     setActivePlayerId,
     setPlayers,
