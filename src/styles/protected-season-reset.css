@@ -1,0 +1,136 @@
+.protected-season-reset-card {
+  grid-column: 1 / -1;
+  border-color:
+    rgba(255, 92, 92, 0.4);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(93, 22, 22, 0.18),
+      rgba(9, 9, 9, 0.98)
+    );
+}
+
+.protected-season-reset-card__preserved,
+.protected-season-reset-card__cleared {
+  display: grid;
+  gap: 5px;
+  margin-top: 13px;
+  padding: 14px;
+  border-radius: 13px;
+}
+
+.protected-season-reset-card__preserved {
+  border: 1px solid
+    rgba(68, 214, 139, 0.26);
+  background:
+    rgba(68, 214, 139, 0.07);
+}
+
+.protected-season-reset-card__cleared {
+  border: 1px solid
+    rgba(255, 92, 92, 0.28);
+  background:
+    rgba(255, 92, 92, 0.07);
+}
+
+.protected-season-reset-card__preserved strong {
+  color: #83efb8;
+}
+
+.protected-season-reset-card__cleared strong {
+  color: #ffaaaa;
+}
+
+.protected-season-reset-card__preserved p,
+.protected-season-reset-card__cleared p,
+.protected-season-reset-card__note,
+.protected-season-reset-card__locked,
+.protected-season-reset-card__error {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.protected-season-reset-card__preserved p,
+.protected-season-reset-card__cleared p,
+.protected-season-reset-card__note,
+.protected-season-reset-card__locked {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.protected-season-reset-card__controls {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.protected-season-reset-card__controls label {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.protected-season-reset-card__controls code {
+  color: #ffffff;
+  font-family: inherit;
+  font-weight: 950;
+}
+
+.protected-season-reset-card__controls input {
+  min-height: 48px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 13px;
+  border: 1px solid
+    rgba(255, 92, 92, 0.42);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.34);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 850;
+  outline: none;
+}
+
+.protected-season-reset-card__controls input:focus {
+  border-color: #ff7373;
+  box-shadow:
+    0 0 0 3px
+    rgba(255, 92, 92, 0.14);
+}
+
+.protected-season-reset-card__button {
+  width: 100%;
+}
+
+.protected-season-reset-card__locked {
+  margin-top: 15px;
+  padding: 13px;
+  border: 1px solid
+    rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background:
+    rgba(255, 255, 255, 0.04);
+}
+
+.protected-season-reset-card__error {
+  margin-top: 13px;
+  padding: 12px;
+  border: 1px solid
+    rgba(255, 92, 92, 0.45);
+  border-radius: 11px;
+  background:
+    rgba(255, 92, 92, 0.12);
+  color: #ffb5b5;
+  font-weight: 800;
+}
+
+.protected-season-reset-card__note {
+  margin-top: 14px;
+}
+
+@media (max-width: 600px) {
+  .protected-season-reset-card__preserved,
+  .protected-season-reset-card__cleared {
+    padding: 12px;
+  }
+}
