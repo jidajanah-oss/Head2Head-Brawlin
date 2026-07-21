@@ -1,7 +1,6 @@
 import type {
   SupabaseClient,
 } from "@supabase/supabase-js";
-
 import type {
   Player,
   PlayerRole,
@@ -79,10 +78,8 @@ function mapCloudLeaguePlayer(
 ): Player {
   const playerId =
     row.player_id.trim();
-
   const playerName =
     row.display_name.trim();
-
   const nflTeam =
     row.nfl_team.trim().toUpperCase();
 
@@ -138,23 +135,25 @@ function validateCloudRoster(
     players.length > 32
   ) {
     throw new Error(
-      "The cloud roster must contain between 1 and 32 players.",
+      "The active cloud roster must contain between 1 and 32 players.",
     );
   }
 
-  const playerIds = new Set<string>();
-  const nflTeams = new Set<string>();
+  const playerIds =
+    new Set<string>();
+  const nflTeams =
+    new Set<string>();
 
   for (const player of players) {
     if (playerIds.has(player.id)) {
       throw new Error(
-        `The cloud roster contains duplicate player ID ${player.id}.`,
+        `The active cloud roster contains duplicate player ID ${player.id}.`,
       );
     }
 
     if (nflTeams.has(player.nflTeam)) {
       throw new Error(
-        `The cloud roster contains duplicate NFL team ${player.nflTeam}.`,
+        `The active cloud roster contains duplicate NFL team ${player.nflTeam}.`,
       );
     }
 
@@ -192,6 +191,7 @@ export async function loadCloudLeagueRoster(
       "league_id",
       normalizedLeagueId,
     )
+    .eq("status", "active")
     .order("role", {
       ascending: true,
     })
@@ -201,13 +201,13 @@ export async function loadCloudLeagueRoster(
 
   if (error) {
     throw new Error(
-      `Unable to load the cloud roster: ${error.message}`,
+      `Unable to load the active cloud roster: ${error.message}`,
     );
   }
 
   if (!Array.isArray(data)) {
     throw new Error(
-      "The cloud roster returned an invalid response.",
+      "The active cloud roster returned an invalid response.",
     );
   }
 
@@ -218,7 +218,7 @@ export async function loadCloudLeagueRoster(
 
       if (!row) {
         throw new Error(
-          "The cloud roster returned an invalid player row.",
+          "The active cloud roster returned an invalid player row.",
         );
       }
 
