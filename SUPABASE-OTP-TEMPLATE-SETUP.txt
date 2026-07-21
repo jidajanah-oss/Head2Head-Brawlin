@@ -1,0 +1,52 @@
+HEAD2HEAD BRAWLIN'
+IPHONE HOME SCREEN EMAIL-CODE SETUP
+
+REQUIRED SUPABASE DASHBOARD CHANGE
+
+1. Open the Head2Head Brawlin project in Supabase.
+2. Go to Authentication.
+3. Open Email Templates.
+4. Select "Magic Link" (sometimes labeled "Magic link or OTP").
+5. Replace the subject and message with the template below.
+6. Save the template.
+
+IMPORTANT:
+Remove every use of {{ .ConfirmationURL }} from this specific template.
+The app is switching this sign-in email from a redirect link to a code.
+The separate "Invite user" template is not changed.
+
+SUGGESTED SUBJECT
+
+Your Head2Head Brawlin' sign-in code
+
+SUGGESTED HTML BODY
+
+<h2>Head2Head Brawlin' sign-in code</h2>
+
+<p>Enter this six-digit code in the Head2Head app:</p>
+
+<p style="font-size:32px;font-weight:800;letter-spacing:8px;margin:24px 0;">
+  {{ .Token }}
+</p>
+
+<p>Return to the same browser or iPhone Home Screen app where you requested the code.</p>
+
+<p>If you did not request this code, you can ignore this email.</p>
+
+TEST FLOW
+
+1. Open the installed Head2Head Home Screen app.
+2. Enter the linked player's email.
+3. Tap "Email me a sign-in code."
+4. Read the email without closing the installed app.
+5. Return to the installed app.
+6. Enter the newest six-digit code.
+7. Tap "Verify code and sign in."
+8. Confirm the player profile loads inside the installed app.
+
+NOTES
+
+- The code is single-use.
+- If multiple codes are requested, use the newest code.
+- Existing linked accounts, invitations, roles, picks, and league data are not changed.
+- A brand-new player may still need to accept the original commissioner invitation once before email-code sign-in is available.
