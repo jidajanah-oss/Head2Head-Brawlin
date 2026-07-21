@@ -1,4 +1,4 @@
-import {
+﻿import {
   createContext,
   useCallback,
   useContext,
@@ -29,7 +29,6 @@ import {
   verifyCloudConnection,
 } from "../services/cloudAccountLinkService";
 import {
-  getSupabaseAuthRedirectUrl,
   supabaseClient,
   supabaseConfiguration,
 } from "../services/supabaseClient";
@@ -46,10 +45,15 @@ type AuthContextValue = {
   access: CloudAccessState;
   errorMessage: string | null;
   connectionErrorMessage: string | null;
-  magicLinkSentTo: string | null;
-  sendMagicLink: (
+  emailCodeSentTo: string | null;
+  sendEmailCode: (
     email: string,
   ) => Promise<void>;
+  verifyEmailCode: (
+    email: string,
+    code: string,
+  ) => Promise<void>;
+  clearEmailCodeRequest: () => void;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
   refreshAccountLink: () => Promise<void>;
@@ -87,6 +91,58 @@ function getStatusForAccount(
     : "signed-in-unlinked";
 }
 
+function normalizeEmailCode(
+  code: string,
+): string {
+  return code.replace(/\D/g, "");
+}
+
+function getEmailCodeErrorMessage(
+  message: string,
+): string {
+  const normalizedMessage =
+    message.trim().toLowerCase();
+
+  if (
+    normalizedMessage.includes(
+      "token has expired",
+    ) ||
+    normalizedMessage.includes(
+      "otp_expired",
+    )
+  ) {
+    return "That sign-in code expired. Request a new code and try again.";
+  }
+
+  if (
+    normalizedMessage.includes(
+      "invalid token",
+    ) ||
+    normalizedMessage.includes(
+      "invalid otp",
+    ) ||
+    normalizedMessage.includes(
+      "token is invalid",
+    )
+  ) {
+    return "That sign-in code is not valid. Check the email and enter the newest code.";
+  }
+
+  if (
+    normalizedMessage.includes(
+      "rate limit",
+    ) ||
+    normalizedMessage.includes(
+      "email rate limit",
+    )
+  ) {
+    return "Too many sign-in emails were requested. Wait a moment before requesting another code.";
+  }
+
+  return message.trim() ||
+    "Unable to complete email-code sign-in.";
+}
+
 export function AuthProvider({
   children,
 }: {
@@ -117,8 +173,8 @@ export function AuthProvider({
     setConnectionErrorMessage,
   ] = useState<string | null>(null);
   const [
-    magicLinkSentTo,
-    setMagicLinkSentTo,
+    emailCodeSentTo,
+    setEmailCodeSentTo,
   ] = useState<string | null>(null);
   const sessionSyncRequestId = useRef(0);
 
@@ -299,7 +355,7 @@ export function AuthProvider({
     await synchronizeSession(session);
   };
 
-  const sendMagicLink = async (
+  const sendEmailCode = async (
     email: string,
   ) => {
     const client = supabaseClient;
@@ -323,28 +379,100 @@ export function AuthProvider({
     }
 
     setErrorMessage(null);
-    setMagicLinkSentTo(null);
+    setEmailCodeSentTo(null);
 
     const { error } =
       await client.auth.signInWithOtp(
         {
           email: normalizedEmail,
           options: {
-            emailRedirectTo:
-              getSupabaseAuthRedirectUrl(),
             shouldCreateUser: false,
           },
         },
       );
 
     if (error) {
-      setErrorMessage(error.message);
-      throw error;
+      const nextMessage =
+        getEmailCodeErrorMessage(
+          error.message,
+        );
+      setErrorMessage(nextMessage);
+      throw new Error(nextMessage);
     }
 
-    setMagicLinkSentTo(
+    setEmailCodeSentTo(
       normalizedEmail,
     );
+  };
+
+  const verifyEmailCode = async (
+    email: string,
+    code: string,
+  ) => {
+    const client = supabaseClient;
+    if (!client) {
+      throw new Error(
+        "Supabase authentication is not configured.",
+      );
+    }
+
+    const normalizedEmail =
+      normalizeAuthEmail(email);
+    const normalizedCode =
+      normalizeEmailCode(code);
+
+    if (
+      !isValidAuthEmail(
+        normalizedEmail,
+      )
+    ) {
+      throw new Error(
+        "Enter a valid email address.",
+      );
+    }
+
+    if (!/^\d{6,10}$/.test(normalizedCode)) {
+      throw new Error(
+        "Enter the complete sign-in code from your email.",
+      );
+    }
+
+    setErrorMessage(null);
+
+    const {
+      data,
+      error,
+    } = await client.auth.verifyOtp({
+      email: normalizedEmail,
+      token: normalizedCode,
+      type: "email",
+    });
+
+    if (error) {
+      const nextMessage =
+        getEmailCodeErrorMessage(
+          error.message,
+        );
+      setErrorMessage(nextMessage);
+      throw new Error(nextMessage);
+    }
+
+    if (!data.session) {
+      const nextMessage =
+        "The code was accepted, but no app session was created. Request a new code and try again.";
+      setErrorMessage(nextMessage);
+      throw new Error(nextMessage);
+    }
+
+    setEmailCodeSentTo(null);
+    await synchronizeSession(
+      data.session,
+    );
+  };
+
+  const clearEmailCodeRequest = () => {
+    setEmailCodeSentTo(null);
+    setErrorMessage(null);
   };
 
   const signOut = async () => {
@@ -362,7 +490,7 @@ export function AuthProvider({
       throw error;
     }
 
-    setMagicLinkSentTo(null);
+    setEmailCodeSentTo(null);
     await synchronizeSession(null);
   };
 
@@ -383,8 +511,10 @@ export function AuthProvider({
         access,
         errorMessage,
         connectionErrorMessage,
-        magicLinkSentTo,
-        sendMagicLink,
+        emailCodeSentTo,
+        sendEmailCode,
+        verifyEmailCode,
+        clearEmailCodeRequest,
         signOut,
         refreshSession,
         refreshAccountLink,
@@ -407,3 +537,4 @@ export function useAuth() {
 
   return context;
 }
+

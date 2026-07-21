@@ -1,4 +1,4 @@
-import {
+﻿import {
   useState,
 } from "react";
 import type {
@@ -7,6 +7,14 @@ import type {
 } from "react";
 
 import { useAuth } from "../../context/AuthContext";
+
+type PendingAction =
+  | "send"
+  | "verify"
+  | "resend"
+  | "sign-out"
+  | "refresh"
+  | null;
 
 function getRoleLabel(
   role: string,
@@ -40,6 +48,14 @@ function getConnectionLabel(
   return "Cloud unavailable";
 }
 
+function normalizeCodeInput(
+  value: string,
+): string {
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 10);
+}
+
 export default function CloudAccountPanel() {
   const {
     configured,
@@ -50,50 +66,115 @@ export default function CloudAccountPanel() {
     user,
     accountLink,
     errorMessage,
-    magicLinkSentTo,
-    sendMagicLink,
+    emailCodeSentTo,
+    sendEmailCode,
+    verifyEmailCode,
+    clearEmailCodeRequest,
     signOut,
     refreshAccountLink,
   } = useAuth();
+
   const [email, setEmail] =
     useState("");
-  const [isSubmitting, setIsSubmitting] =
-    useState(false);
 
-  const handleMagicLinkSubmit = async (
+  const [
+    verificationCode,
+    setVerificationCode,
+  ] = useState("");
+
+  const [
+    pendingAction,
+    setPendingAction,
+  ] = useState<PendingAction>(
+    null,
+  );
+
+  const isSubmitting =
+    pendingAction !== null;
+
+  const handleEmailCodeRequest = async (
     event: FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
-    setIsSubmitting(true);
+    setPendingAction("send");
 
     try {
-      await sendMagicLink(email);
+      await sendEmailCode(email);
+      setVerificationCode("");
     } catch {
       // AuthContext exposes the user-facing error.
     } finally {
-      setIsSubmitting(false);
+      setPendingAction(null);
     }
   };
 
+  const handleEmailCodeVerification = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    if (!emailCodeSentTo) {
+      return;
+    }
+
+    setPendingAction("verify");
+
+    try {
+      await verifyEmailCode(
+        emailCodeSentTo,
+        verificationCode,
+      );
+      setVerificationCode("");
+    } catch {
+      // AuthContext exposes the user-facing error.
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!emailCodeSentTo) {
+      return;
+    }
+
+    setPendingAction("resend");
+
+    try {
+      await sendEmailCode(
+        emailCodeSentTo,
+      );
+      setVerificationCode("");
+    } catch {
+      // AuthContext exposes the user-facing error.
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const handleDifferentEmail = () => {
+    setVerificationCode("");
+    clearEmailCodeRequest();
+  };
+
   const handleSignOut = async () => {
-    setIsSubmitting(true);
+    setPendingAction("sign-out");
 
     try {
       await signOut();
     } catch {
       // AuthContext exposes the user-facing error.
     } finally {
-      setIsSubmitting(false);
+      setPendingAction(null);
     }
   };
 
   const handleRefresh = async () => {
-    setIsSubmitting(true);
+    setPendingAction("refresh");
 
     try {
       await refreshAccountLink();
     } finally {
-      setIsSubmitting(false);
+      setPendingAction(null);
     }
   };
 
@@ -135,25 +216,42 @@ export default function CloudAccountPanel() {
 
       {configured &&
         connectionStatus === "connected" &&
-        !user && (
+        !user &&
+        !emailCodeSentTo && (
           <form
             className="cloud-account-panel__form"
-            onSubmit={handleMagicLinkSubmit}
+            onSubmit={
+              handleEmailCodeRequest
+            }
           >
             <p>
-              Sign in with the email assigned to your league account.
+              Sign in with the email assigned
+              to your league account.
+            </p>
+
+            <p>
+              On iPhone, request the code here,
+              open your email, then return to
+              this same Home Screen app to enter
+              it.
             </p>
 
             <label htmlFor="cloud-account-email">
               Email address
             </label>
+
             <input
               id="cloud-account-email"
               type="email"
               autoComplete="email"
               value={email}
-              onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                setEmail(event.target.value)
+              onChange={(
+                event:
+                  ChangeEvent<HTMLInputElement>,
+              ) =>
+                setEmail(
+                  event.target.value,
+                )
               }
               placeholder="name@example.com"
               required
@@ -163,18 +261,103 @@ export default function CloudAccountPanel() {
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting
-                ? "Sending..."
-                : "Email me a sign-in link"}
+              {pendingAction === "send"
+                ? "Sending code..."
+                : "Email me a sign-in code"}
             </button>
           </form>
         )}
 
-      {magicLinkSentTo && (
-        <div className="cloud-account-panel__message cloud-account-panel__message--success">
-          Sign-in link sent to {magicLinkSentTo}.
-        </div>
-      )}
+      {configured &&
+        connectionStatus === "connected" &&
+        !user &&
+        emailCodeSentTo && (
+          <form
+            className="cloud-account-panel__form"
+            onSubmit={
+              handleEmailCodeVerification
+            }
+          >
+            <div className="cloud-account-panel__message cloud-account-panel__message--success">
+              A sign-in code was sent to{" "}
+              <strong>
+                {emailCodeSentTo}
+              </strong>
+              .
+            </div>
+
+            <p>
+              Enter the newest sign-in code
+              below. Stay in this app while
+              signing in.
+            </p>
+
+            <label htmlFor="cloud-account-code">
+              Sign-in code
+            </label>
+
+            <input
+              id="cloud-account-code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]{6,10}"
+              maxLength={10}
+              value={verificationCode}
+              onChange={(
+                event:
+                  ChangeEvent<HTMLInputElement>,
+              ) =>
+                setVerificationCode(
+                  normalizeCodeInput(
+                    event.target.value,
+                  ),
+                )
+              }
+              placeholder="12345678"
+              autoFocus
+              required
+            />
+
+            <button
+              type="submit"
+              disabled={
+                isSubmitting ||
+                verificationCode.length < 6 || verificationCode.length > 10
+              }
+            >
+              {pendingAction === "verify"
+                ? "Verifying..."
+                : "Verify code and sign in"}
+            </button>
+
+            <div className="cloud-account-panel__actions">
+              <button
+                type="button"
+                className="cloud-account-panel__button--secondary"
+                disabled={isSubmitting}
+                onClick={() => {
+                  void handleResendCode();
+                }}
+              >
+                {pendingAction === "resend"
+                  ? "Resending..."
+                  : "Send a new code"}
+              </button>
+
+              <button
+                type="button"
+                className="cloud-account-panel__button--secondary"
+                disabled={isSubmitting}
+                onClick={
+                  handleDifferentEmail
+                }
+              >
+                Use a different email
+              </button>
+            </div>
+          </form>
+        )}
 
       {user && status === "loading" && (
         <div className="cloud-account-panel__message">
@@ -186,11 +369,18 @@ export default function CloudAccountPanel() {
         status === "signed-in-unlinked" && (
           <div className="cloud-account-panel__account">
             <p>
-              Signed in as <strong>{user.email}</strong>
+              Signed in as{" "}
+              <strong>{user.email}</strong>
             </p>
+
             <div className="cloud-account-panel__message cloud-account-panel__message--warning">
-              This Supabase user does not yet have an active league-player link. Do not invite players yet.
+              This Supabase user does not yet
+              have an active league-player
+              link. Refresh the account after
+              the commissioner prepares the
+              player invitation.
             </div>
+
             <div className="cloud-account-panel__actions">
               <button
                 type="button"
@@ -199,6 +389,7 @@ export default function CloudAccountPanel() {
               >
                 Refresh account link
               </button>
+
               <button
                 type="button"
                 className="cloud-account-panel__button--secondary"
@@ -223,6 +414,7 @@ export default function CloudAccountPanel() {
                     accountLink.playerId}
                 </strong>
               </div>
+
               <div>
                 <span>Role</span>
                 <strong>
@@ -231,6 +423,7 @@ export default function CloudAccountPanel() {
                   )}
                 </strong>
               </div>
+
               <div>
                 <span>League</span>
                 <strong>
@@ -238,6 +431,7 @@ export default function CloudAccountPanel() {
                     "Head2Head Brawlin"}
                 </strong>
               </div>
+
               <div>
                 <span>Season / Team</span>
                 <strong>
@@ -246,7 +440,7 @@ export default function CloudAccountPanel() {
                     accountLink.nflTeam,
                   ]
                     .filter(Boolean)
-                    .join(" · ") || "Linked"}
+                    .join(" Â· ") || "Linked"}
                 </strong>
               </div>
             </div>
@@ -263,6 +457,7 @@ export default function CloudAccountPanel() {
               >
                 Refresh account
               </button>
+
               <button
                 type="button"
                 className="cloud-account-panel__button--secondary"
@@ -283,3 +478,4 @@ export default function CloudAccountPanel() {
     </section>
   );
 }
+
