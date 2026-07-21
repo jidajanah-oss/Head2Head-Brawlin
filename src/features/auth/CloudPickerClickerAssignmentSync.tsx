@@ -27,6 +27,10 @@ import {
   loadCloudPickerClickerWeekAssignments,
 } from "../../services/cloudPickerClickerAssignmentService";
 import type { CloudPickerClickerWeekAssignment } from "../../services/cloudPickerClickerAssignmentService";
+import {
+  publishPickerClickerCloudAuthority,
+  resetPickerClickerCloudAuthority,
+} from "../../services/pickerClickerCloudAuthorityService";
 import { supabaseClient } from "../../services/supabaseClient";
 import type { Player } from "../../types/player";
 
@@ -230,56 +234,9 @@ function buildCloudAssignmentHistory(
   );
 }
 
-function getCurrentCloudCycle(
-  cloudAssignments: CloudPickerClickerWeekAssignment[],
-  activePlayers: Player[],
-): {
-  cycleNumber: number;
-  usedSourcePlayerIds: Set<string>;
-} {
-  const latestCycleNumber = cloudAssignments.reduce(
-    (highestCycle, assignment) =>
-      Math.max(highestCycle, assignment.cycleNumber),
-    1,
-  );
-  const usedSourcePlayerIds = new Set(
-    cloudAssignments
-      .filter(
-        (assignment) =>
-          assignment.cycleNumber === latestCycleNumber,
-      )
-      .map((assignment) => assignment.sourcePlayerId),
-  );
-  const hasEligiblePlayer = activePlayers.some(
-    (player) =>
-      !usedSourcePlayerIds.has(player.id),
-  );
-
-  if (hasEligiblePlayer) {
-    return {
-      cycleNumber: latestCycleNumber,
-      usedSourcePlayerIds,
-    };
-  }
-
-  return {
-    cycleNumber: latestCycleNumber + 1,
-    usedSourcePlayerIds: new Set<string>(),
-  };
-}
-
-function getValidAssignedAt(
-  assignedAt: string,
-): string | undefined {
-  return Number.isNaN(Date.parse(assignedAt))
-    ? undefined
-    : assignedAt;
-}
-
 function getAssignmentCreationCandidate(params: {
   cloudAssignments: CloudPickerClickerWeekAssignment[];
   cloudPlayers: Player[];
-  localHistory: PickerClickerHistory;
   season: number;
   week: number;
 }): {
@@ -293,36 +250,6 @@ function getAssignmentCreationCandidate(params: {
 
   if (activePlayers.length === 0) {
     return null;
-  }
-
-  const cloudCycle = getCurrentCloudCycle(
-    params.cloudAssignments,
-    activePlayers,
-  );
-  const weekId = getPickerClickerWeekId(
-    params.season,
-    params.week,
-  );
-  const localWeekState = params.localHistory[weekId];
-  const localSourcePlayer = localWeekState
-    ? activePlayers.find(
-        (player) =>
-          player.id ===
-            localWeekState.assignment.sourcePlayerId &&
-          !cloudCycle.usedSourcePlayerIds.has(player.id),
-      )
-    : undefined;
-
-  if (localSourcePlayer && localWeekState) {
-    const assignedAt = getValidAssignedAt(
-      localWeekState.assignment.assignedAt,
-    );
-
-    return {
-      sourcePlayerId: localSourcePlayer.id,
-      cycleNumber: cloudCycle.cycleNumber,
-      ...(assignedAt ? { assignedAt } : {}),
-    };
   }
 
   const cloudHistory = buildCloudAssignmentHistory(
@@ -417,12 +344,22 @@ export default function CloudPickerClickerAssignmentSync() {
       !syncKey
     ) {
       lastCompletedSyncKey.current = null;
+      resetPickerClickerCloudAuthority();
       return;
     }
 
     if (lastCompletedSyncKey.current === syncKey) {
       return;
     }
+
+    publishPickerClickerCloudAuthority({
+      status: "syncing",
+      leagueId: accountLink.leagueId,
+      season,
+      week: league.currentWeek,
+      assignment: null,
+      message: "Synchronizing the weekly source.",
+    });
 
     let canceled = false;
     let retryTimerId: number | null = null;
@@ -470,11 +407,28 @@ export default function CloudPickerClickerAssignmentSync() {
           ) ?? null;
 
         if (currentCloudAssignment) {
+          publishPickerClickerCloudAuthority({
+            status: "ready",
+            leagueId: accountLink.leagueId,
+            season,
+            week: league.currentWeek,
+            assignment: currentCloudAssignment,
+            message: "Weekly source synchronized.",
+          });
           lastCompletedSyncKey.current = syncKey;
           return;
         }
 
         if (!access.canManageLeague) {
+          publishPickerClickerCloudAuthority({
+            status: "waiting",
+            leagueId: accountLink.leagueId,
+            season,
+            week: league.currentWeek,
+            assignment: null,
+            message:
+              "Waiting for a commissioner to publish the weekly source.",
+          });
           scheduleRetry();
           return;
         }
@@ -508,12 +462,20 @@ export default function CloudPickerClickerAssignmentSync() {
           getAssignmentCreationCandidate({
             cloudAssignments,
             cloudPlayers,
-            localHistory: latestHydratedHistory,
             season,
             week: league.currentWeek,
           });
 
         if (!creationCandidate) {
+          publishPickerClickerCloudAuthority({
+            status: "waiting",
+            leagueId: accountLink.leagueId,
+            season,
+            week: league.currentWeek,
+            assignment: null,
+            message:
+              "The active cloud roster is not ready for weekly source assignment.",
+          });
           scheduleRetry();
           return;
         }
@@ -564,9 +526,30 @@ export default function CloudPickerClickerAssignmentSync() {
           );
         }
 
+        publishPickerClickerCloudAuthority({
+          status: "ready",
+          leagueId: accountLink.leagueId,
+          season,
+          week: league.currentWeek,
+          assignment: creationResult.assignment,
+          message: "Weekly source synchronized.",
+        });
         lastCompletedSyncKey.current = syncKey;
       } catch (error) {
         if (!canceled) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Unable to synchronize the weekly source.";
+
+          publishPickerClickerCloudAuthority({
+            status: "error",
+            leagueId: accountLink.leagueId,
+            season,
+            week: league.currentWeek,
+            assignment: null,
+            message,
+          });
           console.error(
             "Cloud Picker Clicker assignment synchronization failed.",
             error,

@@ -28,6 +28,9 @@ import {
   type EffectivePickSource,
 } from "../../engine";
 import {
+  usePickerClickerCloudAuthority,
+} from "../../services/pickerClickerCloudAuthorityService";
+import {
   formatKickoff,
   getStatusEmoji,
   getStatusLabel,
@@ -256,6 +259,9 @@ function PickSheet() {
     error,
   } = useNFL();
 
+  const pickerClickerAuthority =
+    usePickerClickerCloudAuthority();
+
   const [
     activeFilter,
     setActiveFilter,
@@ -286,7 +292,7 @@ function PickSheet() {
   const games =
     snapshot?.weekGames ?? [];
 
-  const pickerClickerWeekState =
+  const localPickerClickerWeekState =
     pickerClickerHistory[
       getPickerClickerWeekId(
         season,
@@ -294,8 +300,33 @@ function PickSheet() {
       )
     ] ?? null;
 
+  const pickerClickerAuthorityReady =
+    pickerClickerAuthority.status === "ready" &&
+    pickerClickerAuthority.season === season &&
+    pickerClickerAuthority.week ===
+      league.currentWeek &&
+    Boolean(
+      pickerClickerAuthority.assignment
+    );
+
+  const pickerClickerWeekState =
+    pickerClickerAuthorityReady &&
+    localPickerClickerWeekState &&
+    localPickerClickerWeekState.assignment
+      .sourcePlayerId ===
+      pickerClickerAuthority.assignment
+        ?.sourcePlayerId
+      ? localPickerClickerWeekState
+      : null;
+
   const pickerClickerAssignment =
-    pickerClickerWeekState?.assignment;
+    pickerClickerWeekState?.assignment ??
+    null;
+
+  const pickerClickerAuthorityMessage =
+    pickerClickerAuthority.status === "error"
+      ? pickerClickerAuthority.message
+      : "Weekly source syncing";
 
   const pickerClickerSourcePlayer =
     pickerClickerAssignment
@@ -568,6 +599,7 @@ function PickSheet() {
     if (
       !activePlayerId ||
       locked ||
+      !pickerClickerAuthorityReady ||
       !pickerClickerWeekState
     ) {
       return;
@@ -675,26 +707,36 @@ function PickSheet() {
           title={
             pickerClickerAssignment
               ? pickerClickerAssignment.sourcePlayerName
-              : "Assigning weekly source..."
+              : pickerClickerAuthority.status ===
+                  "error"
+                ? "Weekly source unavailable"
+                : "Weekly source syncing..."
           }
           description={
             pickerClickerAssignment
               ? `${pickerClickerAssignment.sourceNFLTeam} • ${getTeamDisplayName(
                   pickerClickerAssignment.sourceNFLTeam
                 )} • Nonrepeating random cycle ${pickerClickerAssignment.cycleNumber}`
-              : "The weekly source will be selected automatically from active players."
+              : pickerClickerAuthority.status ===
+                    "error"
+                ? pickerClickerAuthorityMessage
+                : "Waiting for the single cloud-authoritative weekly source."
           }
           action={
             <SteelBadge
               variant={
-                activePlayerWeeklyPrizeEligible
-                  ? "success"
-                  : "danger"
+                pickerClickerAuthorityReady
+                  ? activePlayerWeeklyPrizeEligible
+                    ? "success"
+                    : "danger"
+                  : "neutral"
               }
             >
-              {activePlayerWeeklyPrizeEligible
-                ? "Prize Eligible"
-                : "Prize Ineligible"}
+              {pickerClickerAuthorityReady
+                ? activePlayerWeeklyPrizeEligible
+                  ? "Prize Eligible"
+                  : "Prize Ineligible"
+                : "Cloud Sync"}
             </SteelBadge>
           }
         />
@@ -903,9 +945,14 @@ function PickSheet() {
               !activePlayerId;
 
             const pickerClickerDisabledReason =
-              !pickerClickerWeekState
-                ? "Weekly source unavailable"
-                : activePlayerIsPickerClickerSource
+              !pickerClickerAuthorityReady
+                ? pickerClickerAuthority.status ===
+                    "error"
+                  ? "Weekly source unavailable"
+                  : "Weekly source syncing"
+                : !pickerClickerWeekState
+                  ? "Weekly source syncing"
+                  : activePlayerIsPickerClickerSource
                   ? "Source cannot copy self"
                   : locked
                     ? "Game locked"
