@@ -227,6 +227,16 @@ function wrapAssignmentError(
   const normalizedMessage = message.toLowerCase();
 
   if (
+    normalizedMessage.includes(
+      "create_picker_clicker_week_assignment",
+    )
+  ) {
+    return new Error(
+      `Unable to ${action}: deploy the Picker Clicker authorization recovery migration first.`,
+    );
+  }
+
+  if (
     error.code === "42501" ||
     normalizedMessage.includes("row-level security") ||
     normalizedMessage.includes("permission denied")
@@ -347,46 +357,46 @@ export async function createCloudPickerClickerWeekAssignment(
   const assignedAt = normalizeAssignedAt(input.assignedAt);
 
   const { data, error } = await client
-    .from("picker_clicker_week_assignments")
-    .insert({
-      league_id: leagueId,
-      season,
-      week,
-      source_player_id: sourcePlayerId,
-      source_player_name: "pending",
-      source_nfl_team: "NFL",
-      cycle_number: cycleNumber,
-      assigned_at: assignedAt,
-    })
-    .select(ASSIGNMENT_COLUMNS)
+    .rpc(
+      "create_picker_clicker_week_assignment",
+      {
+        target_league_id: leagueId,
+        target_season: season,
+        target_week: week,
+        target_source_player_id: sourcePlayerId,
+        target_cycle_number: cycleNumber,
+        target_assigned_at: assignedAt,
+      },
+    )
     .single();
 
-  if (!error) {
-    return {
-      assignment: mapAssignment(data),
-      created: true,
-    };
+  if (error) {
+    throw wrapAssignmentError(
+      "create the Picker Clicker assignment",
+      error,
+    );
   }
 
-  if (error.code === "23505") {
-    const existingAssignment =
-      await loadCloudPickerClickerWeekAssignment(
-        client,
-        leagueId,
-        season,
-        week,
-      );
-
-    if (existingAssignment) {
-      return {
-        assignment: existingAssignment,
-        created: false,
-      };
-    }
+  if (
+    !data ||
+    typeof data !== "object" ||
+    Array.isArray(data)
+  ) {
+    throw new Error(
+      "The cloud Picker Clicker service returned an invalid assignment response.",
+    );
   }
 
-  throw wrapAssignmentError(
-    "create the Picker Clicker assignment",
-    error,
-  );
+  const row = data as Record<string, unknown>;
+
+  if (typeof row.created !== "boolean") {
+    throw new Error(
+      "The cloud Picker Clicker service returned an invalid creation result.",
+    );
+  }
+
+  return {
+    assignment: mapAssignment(data),
+    created: row.created,
+  };
 }
