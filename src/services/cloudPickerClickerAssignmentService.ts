@@ -228,6 +228,16 @@ function wrapAssignmentError(
 
   if (
     normalizedMessage.includes(
+      "load_picker_clicker_week_assignments",
+    )
+  ) {
+    return new Error(
+      `Unable to ${action}: deploy the Picker Clicker member-read recovery migration first.`,
+    );
+  }
+
+  if (
+    normalizedMessage.includes(
       "create_picker_clicker_week_assignment",
     )
   ) {
@@ -278,19 +288,23 @@ export async function loadCloudPickerClickerWeekAssignments(
   season?: number,
 ): Promise<CloudPickerClickerWeekAssignment[]> {
   const normalizedLeagueId = normalizeLeagueId(leagueId);
+  const normalizedSeason =
+    season === undefined
+      ? null
+      : normalizeSeason(season);
 
-  let query = client
-    .from("picker_clicker_week_assignments")
-    .select(ASSIGNMENT_COLUMNS)
-    .eq("league_id", normalizedLeagueId);
-
-  if (season !== undefined) {
-    query = query.eq("season", normalizeSeason(season));
-  }
-
-  const { data, error } = await query
-    .order("season", { ascending: true })
-    .order("week", { ascending: true });
+  const { data, error } = await client
+    .rpc(
+      "load_picker_clicker_week_assignments",
+      {
+        target_league_id:
+          normalizedLeagueId,
+        target_season:
+          normalizedSeason,
+        target_week: null,
+      },
+    )
+    .select(ASSIGNMENT_COLUMNS);
 
   if (error) {
     throw wrapAssignmentError(
@@ -314,17 +328,26 @@ export async function loadCloudPickerClickerWeekAssignment(
   season: number,
   week: number,
 ): Promise<CloudPickerClickerWeekAssignment | null> {
-  const normalizedLeagueId = normalizeLeagueId(leagueId);
-  const normalizedSeason = normalizeSeason(season);
-  const normalizedWeek = normalizeWeek(week);
+  const normalizedLeagueId =
+    normalizeLeagueId(leagueId);
+  const normalizedSeason =
+    normalizeSeason(season);
+  const normalizedWeek =
+    normalizeWeek(week);
 
   const { data, error } = await client
-    .from("picker_clicker_week_assignments")
-    .select(ASSIGNMENT_COLUMNS)
-    .eq("league_id", normalizedLeagueId)
-    .eq("season", normalizedSeason)
-    .eq("week", normalizedWeek)
-    .limit(1);
+    .rpc(
+      "load_picker_clicker_week_assignments",
+      {
+        target_league_id:
+          normalizedLeagueId,
+        target_season:
+          normalizedSeason,
+        target_week:
+          normalizedWeek,
+      },
+    )
+    .select(ASSIGNMENT_COLUMNS);
 
   if (error) {
     throw wrapAssignmentError(
@@ -339,7 +362,9 @@ export async function loadCloudPickerClickerWeekAssignment(
     );
   }
 
-  return data.length === 0 ? null : mapAssignment(data[0]);
+  return data.length === 0
+    ? null
+    : mapAssignment(data[0]);
 }
 
 export async function createCloudPickerClickerWeekAssignment(
