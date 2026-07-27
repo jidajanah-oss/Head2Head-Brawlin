@@ -279,13 +279,53 @@ function wrapCloudPickError(
   message: string,
 ): Error {
   const normalizedMessage = message.trim();
+  const lowerMessage =
+    normalizedMessage.toLowerCase();
 
   if (
-    normalizedMessage.includes("row-level security") ||
-    normalizedMessage.includes("Pick changes are locked")
+    lowerMessage.includes(
+      "load_my_player_pick_intents",
+    ) ||
+    lowerMessage.includes(
+      "save_my_player_pick_intent",
+    ) ||
+    lowerMessage.includes(
+      "clear_my_player_pick_intent",
+    )
   ) {
     return new Error(
-      `Unable to ${action}: this game is locked or the signed-in account does not own the pick.`,
+      `Unable to ${action}: deploy the global cloud pick-write recovery migration first.`,
+    );
+  }
+
+  if (
+    lowerMessage.includes("row-level security") ||
+    lowerMessage.includes("permission denied") ||
+    lowerMessage.includes(
+      "linked active player account",
+    )
+  ) {
+    return new Error(
+      `Unable to ${action}: the signed-in account is not linked to this player.`,
+    );
+  }
+
+  if (
+    lowerMessage.includes("pick changes are locked") ||
+    lowerMessage.includes("game is locked")
+  ) {
+    return new Error(
+      `Unable to ${action}: this game's pick window is closed.`,
+    );
+  }
+
+  if (
+    lowerMessage.includes(
+      "picker clicker source",
+    )
+  ) {
+    return new Error(
+      `Unable to ${action}: the shared Picker Clicker source is not valid for this choice.`,
     );
   }
 
@@ -294,16 +334,34 @@ function wrapCloudPickError(
   );
 }
 
-async function upsertCloudPlayerPick(
+async function saveCloudPlayerPick(
   client: SupabaseClient,
-  payload: Record<string, unknown>,
+  input: {
+    leagueId: string;
+    playerId: string;
+    gameId: string;
+    selectedTeam: string | null;
+    source: "player" | "picker_clicker";
+    pickerClickerSourcePlayerId: string | null;
+    submittedAt: string | null;
+  },
 ): Promise<CloudPlayerPickIntent> {
   const { data, error } = await client
-    .from("player_picks")
-    .upsert(payload, {
-      onConflict: "league_id,player_id,game_id",
-    })
-    .select(PLAYER_PICK_COLUMNS)
+    .rpc(
+      "save_my_player_pick_intent",
+      {
+        target_league_id: input.leagueId,
+        target_player_id: input.playerId,
+        target_game_id: input.gameId,
+        target_selected_team:
+          input.selectedTeam,
+        target_source: input.source,
+        target_picker_clicker_source_player_id:
+          input.pickerClickerSourcePlayerId,
+        target_submitted_at:
+          input.submittedAt,
+      },
+    )
     .single();
 
   if (error) {
@@ -322,28 +380,34 @@ export async function loadCloudPlayerPickIntents(
   playerId: string,
   week?: number,
 ): Promise<CloudPlayerPickIntent[]> {
-  const normalizedLeagueId = normalizeRequiredIdentifier(
-    leagueId,
-    "League ID",
-  );
-  const normalizedPlayerId = normalizeRequiredIdentifier(
-    playerId,
-    "Player ID",
-  );
+  const normalizedLeagueId =
+    normalizeRequiredIdentifier(
+      leagueId,
+      "League ID",
+    );
+  const normalizedPlayerId =
+    normalizeRequiredIdentifier(
+      playerId,
+      "Player ID",
+    );
+  const normalizedWeek =
+    week === undefined
+      ? null
+      : normalizeWeek(week);
 
-  let query = client
-    .from("player_picks")
-    .select(PLAYER_PICK_COLUMNS)
-    .eq("league_id", normalizedLeagueId)
-    .eq("player_id", normalizedPlayerId);
-
-  if (week !== undefined) {
-    query = query.eq("week", normalizeWeek(week));
-  }
-
-  const { data, error } = await query
-    .order("week", { ascending: true })
-    .order("game_id", { ascending: true });
+  const { data, error } = await client
+    .rpc(
+      "load_my_player_pick_intents",
+      {
+        target_league_id:
+          normalizedLeagueId,
+        target_player_id:
+          normalizedPlayerId,
+        target_week:
+          normalizedWeek,
+      },
+    )
+    .select(PLAYER_PICK_COLUMNS);
 
   if (error) {
     throw wrapCloudPickError(
@@ -381,17 +445,22 @@ export async function saveCloudManualPickIntent(
     input.selectedTeam,
   );
 
-  return upsertCloudPlayerPick(client, {
-    league_id: leagueId,
-    player_id: playerId,
-    game_id: gameId,
-    selected_team: selectedTeam,
-    source: "player",
-    picker_clicker_source_player_id: null,
-    submitted_at: normalizeOptionalTimestamp(
-      input.submittedAt,
-    ),
-  });
+  return saveCloudPlayerPick(
+    client,
+    {
+      leagueId,
+      playerId,
+      gameId,
+      selectedTeam,
+      source: "player",
+      pickerClickerSourcePlayerId:
+        null,
+      submittedAt:
+        normalizeOptionalTimestamp(
+          input.submittedAt,
+        ),
+    },
+  );
 }
 
 export async function saveCloudPickerClickerIntent(
@@ -421,43 +490,53 @@ export async function saveCloudPickerClickerIntent(
     );
   }
 
-  return upsertCloudPlayerPick(client, {
-    league_id: leagueId,
-    player_id: playerId,
-    game_id: gameId,
-    selected_team: null,
-    source: "picker_clicker",
-    picker_clicker_source_player_id: sourcePlayerId,
-    submitted_at: normalizeOptionalTimestamp(
-      input.submittedAt,
-    ),
-  });
+  return saveCloudPlayerPick(
+    client,
+    {
+      leagueId,
+      playerId,
+      gameId,
+      selectedTeam: null,
+      source: "picker_clicker",
+      pickerClickerSourcePlayerId:
+        sourcePlayerId,
+      submittedAt:
+        normalizeOptionalTimestamp(
+          input.submittedAt,
+        ),
+    },
+  );
 }
 
 export async function clearCloudPlayerPickIntent(
   client: SupabaseClient,
   input: ClearCloudPlayerPickInput,
 ): Promise<boolean> {
-  const leagueId = normalizeRequiredIdentifier(
-    input.leagueId,
-    "League ID",
-  );
-  const playerId = normalizeRequiredIdentifier(
-    input.playerId,
-    "Player ID",
-  );
-  const gameId = normalizeRequiredIdentifier(
-    input.gameId,
-    "Game ID",
-  );
+  const leagueId =
+    normalizeRequiredIdentifier(
+      input.leagueId,
+      "League ID",
+    );
+  const playerId =
+    normalizeRequiredIdentifier(
+      input.playerId,
+      "Player ID",
+    );
+  const gameId =
+    normalizeRequiredIdentifier(
+      input.gameId,
+      "Game ID",
+    );
 
   const { data, error } = await client
-    .from("player_picks")
-    .delete()
-    .eq("league_id", leagueId)
-    .eq("player_id", playerId)
-    .eq("game_id", gameId)
-    .select("game_id");
+    .rpc(
+      "clear_my_player_pick_intent",
+      {
+        target_league_id: leagueId,
+        target_player_id: playerId,
+        target_game_id: gameId,
+      },
+    );
 
   if (error) {
     throw wrapCloudPickError(
@@ -466,5 +545,11 @@ export async function clearCloudPlayerPickIntent(
     );
   }
 
-  return Array.isArray(data) && data.length > 0;
+  if (typeof data !== "boolean") {
+    throw new Error(
+      "The cloud pick service returned an invalid clear result.",
+    );
+  }
+
+  return data;
 }

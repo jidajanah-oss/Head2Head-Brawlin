@@ -33,9 +33,6 @@ import {
   applyLocalSeasonResetIfNeeded,
   loadLatestCloudSeasonReset,
 } from "../../services/cloudSeasonResetService";
-import {
-  usePickerClickerCloudAuthority,
-} from "../../services/pickerClickerCloudAuthorityService";
 import { supabaseClient } from "../../services/supabaseClient";
 
 const CLOUD_SYNC_INTERVAL_MS = 15_000;
@@ -443,8 +440,6 @@ export default function CloudPlayerPickIntentSync() {
     week,
     snapshot,
   } = useNFL();
-  const pickerClickerAuthority =
-    usePickerClickerCloudAuthority();
   const [readyVersion, setReadyVersion] = useState(0);
   const [retryVersion, setRetryVersion] = useState(0);
   const baselineRef = useRef<SignatureMap>({});
@@ -476,12 +471,6 @@ export default function CloudPlayerPickIntentSync() {
   );
   const weekState =
     pickerClickerHistory[weekStateId];
-  const authoritativeAssignment =
-    pickerClickerAuthority.status === "ready" &&
-    pickerClickerAuthority.season === season &&
-    pickerClickerAuthority.week === week
-      ? pickerClickerAuthority.assignment
-      : null;
   const gameFingerprint = useMemo(() => {
     if (!snapshot) {
       return "";
@@ -506,9 +495,6 @@ export default function CloudPlayerPickIntentSync() {
       !accountLink ||
       !snapshot ||
       !weekState ||
-      !authoritativeAssignment ||
-      weekState.assignment.sourcePlayerId !==
-        authoritativeAssignment.sourcePlayerId ||
       snapshot.season !== season ||
       snapshot.week !== week ||
       week !== league.currentWeek ||
@@ -525,12 +511,11 @@ export default function CloudPlayerPickIntentSync() {
       accountLink.playerId,
       season,
       week,
-      authoritativeAssignment.sourcePlayerId,
+      weekState.assignment.sourcePlayerId,
       gameFingerprint,
     ].join(":");
   }, [
     accountLink,
-    authoritativeAssignment,
     gameFingerprint,
     league.currentWeek,
     season,
@@ -578,7 +563,7 @@ export default function CloudPlayerPickIntentSync() {
           await loadLatestCloudSeasonReset(
             client,
             accountLink.leagueId,
-            season,
+            accountLink.season ?? season,
           );
 
         if (
@@ -614,6 +599,7 @@ export default function CloudPlayerPickIntentSync() {
   }, [
     access.isLinked,
     accountLink,
+    season,
     status,
   ]);
 
@@ -627,8 +613,7 @@ export default function CloudPlayerPickIntentSync() {
       !accountLink ||
       !access.isLinked ||
       !snapshot ||
-      !weekState ||
-      !authoritativeAssignment
+      !weekState
     ) {
       return;
     }
@@ -641,7 +626,7 @@ export default function CloudPlayerPickIntentSync() {
     const playerId = accountLink.playerId;
     const leagueId = accountLink.leagueId;
     const assignmentSourcePlayerId =
-      authoritativeAssignment.sourcePlayerId;
+      weekState.assignment.sourcePlayerId;
 
     const reconcileCloudState = async () => {
       if (running || canceled) {
@@ -792,8 +777,13 @@ export default function CloudPlayerPickIntentSync() {
               game.id,
             );
           } else if (!wasReady) {
+            const preserveExistingLocalIntent =
+              latestIntent !== null &&
+              mappedCloudIntent === null;
+
             desiredIntents[game.id] =
-              changedDuringLoad
+              changedDuringLoad ||
+              preserveExistingLocalIntent
                 ? latestIntent
                 : mappedCloudIntent;
             nextBaseline[game.id] =
@@ -874,7 +864,6 @@ export default function CloudPlayerPickIntentSync() {
     access.canManageLeague,
     access.isLinked,
     accountLink,
-    authoritativeAssignment,
     season,
     snapshot,
     status,
