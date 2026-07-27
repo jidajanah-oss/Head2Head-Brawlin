@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   SteelBadge,
@@ -18,6 +24,7 @@ import {
   loadCloudWeeklyPickSubmission,
   reopenCloudWeeklyPickSubmission,
   submitCloudWeeklyPicks,
+  type CloudWeeklyPickIntentInput,
   type CloudWeeklyPickSubmission,
 } from "../../services/cloudWeeklyPickSubmissionService";
 import { supabaseClient } from "../../services/supabaseClient";
@@ -26,6 +33,7 @@ const STATUS_REFRESH_INTERVAL_MS = 15_000;
 
 function formatSubmissionTime(value: string): string {
   const timestamp = Date.parse(value);
+
   if (Number.isNaN(timestamp)) {
     return value;
   }
@@ -52,33 +60,70 @@ export default function WeeklyPickSubmissionPanel() {
     activePlayerId,
     pickerClickerHistory,
   } = useLeague();
-  const { season, week, snapshot } = useNFL();
-  const [submission, setSubmission] =
-    useState<CloudWeeklyPickSubmission | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [workingAction, setWorkingAction] = useState<
+  const {
+    season,
+    week,
+    snapshot,
+  } = useNFL();
+  const [
+    submission,
+    setSubmission,
+  ] = useState<CloudWeeklyPickSubmission | null>(
+    null,
+  );
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
+  const [
+    workingAction,
+    setWorkingAction,
+  ] = useState<
     "submit" | "reopen" | null
   >(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [
+    message,
+    setMessage,
+  ] = useState<string | null>(null);
   const requestIdRef = useRef(0);
 
-  const selectedPlayerId = activePlayerId || accountLink?.playerId || "";
-  const selectedPlayer = league.players.find(
-    (player) => player.id === selectedPlayerId,
-  );
-  const isLinked = status === "signed-in-linked" && Boolean(accountLink);
+  const selectedPlayerId =
+    activePlayerId ||
+    accountLink?.playerId ||
+    "";
+  const selectedPlayer =
+    league.players.find(
+      (player) =>
+        player.id === selectedPlayerId,
+    );
+  const isLinked =
+    status === "signed-in-linked" &&
+    Boolean(accountLink);
   const isViewingOwnPlayer = Boolean(
-    accountLink && selectedPlayerId === accountLink.playerId,
+    accountLink &&
+      selectedPlayerId ===
+        accountLink.playerId,
   );
   const isCommissioner = Boolean(
     accountLink &&
-      (accountLink.role === "commissioner" ||
-        accountLink.role === "backup_commissioner"),
+      (
+        accountLink.role ===
+          "commissioner" ||
+        accountLink.role ===
+          "backup_commissioner"
+      ),
   );
-  const canReadSelectedSubmission = Boolean(
-    isLinked && selectedPlayerId && (isViewingOwnPlayer || isCommissioner),
-  );
-  const currentWeek = league.currentWeek;
+  const canReadSelectedSubmission =
+    Boolean(
+      isLinked &&
+      selectedPlayerId &&
+      (
+        isViewingOwnPlayer ||
+        isCommissioner
+      ),
+    );
+  const currentWeek =
+    league.currentWeek;
   const gamesAreReady = Boolean(
     snapshot &&
       snapshot.season === season &&
@@ -86,9 +131,17 @@ export default function WeeklyPickSubmissionPanel() {
       week === currentWeek &&
       snapshot.weekGames.length > 0,
   );
-  const games = gamesAreReady ? snapshot?.weekGames ?? [] : [];
+  const games =
+    gamesAreReady
+      ? snapshot?.weekGames ?? []
+      : [];
   const pickerClickerWeekState =
-    pickerClickerHistory[getPickerClickerWeekId(season, currentWeek)] ?? null;
+    pickerClickerHistory[
+      getPickerClickerWeekId(
+        season,
+        currentWeek,
+      )
+    ] ?? null;
 
   const pickProgress = useMemo(() => {
     let explicitCount = 0;
@@ -97,19 +150,26 @@ export default function WeeklyPickSubmissionPanel() {
 
     for (const game of games) {
       const hasManualPick = Boolean(
-        selectedPlayerId && picks[selectedPlayerId]?.[game.id],
-      );
-      const hasDeliberatePickerClicker = Boolean(
         selectedPlayerId &&
+          picks[selectedPlayerId]?.[
+            game.id
+          ],
+      );
+      const hasDeliberatePickerClicker =
+        Boolean(
+          selectedPlayerId &&
           pickerClickerWeekState &&
           isPlayerPickerClickerSelected(
             pickerClickerWeekState,
             selectedPlayerId,
             game.id,
           ),
-      );
-      const hasExplicitIntent = hasManualPick || hasDeliberatePickerClicker;
-      const locked = PickLockEngine.isPickLocked(game);
+        );
+      const hasExplicitIntent =
+        hasManualPick ||
+        hasDeliberatePickerClicker;
+      const locked =
+        PickLockEngine.isPickLocked(game);
 
       if (hasExplicitIntent) {
         explicitCount += 1;
@@ -126,151 +186,356 @@ export default function WeeklyPickSubmissionPanel() {
       lockedMissingCount,
       totalCount: games.length,
     };
-  }, [games, pickerClickerWeekState, picks, selectedPlayerId]);
+  }, [
+    games,
+    pickerClickerWeekState,
+    picks,
+    selectedPlayerId,
+  ]);
+
+  const submissionIntents =
+    useMemo<
+      CloudWeeklyPickIntentInput[]
+    >(() => {
+      if (
+        !selectedPlayerId ||
+        !pickerClickerWeekState
+      ) {
+        return [];
+      }
+
+      const playerPicks =
+        picks[selectedPlayerId] ?? {};
+      const playerPickerClickerPicks =
+        pickerClickerWeekState
+          .playerSelectedPicks?.[
+            selectedPlayerId
+          ] ?? {};
+      const pickerClickerSourcePlayerId =
+        pickerClickerWeekState
+          .assignment.sourcePlayerId;
+
+      return games.flatMap(
+        (
+          game,
+        ): CloudWeeklyPickIntentInput[] => {
+          const selectedPickerClickerPick =
+            playerPickerClickerPicks[
+              game.id
+            ];
+
+          if (
+            selectedPickerClickerPick &&
+            pickerClickerSourcePlayerId !==
+              selectedPlayerId
+          ) {
+            return [
+              {
+                gameId: game.id,
+                selectedTeam: null,
+                source:
+                  "picker_clicker",
+                pickerClickerSourcePlayerId,
+                submittedAt:
+                  selectedPickerClickerPick
+                    .selectedAt,
+              },
+            ];
+          }
+
+          const selectedTeam =
+            (
+              playerPicks[game.id] ??
+              ""
+            )
+              .trim()
+              .toUpperCase();
+
+          if (!selectedTeam) {
+            return [];
+          }
+
+          return [
+            {
+              gameId: game.id,
+              selectedTeam,
+              source: "player",
+              pickerClickerSourcePlayerId:
+                null,
+              submittedAt: null,
+            },
+          ];
+        },
+      );
+    }, [
+      games,
+      pickerClickerWeekState,
+      picks,
+      selectedPlayerId,
+    ]);
 
   const target = useMemo(() => {
-    if (!accountLink || !selectedPlayerId) {
+    if (
+      !accountLink ||
+      !selectedPlayerId
+    ) {
       return null;
     }
 
     return {
-      leagueId: accountLink.leagueId,
-      playerId: selectedPlayerId,
-      week: currentWeek,
+      leagueId:
+        accountLink.leagueId,
+      playerId:
+        selectedPlayerId,
+      week:
+        currentWeek,
     };
-  }, [accountLink, currentWeek, selectedPlayerId]);
+  }, [
+    accountLink,
+    currentWeek,
+    selectedPlayerId,
+  ]);
 
   const loadSubmission = useCallback(
-    async (showLoading: boolean) => {
-      const client = supabaseClient;
-      if (!client || !target || !canReadSelectedSubmission) {
+    async (
+      showLoading: boolean,
+    ) => {
+      const client =
+        supabaseClient;
+
+      if (
+        !client ||
+        !target ||
+        !canReadSelectedSubmission
+      ) {
         requestIdRef.current += 1;
         setSubmission(null);
         setLoading(false);
         return;
       }
 
-      const requestId = requestIdRef.current + 1;
-      requestIdRef.current = requestId;
+      const requestId =
+        requestIdRef.current + 1;
+      requestIdRef.current =
+        requestId;
+
       if (showLoading) {
         setLoading(true);
       }
 
       try {
-        const nextSubmission = await loadCloudWeeklyPickSubmission(
-          client,
-          target,
-        );
-        if (requestId === requestIdRef.current) {
-          setSubmission(nextSubmission);
+        const nextSubmission =
+          await loadCloudWeeklyPickSubmission(
+            client,
+            target,
+          );
+
+        if (
+          requestId ===
+          requestIdRef.current
+        ) {
+          setSubmission(
+            nextSubmission,
+          );
           setMessage(null);
         }
       } catch (error) {
-        if (requestId === requestIdRef.current) {
-          setMessage(getErrorMessage(error));
+        if (
+          requestId ===
+          requestIdRef.current
+        ) {
+          setMessage(
+            getErrorMessage(error),
+          );
         }
       } finally {
-        if (requestId === requestIdRef.current) {
+        if (
+          requestId ===
+          requestIdRef.current
+        ) {
           setLoading(false);
         }
       }
     },
-    [canReadSelectedSubmission, target],
+    [
+      canReadSelectedSubmission,
+      target,
+    ],
   );
 
   useEffect(() => {
     void loadSubmission(true);
 
-    if (!canReadSelectedSubmission) {
+    if (
+      !canReadSelectedSubmission
+    ) {
       return undefined;
     }
 
-    const timerId = window.setInterval(() => {
-      void loadSubmission(false);
-    }, STATUS_REFRESH_INTERVAL_MS);
+    const timerId =
+      window.setInterval(() => {
+        void loadSubmission(false);
+      }, STATUS_REFRESH_INTERVAL_MS);
 
     return () => {
-      window.clearInterval(timerId);
+      window.clearInterval(
+        timerId,
+      );
       requestIdRef.current += 1;
     };
-  }, [canReadSelectedSubmission, loadSubmission]);
+  }, [
+    canReadSelectedSubmission,
+    loadSubmission,
+  ]);
 
-  const handleSubmit = async () => {
-    const client = supabaseClient;
-    if (!client || !target || !isViewingOwnPlayer) {
-      return;
-    }
+  const handleSubmit =
+    async () => {
+      const client =
+        supabaseClient;
 
-    setWorkingAction("submit");
-    setMessage(null);
-    try {
-      const nextSubmission = await submitCloudWeeklyPicks(client, target);
-      setSubmission(nextSubmission);
-      setMessage("Week submitted to the shared league cloud.");
-    } catch (error) {
-      setMessage(getErrorMessage(error));
-    } finally {
-      setWorkingAction(null);
-    }
-  };
+      if (
+        !client ||
+        !target ||
+        !isViewingOwnPlayer
+      ) {
+        return;
+      }
 
-  const handleReopen = async () => {
-    const client = supabaseClient;
-    if (!client || !target || !isCommissioner || !submission) {
-      return;
-    }
+      setWorkingAction("submit");
+      setMessage(null);
 
-    setWorkingAction("reopen");
-    setMessage(null);
-    try {
-      const nextSubmission = await reopenCloudWeeklyPickSubmission(
-        client,
-        target,
-      );
-      setSubmission(nextSubmission);
-      setMessage("The weekly entry is reopened for the linked player.");
-    } catch (error) {
-      setMessage(getErrorMessage(error));
-    } finally {
-      setWorkingAction(null);
-    }
-  };
+      try {
+        const nextSubmission =
+          await submitCloudWeeklyPicks(
+            client,
+            target,
+            submissionIntents,
+          );
 
-  const hasSubmitted = submission?.status === "submitted";
-  const hasReopened = submission?.status === "reopened";
+        setSubmission(
+          nextSubmission,
+        );
+        setMessage(
+          "All current choices were synchronized and the week was submitted.",
+        );
+      } catch (error) {
+        setMessage(
+          getErrorMessage(error),
+        );
+      } finally {
+        setWorkingAction(null);
+      }
+    };
+
+  const handleReopen =
+    async () => {
+      const client =
+        supabaseClient;
+
+      if (
+        !client ||
+        !target ||
+        !isCommissioner ||
+        !submission
+      ) {
+        return;
+      }
+
+      setWorkingAction("reopen");
+      setMessage(null);
+
+      try {
+        const nextSubmission =
+          await reopenCloudWeeklyPickSubmission(
+            client,
+            target,
+          );
+
+        setSubmission(
+          nextSubmission,
+        );
+        setMessage(
+          "The weekly entry is reopened for the linked player.",
+        );
+      } catch (error) {
+        setMessage(
+          getErrorMessage(error),
+        );
+      } finally {
+        setWorkingAction(null);
+      }
+    };
+
+  const hasSubmitted =
+    submission?.status ===
+      "submitted";
+  const hasReopened =
+    submission?.status ===
+      "reopened";
   const submitDisabled =
     !isLinked ||
     !canReadSelectedSubmission ||
     !isViewingOwnPlayer ||
     !gamesAreReady ||
-    pickProgress.openMissingCount > 0 ||
+    pickProgress.openMissingCount >
+      0 ||
+    submissionIntents.length !==
+      pickProgress.explicitCount ||
     hasSubmitted ||
     workingAction !== null;
-  const statusBadge = !isLinked ? (
-    <SteelBadge variant="neutral">Local only</SteelBadge>
-  ) : !canReadSelectedSubmission ? (
-    <SteelBadge variant="neutral">Account protected</SteelBadge>
-  ) : hasSubmitted ? (
-    <SteelBadge variant="success">Submitted</SteelBadge>
-  ) : hasReopened ? (
-    <SteelBadge variant="gold">Reopened</SteelBadge>
-  ) : (
-    <SteelBadge variant="info">Not submitted</SteelBadge>
-  );
+
+  const statusBadge =
+    !isLinked ? (
+      <SteelBadge
+        variant="neutral"
+      >
+        Local only
+      </SteelBadge>
+    ) : !canReadSelectedSubmission ? (
+      <SteelBadge
+        variant="neutral"
+      >
+        Account protected
+      </SteelBadge>
+    ) : hasSubmitted ? (
+      <SteelBadge
+        variant="success"
+      >
+        Submitted
+      </SteelBadge>
+    ) : hasReopened ? (
+      <SteelBadge
+        variant="gold"
+      >
+        Reopened
+      </SteelBadge>
+    ) : (
+      <SteelBadge
+        variant="info"
+      >
+        Not submitted
+      </SteelBadge>
+    );
 
   let description =
     "Submit only after every still-open game has a manual pick or deliberate Picker Clicker choice.";
+
   if (!isLinked) {
     description =
       "Sign in with a linked league account to use shared weekly submission status.";
-  } else if (!canReadSelectedSubmission) {
+  } else if (
+    !canReadSelectedSubmission
+  ) {
     description =
       "The selected player has a separate protected cloud account. Switch back to your linked player to submit.";
   }
 
   return (
     <section className="weekly-pick-submission-shell">
-      <SteelCard className="weekly-pick-submission-card" variant="gold">
+      <SteelCard
+        className="weekly-pick-submission-card"
+        variant="gold"
+      >
         <SteelSectionHeader
           eyebrow={`Season ${season} • Week ${currentWeek}`}
           title="Weekly Pick Submission"
@@ -279,8 +544,13 @@ export default function WeeklyPickSubmissionPanel() {
         />
 
         <div className="weekly-pick-submission-player">
-          <span>Selected entry</span>
-          <strong>{selectedPlayer?.name ?? "No player selected"}</strong>
+          <span>
+            Selected entry
+          </span>
+          <strong>
+            {selectedPlayer?.name ??
+              "No player selected"}
+          </strong>
           <small>
             {selectedPlayer
               ? `${selectedPlayer.nflTeam} franchise`
@@ -290,41 +560,82 @@ export default function WeeklyPickSubmissionPanel() {
 
         <div className="weekly-pick-submission-stats">
           <div>
-            <span>Deliberate choices</span>
+            <span>
+              Deliberate choices
+            </span>
             <strong>
-              {pickProgress.explicitCount}/{pickProgress.totalCount || 0}
+              {
+                pickProgress
+                  .explicitCount
+              }
+              /
+              {
+                pickProgress
+                  .totalCount || 0
+              }
             </strong>
           </div>
           <div>
-            <span>Still open</span>
-            <strong>{pickProgress.openMissingCount}</strong>
+            <span>
+              Still open
+            </span>
+            <strong>
+              {
+                pickProgress
+                  .openMissingCount
+              }
+            </strong>
           </div>
           <div>
-            <span>Locked omissions</span>
-            <strong>{pickProgress.lockedMissingCount}</strong>
+            <span>
+              Locked omissions
+            </span>
+            <strong>
+              {
+                pickProgress
+                  .lockedMissingCount
+              }
+            </strong>
           </div>
         </div>
 
         {submission ? (
           <p className="weekly-pick-submission-timestamp">
-            {submission.status === "submitted" ? "Submitted" : "Reopened"}{" "}
+            {submission.status ===
+            "submitted"
+              ? "Submitted"
+              : "Reopened"}{" "}
             {formatSubmissionTime(
-              submission.status === "submitted"
-                ? submission.submittedAt
-                : submission.reopenedAt ?? submission.updatedAt,
+              submission.status ===
+                "submitted"
+                ? submission
+                    .submittedAt
+                : submission
+                    .reopenedAt ??
+                    submission
+                      .updatedAt,
             )}
           </p>
         ) : null}
 
-        {pickProgress.lockedMissingCount > 0 ? (
+        {pickProgress
+          .lockedMissingCount >
+        0 ? (
           <p className="weekly-pick-submission-note">
-            Locked omissions stay outside deliberate cloud intent and continue
-            through the existing automatic Picker Clicker fallback rules.
+            Locked omissions stay
+            outside deliberate cloud
+            intent and continue through
+            the existing automatic
+            Picker Clicker fallback
+            rules.
           </p>
         ) : null}
 
         {message ? (
-          <p className="weekly-pick-submission-message" role="status">
+          <p
+            className="weekly-pick-submission-message"
+            role="status"
+          >
             {message}
           </p>
         ) : null}
@@ -332,40 +643,64 @@ export default function WeeklyPickSubmissionPanel() {
         <div className="weekly-pick-submission-actions">
           {isViewingOwnPlayer ? (
             <SteelButton
-              disabled={submitDisabled}
-              onClick={() => void handleSubmit()}
+              disabled={
+                submitDisabled
+              }
+              onClick={() =>
+                void handleSubmit()
+              }
               size="md"
               variant="primary"
             >
-              {workingAction === "submit"
-                ? "Submitting…"
+              {workingAction ===
+              "submit"
+                ? "Synchronizing and submitting…"
                 : hasSubmitted
                   ? "Week Submitted"
                   : hasReopened
-                    ? "Resubmit Week"
-                    : "Submit Week"}
+                    ? "Sync and Resubmit Week"
+                    : "Sync and Submit Week"}
             </SteelButton>
           ) : null}
 
-          {isCommissioner && hasSubmitted ? (
+          {isCommissioner &&
+          hasSubmitted ? (
             <SteelButton
-              disabled={workingAction !== null}
-              onClick={() => void handleReopen()}
+              disabled={
+                workingAction !==
+                null
+              }
+              onClick={() =>
+                void handleReopen()
+              }
               size="md"
               variant="secondary"
             >
-              {workingAction === "reopen" ? "Reopening…" : "Reopen Entry"}
+              {workingAction ===
+              "reopen"
+                ? "Reopening…"
+                : "Reopen Entry"}
             </SteelButton>
           ) : null}
 
           {canReadSelectedSubmission ? (
             <SteelButton
-              disabled={loading || workingAction !== null}
-              onClick={() => void loadSubmission(true)}
+              disabled={
+                loading ||
+                workingAction !==
+                  null
+              }
+              onClick={() =>
+                void loadSubmission(
+                  true,
+                )
+              }
               size="sm"
               variant="ghost"
             >
-              {loading ? "Checking…" : "Refresh Status"}
+              {loading
+                ? "Checking…"
+                : "Refresh Status"}
             </SteelButton>
           ) : null}
         </div>
