@@ -1,5 +1,7 @@
 import {
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { FormEvent } from "react";
@@ -466,6 +468,53 @@ function CommissionerPayoutLedger() {
     useState("");
   const [formMessage, setFormMessage] =
     useState("");
+  const lastRosterSyncSignatureRef =
+    useRef("");
+
+  const rosterSyncSignature = useMemo(
+    () =>
+      league.players
+        .filter(
+          (player) =>
+            player.status === "active",
+        )
+        .map(
+          (player) =>
+            [
+              player.id,
+              player.name,
+              player.nflTeam,
+              player.role,
+              player.status,
+            ].join(":"),
+        )
+        .sort()
+        .join("|"),
+    [league.players],
+  );
+
+  useEffect(() => {
+    if (
+      !ledger ||
+      lastRosterSyncSignatureRef
+        .current ===
+        rosterSyncSignature
+    ) {
+      return;
+    }
+
+    lastRosterSyncSignatureRef.current =
+      rosterSyncSignature;
+
+    synchronizePayoutLedgerSeason(
+      season,
+    );
+  }, [
+    ledger,
+    rosterSyncSignature,
+    season,
+    synchronizePayoutLedgerSeason,
+  ]);
 
   const playerLogoById = useMemo(
     () =>
