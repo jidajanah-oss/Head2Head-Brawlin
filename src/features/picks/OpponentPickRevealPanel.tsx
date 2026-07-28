@@ -205,18 +205,23 @@ export default function OpponentPickRevealPanel() {
     };
   }, [canRequestReveal, loadReveal]);
 
+  const revealedPickCount =
+    reveal?.revealedPicks.length ?? 0;
+
   const statusBadge = !isLinked ? (
     <SteelBadge variant="neutral">Local only</SteelBadge>
   ) : !canRequestReveal ? (
     <SteelBadge variant="neutral">Account protected</SteelBadge>
+  ) : reveal?.canReveal && revealedPickCount > 0 ? (
+    <SteelBadge variant="success">Locked picks shown</SteelBadge>
   ) : reveal?.canReveal ? (
-    <SteelBadge variant="success">Revealed</SteelBadge>
+    <SteelBadge variant="gold">Waiting for lock</SteelBadge>
   ) : (
-    <SteelBadge variant="gold">Waiting</SteelBadge>
+    <SteelBadge variant="gold">Waiting for entries</SteelBadge>
   );
 
   let description =
-    "Opponent selections appear only after both head-to-head entries are submitted.";
+    "Opponent selections stay hidden game-by-game until each game's five-minute lock.";
   if (!isLinked) {
     description = "Sign in with a linked account to use protected opponent reveal.";
   } else if (!canRequestReveal) {
@@ -302,15 +307,26 @@ export default function OpponentPickRevealPanel() {
           </p>
         ) : reveal && !reveal.canReveal ? (
           <p className="opponent-reveal-waiting">
-            Waiting for both head-to-head entries to be submitted. No opponent
-            selections have been returned to this browser.
+            Waiting for both head-to-head entries to be submitted at least
+            once. No opponent selections have been returned to this browser.
+          </p>
+        ) : reveal?.canReveal && revealedPickCount === 0 ? (
+          <p className="opponent-reveal-waiting">
+            Both entries are on file. Opponent selections will appear one game
+            at a time when that game's five-minute lock arrives.
           </p>
         ) : reveal?.canReveal ? (
-          <div className="opponent-reveal-games">
-            {reveal.revealedPicks.map((pick) => (
-              <OpponentPickRow key={pick.gameId} pick={pick} />
-            ))}
-          </div>
+          <>
+            <p className="opponent-reveal-waiting">
+              Only games whose five-minute lock has arrived are shown. Later
+              games remain hidden and may still be changed.
+            </p>
+            <div className="opponent-reveal-games">
+              {reveal.revealedPicks.map((pick) => (
+                <OpponentPickRow key={pick.gameId} pick={pick} />
+              ))}
+            </div>
+          </>
         ) : null}
 
         {canRequestReveal ? (
