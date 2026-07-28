@@ -232,40 +232,195 @@ export function synchronizePayoutLedgerRosterAndBuyIns(
 
   const timestamp =
     getTimestamp(updatedAt);
-
-  const existingPlayerIds = new Set(
-    ledger.roster.map(
-      (player) => player.playerId,
-    ),
+  const activePlayers = players.filter(
+    (player) =>
+      player.status === "active",
   );
-
-  const nextRoster = [...ledger.roster];
-  const nextEntries = {
-    ...ledger.entries,
-  };
+  const activePlayerById = new Map(
+    activePlayers.map((player) => [
+      player.id,
+      player,
+    ]),
+  );
+  const activePlayerByTeam = new Map(
+    activePlayers.map((player) => [
+      player.nflTeam,
+      player,
+    ]),
+  );
+  const existingRosterById = new Map(
+    ledger.roster.map((player) => [
+      player.playerId,
+      player,
+    ]),
+  );
+  const existingRosterByTeam = new Map(
+    ledger.roster.map((player) => [
+      player.nflTeam,
+      player,
+    ]),
+  );
 
   let changed = false;
 
-  players
-    .filter(
-      (player) =>
-        player.status === "active",
-    )
-    .forEach((player) => {
-      if (
-        !existingPlayerIds.has(player.id)
-      ) {
-        nextRoster.push(
-          buildPlayerSnapshot(
-            player,
+  const nextRoster =
+    activePlayers.map((player) => {
+      const existingSnapshot =
+        existingRosterById.get(
+          player.id,
+        ) ??
+        existingRosterByTeam.get(
+          player.nflTeam,
+        );
+      const nextSnapshot =
+        buildPlayerSnapshot(
+          player,
+          existingSnapshot
+            ?.capturedAt ||
             timestamp,
-          ),
         );
 
-        existingPlayerIds.add(player.id);
-        changed = true;
+      if (
+        existingSnapshot &&
+        existingSnapshot.playerId ===
+          nextSnapshot.playerId &&
+        existingSnapshot.playerName ===
+          nextSnapshot.playerName &&
+        existingSnapshot.nflTeam ===
+          nextSnapshot.nflTeam &&
+        existingSnapshot.status ===
+          nextSnapshot.status &&
+        existingSnapshot.role ===
+          nextSnapshot.role
+      ) {
+        return existingSnapshot;
       }
 
+      changed = true;
+      return nextSnapshot;
+    });
+
+  const activePlayerIds = new Set(
+    activePlayers.map(
+      (player) => player.id,
+    ),
+  );
+  const activePlayerTeams = new Set(
+    activePlayers.map(
+      (player) => player.nflTeam,
+    ),
+  );
+
+  ledger.roster.forEach(
+    (snapshot) => {
+      if (
+        !activePlayerIds.has(
+          snapshot.playerId,
+        ) &&
+        !activePlayerTeams.has(
+          snapshot.nflTeam,
+        )
+      ) {
+        nextRoster.push(snapshot);
+      }
+    },
+  );
+
+  if (
+    nextRoster.length !==
+    ledger.roster.length
+  ) {
+    changed = true;
+  }
+
+  const nextEntries: Record<
+    string,
+    PayoutLedgerEntry
+  > = {};
+
+  Object.values(
+    ledger.entries,
+  ).forEach((entry) => {
+    const activePlayer =
+      activePlayerById.get(
+        entry.playerId,
+      ) ??
+      activePlayerByTeam.get(
+        entry.nflTeam,
+      );
+
+    if (!activePlayer) {
+      nextEntries[entry.id] =
+        entry;
+      return;
+    }
+
+    const nextEntryId =
+      getPayoutLedgerEntryId(
+        entry.season,
+        entry.category,
+        entry.sourceKey,
+        activePlayer.id,
+      );
+    const identityChanged =
+      entry.id !== nextEntryId ||
+      entry.playerId !==
+        activePlayer.id ||
+      entry.playerName !==
+        activePlayer.name ||
+      entry.nflTeam !==
+        activePlayer.nflTeam;
+
+    const nextEntry =
+      identityChanged
+        ? {
+            ...entry,
+            id: nextEntryId,
+            playerId:
+              activePlayer.id,
+            playerName:
+              activePlayer.name,
+            nflTeam:
+              activePlayer.nflTeam,
+          }
+        : entry;
+
+    if (identityChanged) {
+      changed = true;
+    }
+
+    const existingTarget =
+      nextEntries[nextEntryId];
+
+    if (!existingTarget) {
+      nextEntries[nextEntryId] =
+        nextEntry;
+      return;
+    }
+
+    const preferredEntry =
+      existingTarget.status ===
+        "paid"
+        ? existingTarget
+        : nextEntry.status ===
+            "paid"
+          ? nextEntry
+          : Date.parse(
+                nextEntry.updatedAt,
+              ) >
+              Date.parse(
+                existingTarget.updatedAt,
+              )
+            ? nextEntry
+            : existingTarget;
+
+    nextEntries[nextEntryId] =
+      preferredEntry;
+    changed = true;
+  });
+
+  activePlayers.forEach(
+    (player) => {
       const buyInEntry =
         createBuyInEntry(
           ledger.season,
@@ -278,10 +433,10 @@ export function synchronizePayoutLedgerRosterAndBuyIns(
       ) {
         nextEntries[buyInEntry.id] =
           buyInEntry;
-
         changed = true;
       }
-    });
+    },
+  );
 
   if (!changed) {
     return ledger;
