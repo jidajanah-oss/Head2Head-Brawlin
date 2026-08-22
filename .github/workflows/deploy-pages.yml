@@ -1,4 +1,4 @@
-name: Deploy Head2Head Brawlin to GitHub Pages
+﻿name: Deploy Head2Head Brawlin to GitHub Pages
 
 on:
   push:
@@ -34,7 +34,7 @@ jobs:
 
       - name: Build GitHub Pages release
         env:
-          GITHUB_PAGES: "true"
+          GITHUB_PAGES: "false"
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: npm run build
