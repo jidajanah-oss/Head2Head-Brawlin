@@ -13,6 +13,7 @@ import { useAuth } from "./context/AuthContext";
 import { NFLProvider } from "./context/NFLContext";
 import { ObscureStatProvider } from "./context/ObscureStatContext";
 import { SeasonAwardProvider } from "./context/SeasonAwardContext";
+import CloudPickerClickerAssignmentSync from "./features/auth/CloudPickerClickerAssignmentSync";
 import CloudPlayerPickIntentSync from "./features/auth/CloudPlayerPickIntentSync";
 import ObscureStatPayoutSync from "./features/payouts/ObscureStatPayoutSync";
 import PlayoffPayoutSync from "./features/payouts/PlayoffPayoutSync";
@@ -64,6 +65,7 @@ function AppRuntime() {
     <NFLProvider>
       <ObscureStatProvider>
         <SeasonAwardProvider>
+          <CloudPickerClickerAssignmentSync />
           <PickerClickerSync />
           <CloudPlayerPickIntentSync />
           <WeeklyScoringSync />
