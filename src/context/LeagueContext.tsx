@@ -32,6 +32,7 @@ import type {
   PayoutLedgerEntry,
   PayoutLedgerEntryStatus,
   PayoutLedgerHistory,
+  PayoutLedgerSeasonState,
 } from "../engine/payoutLedgerTypes";
 import {
   clearPlayoffMatchupResult as clearStoredPlayoffMatchupResult,
@@ -117,6 +118,10 @@ type LeagueContextType = {
 
   // COMMISSIONER PAYOUT LEDGER
   payoutLedgerHistory: PayoutLedgerHistory;
+  replacePayoutLedgerSeasonFromCloud: (
+    season: number,
+    ledger: PayoutLedgerSeasonState,
+  ) => void;
   initializePayoutLedgerSeason: (
     season: number,
   ) => void;
@@ -632,7 +637,22 @@ export function LeagueProvider({
         };
       },
     );
+  };  const replacePayoutLedgerSeasonFromCloud = (
+    season: number,
+    ledger: PayoutLedgerSeasonState,
+  ) => {
+    const ledgerId =
+      getPayoutLedgerSeasonId(season);
+
+    setPayoutLedgerHistory(
+      (previousHistory) => ({
+        ...previousHistory,
+        [ledgerId]: ledger,
+      }),
+    );
   };
+
+
 
   const synchronizePayoutLedgerSeason = (
     season: number,
@@ -1051,6 +1071,7 @@ export function LeagueProvider({
         upsertObscureStatCoinFlipResolution,
         clearObscureStatCoinFlipResolution,
         payoutLedgerHistory,
+        replacePayoutLedgerSeasonFromCloud,
         initializePayoutLedgerSeason,
         synchronizePayoutLedgerSeason,
         upsertPayoutLedgerEntry,

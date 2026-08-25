@@ -15,6 +15,7 @@ import { ObscureStatProvider } from "./context/ObscureStatContext";
 import { SeasonAwardProvider } from "./context/SeasonAwardContext";
 import CloudPickerClickerAssignmentSync from "./features/auth/CloudPickerClickerAssignmentSync";
 import CloudPlayerPickIntentSync from "./features/auth/CloudPlayerPickIntentSync";
+import CloudPayoutLedgerSync from "./features/payouts/CloudPayoutLedgerSync";
 import ObscureStatPayoutSync from "./features/payouts/ObscureStatPayoutSync";
 import PlayoffPayoutSync from "./features/payouts/PlayoffPayoutSync";
 import SeasonAwardPayoutSync from "./features/payouts/SeasonAwardPayoutSync";
@@ -68,6 +69,7 @@ function AppRuntime() {
           <CloudPickerClickerAssignmentSync />
           <PickerClickerSync />
           <CloudPlayerPickIntentSync />
+          <CloudPayoutLedgerSync />
           <WeeklyScoringSync />
           <ObscureStatPayoutSync />
           <PlayoffPayoutSync />
