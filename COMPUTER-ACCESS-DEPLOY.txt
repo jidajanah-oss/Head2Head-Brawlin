@@ -1,0 +1,44 @@
+HEAD2HEAD BRAWLIN' — COMPUTER ACCESS PIN v1
+
+Purpose
+-------
+Adds a second sign-in method for players who cannot reliably use email/phone.
+Kenny (CAR) can keep his existing player ID and all league history while his
+old inaccessible Gmail link is retired and replaced by a computer-only PIN.
+
+Security
+--------
+- Player enters a login name + 6-digit PIN.
+- The six-digit PIN is never stored in public tables.
+- The Edge Function derives a long Supabase Auth password using the server's
+  service-role secret, so the raw PIN cannot be used directly against Auth.
+- Five bad PIN attempts lock that Computer Access account for 15 minutes.
+- Only the primary commissioner can enable, reset, or disable Computer Access.
+- Enabling Computer Access retires only the player's old account link. Roster,
+  team, picks, standings, payouts, and history are preserved.
+
+Deployment order
+----------------
+1. Copy this update into the current Head2Head-Brawlin repo.
+2. Apply the new Supabase migration.
+3. Deploy the computer-access Edge Function WITH JWT verification disabled:
+
+   supabase functions deploy computer-access --no-verify-jwt
+
+   The function itself performs commissioner JWT validation for management
+   actions. The login action must be callable before a player has a session.
+
+4. Build locally:
+
+   npm.cmd run build
+
+5. Commit/push to GitHub. GitHub Pages deploys the app automatically.
+6. Sign in as Jimbo -> Commish -> Computer Access PIN.
+7. Kenny should be preselected. Enter login name Kenny and a new 6-digit PIN
+   twice, then choose Enable Computer Access.
+8. Confirm the warning. This retires Kenny's old linked Gmail and creates the
+   new computer login on the SAME CAR player record.
+9. On Kenny's computer: Me -> Cloud Account -> Computer Access -> Kenny + PIN.
+
+Do not use the old Reset Incorrect Player Link first. The new Enable Computer
+Access action performs the safe replacement itself.

@@ -2,6 +2,7 @@ import SeasonAwardsBoard from "../features/awards/SeasonAwardsBoard";
 import CommissionerSeasonCloseout from "../features/closeout/CommissionerSeasonCloseout";
 import CommissionerSeasonOperations from "../features/commissioner/CommissionerSeasonOperations";
 import FutureSeasonDraftPanel from "../features/commissioner/FutureSeasonDraftPanel";
+import ComputerAccessManagerPanel from "../features/auth/ComputerAccessManagerPanel";
 import LinkedPlayerAccountResetPanel from "../features/auth/LinkedPlayerAccountResetPanel";
 import CommissionerPayoutLedger from "../features/payouts/CommissionerPayoutLedger";
 import CommissionerPlayoffResults from "../features/playoffs/CommissionerPlayoffResults";
@@ -11,6 +12,7 @@ export default function Commissioner() {
   return (
     <>
       <CommissionerSeasonOperations />
+      <ComputerAccessManagerPanel />
       <LinkedPlayerAccountResetPanel />
       <FutureSeasonDraftPanel />
       <CommissionerDataTransfer />

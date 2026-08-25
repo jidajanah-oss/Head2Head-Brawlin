@@ -1,4 +1,4 @@
-﻿import {
+import {
   useState,
 } from "react";
 import type {
@@ -12,9 +12,12 @@ type PendingAction =
   | "send"
   | "verify"
   | "resend"
+  | "computer"
   | "sign-out"
   | "refresh"
   | null;
+
+type SignInMode = "email" | "computer";
 
 function getRoleLabel(
   role: string,
@@ -56,6 +59,14 @@ function normalizeCodeInput(
     .slice(0, 10);
 }
 
+function normalizePinInput(
+  value: string,
+): string {
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 6);
+}
+
 export default function CloudAccountPanel() {
   const {
     configured,
@@ -70,9 +81,13 @@ export default function CloudAccountPanel() {
     sendEmailCode,
     verifyEmailCode,
     clearEmailCodeRequest,
+    signInWithComputerAccess,
     signOut,
     refreshAccountLink,
   } = useAuth();
+
+  const [signInMode, setSignInMode] =
+    useState<SignInMode>("email");
 
   const [email, setEmail] =
     useState("");
@@ -80,6 +95,16 @@ export default function CloudAccountPanel() {
   const [
     verificationCode,
     setVerificationCode,
+  ] = useState("");
+
+  const [
+    computerUsername,
+    setComputerUsername,
+  ] = useState("");
+
+  const [
+    computerPin,
+    setComputerPin,
   ] = useState("");
 
   const [
@@ -91,6 +116,16 @@ export default function CloudAccountPanel() {
 
   const isSubmitting =
     pendingAction !== null;
+
+  const isComputerAccessUser =
+    user?.app_metadata?.auth_method ===
+    "computer_pin";
+
+  const computerAccessLabel =
+    typeof user?.app_metadata?.computer_username ===
+    "string"
+      ? user.app_metadata.computer_username
+      : accountLink?.playerName ?? "Computer Access";
 
   const handleEmailCodeRequest = async (
     event: FormEvent<HTMLFormElement>,
@@ -125,6 +160,25 @@ export default function CloudAccountPanel() {
         verificationCode,
       );
       setVerificationCode("");
+    } catch {
+      // AuthContext exposes the user-facing error.
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const handleComputerAccess = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    setPendingAction("computer");
+
+    try {
+      await signInWithComputerAccess(
+        computerUsername,
+        computerPin,
+      );
+      setComputerPin("");
     } catch {
       // AuthContext exposes the user-facing error.
     } finally {
@@ -183,7 +237,7 @@ export default function CloudAccountPanel() {
       <div className="cloud-account-panel__heading">
         <div>
           <p className="cloud-account-panel__kicker">
-            Milestone 12
+            Secure Player Access
           </p>
           <h2>Cloud Account</h2>
         </div>
@@ -218,54 +272,161 @@ export default function CloudAccountPanel() {
         connectionStatus === "connected" &&
         !user &&
         !emailCodeSentTo && (
-          <form
-            className="cloud-account-panel__form"
-            onSubmit={
-              handleEmailCodeRequest
-            }
-          >
-            <p>
-              Sign in with the email assigned
-              to your league account.
-            </p>
-
-            <p>
-              On iPhone, request the code here,
-              open your email, then return to
-              this same Home Screen app to enter
-              it.
-            </p>
-
-            <label htmlFor="cloud-account-email">
-              Email address
-            </label>
-
-            <input
-              id="cloud-account-email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(
-                event:
-                  ChangeEvent<HTMLInputElement>,
-              ) =>
-                setEmail(
-                  event.target.value,
-                )
-              }
-              placeholder="name@example.com"
-              required
-            />
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
+          <>
+            <div
+              className="cloud-account-panel__signin-modes"
+              role="group"
+              aria-label="Sign-in method"
             >
-              {pendingAction === "send"
-                ? "Sending code..."
-                : "Email me a sign-in code"}
-            </button>
-          </form>
+              <button
+                type="button"
+                className={
+                  signInMode === "email"
+                    ? "cloud-account-panel__mode-button cloud-account-panel__mode-button--active"
+                    : "cloud-account-panel__mode-button"
+                }
+                disabled={isSubmitting}
+                onClick={() => {
+                  setSignInMode("email");
+                }}
+              >
+                Email Code
+              </button>
+
+              <button
+                type="button"
+                className={
+                  signInMode === "computer"
+                    ? "cloud-account-panel__mode-button cloud-account-panel__mode-button--active"
+                    : "cloud-account-panel__mode-button"
+                }
+                disabled={isSubmitting}
+                onClick={() => {
+                  setSignInMode("computer");
+                  clearEmailCodeRequest();
+                }}
+              >
+                Computer Access
+              </button>
+            </div>
+
+            {signInMode === "email" ? (
+              <form
+                className="cloud-account-panel__form"
+                onSubmit={
+                  handleEmailCodeRequest
+                }
+              >
+                <p>
+                  Sign in with the email assigned
+                  to your league account.
+                </p>
+
+                <p>
+                  On iPhone, request the code here,
+                  open your email, then return to
+                  this same Home Screen app to enter
+                  it.
+                </p>
+
+                <label htmlFor="cloud-account-email">
+                  Email address
+                </label>
+
+                <input
+                  id="cloud-account-email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(
+                    event:
+                      ChangeEvent<HTMLInputElement>,
+                  ) =>
+                    setEmail(
+                      event.target.value,
+                    )
+                  }
+                  placeholder="name@example.com"
+                  required
+                />
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                >
+                  {pendingAction === "send"
+                    ? "Sending code..."
+                    : "Email me a sign-in code"}
+                </button>
+              </form>
+            ) : (
+              <form
+                className="cloud-account-panel__form cloud-account-panel__computer-form"
+                onSubmit={handleComputerAccess}
+              >
+                <div className="cloud-account-panel__message cloud-account-panel__message--computer">
+                  <strong>Computer Access</strong>
+                  <span>
+                    Use the player name and 6-digit PIN assigned by the commissioner. No email or phone is required.
+                  </span>
+                </div>
+
+                <label htmlFor="cloud-computer-username">
+                  Player name
+                </label>
+
+                <input
+                  id="cloud-computer-username"
+                  type="text"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={computerUsername}
+                  onChange={(
+                    event: ChangeEvent<HTMLInputElement>,
+                  ) => setComputerUsername(event.target.value)}
+                  placeholder="Kenny"
+                  required
+                />
+
+                <label htmlFor="cloud-computer-pin">
+                  6-digit PIN
+                </label>
+
+                <input
+                  id="cloud-computer-pin"
+                  className="cloud-account-panel__pin-input"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  value={computerPin}
+                  onChange={(
+                    event: ChangeEvent<HTMLInputElement>,
+                  ) => setComputerPin(normalizePinInput(event.target.value))}
+                  placeholder="••••••"
+                  required
+                />
+
+                <button
+                  type="submit"
+                  disabled={
+                    isSubmitting ||
+                    computerUsername.trim().length < 2 ||
+                    computerPin.length !== 6
+                  }
+                >
+                  {pendingAction === "computer"
+                    ? "Signing in..."
+                    : "Sign in with PIN"}
+                </button>
+
+                <small className="cloud-account-panel__security-note">
+                  Five incorrect PIN attempts temporarily lock Computer Access for 15 minutes.
+                </small>
+              </form>
+            )}
+          </>
         )}
 
       {configured &&
@@ -369,8 +530,17 @@ export default function CloudAccountPanel() {
         status === "signed-in-unlinked" && (
           <div className="cloud-account-panel__account">
             <p>
-              Signed in as{" "}
-              <strong>{user.email}</strong>
+              {isComputerAccessUser ? (
+                <>
+                  Computer Access signed in as{" "}
+                  <strong>{computerAccessLabel}</strong>
+                </>
+              ) : (
+                <>
+                  Signed in as{" "}
+                  <strong>{user.email}</strong>
+                </>
+              )}
             </p>
 
             <div className="cloud-account-panel__message cloud-account-panel__message--warning">
@@ -378,7 +548,7 @@ export default function CloudAccountPanel() {
               have an active league-player
               link. Refresh the account after
               the commissioner prepares the
-              player invitation.
+              player access.
             </div>
 
             <div className="cloud-account-panel__actions">
@@ -440,13 +610,15 @@ export default function CloudAccountPanel() {
                     accountLink.nflTeam,
                   ]
                     .filter(Boolean)
-                    .join(" Â· ") || "Linked"}
+                    .join(" · ") || "Linked"}
                 </strong>
               </div>
             </div>
 
             <p className="cloud-account-panel__email">
-              Signed in as {user.email}
+              {isComputerAccessUser
+                ? `Computer Access · ${computerAccessLabel}`
+                : `Signed in as ${user.email ?? "email account"}`}
             </p>
 
             <div className="cloud-account-panel__actions">
@@ -478,4 +650,3 @@ export default function CloudAccountPanel() {
     </section>
   );
 }
-

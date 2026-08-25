@@ -201,3 +201,50 @@
     flex: 1 1 150px;
   }
 }
+
+.cloud-account-panel__signin-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.56);
+}
+
+.cloud-account-panel__mode-button {
+  min-height: 38px !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  color: #cbd5e1 !important;
+}
+
+.cloud-account-panel__mode-button--active {
+  border-color: rgba(245, 190, 44, 0.55) !important;
+  background: rgba(245, 190, 44, 0.14) !important;
+  color: #fde68a !important;
+}
+
+.cloud-account-panel__message--computer {
+  margin-top: 0;
+  border-color: rgba(59, 130, 246, 0.42);
+  color: #bfdbfe;
+}
+
+.cloud-account-panel__pin-input {
+  letter-spacing: 0.45em;
+  font-weight: 900 !important;
+  -webkit-text-security: disc;
+}
+
+.cloud-account-panel__security-note {
+  color: #94a3b8;
+  line-height: 1.45;
+}
+
+@media (max-width: 480px) {
+  .cloud-account-panel__signin-modes {
+    grid-template-columns: 1fr;
+  }
+}

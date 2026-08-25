@@ -95,6 +95,17 @@ function getRoleRank(role: PlayerRole): number {
   return 2;
 }
 
+
+function isComputerAccessEmail(
+  email: string | undefined,
+): boolean {
+  return Boolean(
+    email?.toLowerCase().endsWith(
+      "@head2head.invalid",
+    ),
+  );
+}
+
 function getPlayerInitials(displayName: string): string {
   const initials = displayName
     .trim()
@@ -229,7 +240,11 @@ export default function PlayerAccountReadinessPanel() {
         for (const record of nextRecords) {
           if (!(record.playerId in next)) {
             next[record.playerId] =
-              record.email ?? "";
+              isComputerAccessEmail(
+                record.email,
+              )
+                ? ""
+                : record.email ?? "";
           }
         }
 
@@ -305,8 +320,12 @@ export default function PlayerAccountReadinessPanel() {
 
         const draftEmail =
           emailDrafts[record.playerId] ??
-          record.email ??
-          "";
+          isComputerAccessEmail(
+            record.email,
+          )
+            ? "computer pin access"
+            : record.email ??
+              "";
 
         const searchableText = [
           record.displayName,
@@ -516,6 +535,10 @@ export default function PlayerAccountReadinessPanel() {
       record.accountStatus ===
       "invitation_pending";
 
+    const usesComputerAccess =
+      isLinked &&
+      isComputerAccessEmail(record.email);
+
     const hasDraftEmail = Boolean(
       emailDrafts[record.playerId]?.trim(),
     );
@@ -588,25 +611,32 @@ export default function PlayerAccountReadinessPanel() {
           ) : null}
         </div>
 
-        <label className="cloud-roster-email-field">
-          <span>Login email</span>
+        {usesComputerAccess ? (
+          <div className="cloud-roster-email-field cloud-roster-email-field--computer">
+            <span>Login method</span>
+            <strong>Computer PIN access</strong>
+          </div>
+        ) : (
+          <label className="cloud-roster-email-field">
+            <span>Login email</span>
 
-          <input
-            autoComplete="off"
-            disabled={isBusy || isLinked}
-            onChange={(event) =>
-              handleEmailChange(
-                record.playerId,
-                event,
-              )
-            }
-            placeholder="player@example.com"
-            type="email"
-            value={
-              emailDrafts[record.playerId] ?? ""
-            }
-          />
-        </label>
+            <input
+              autoComplete="off"
+              disabled={isBusy || isLinked}
+              onChange={(event) =>
+                handleEmailChange(
+                  record.playerId,
+                  event,
+                )
+              }
+              placeholder="player@example.com"
+              type="email"
+              value={
+                emailDrafts[record.playerId] ?? ""
+              }
+            />
+          </label>
+        )}
 
         <div className="cloud-roster-player__details">
           {isLinked ? (
@@ -682,7 +712,9 @@ export default function PlayerAccountReadinessPanel() {
           </div>
         ) : (
           <p className="cloud-roster-player__linked-note">
-            This player’s login is connected and ready.
+            {usesComputerAccess
+              ? "This player’s Computer PIN login is connected and ready."
+              : "This player’s login is connected and ready."}
           </p>
         )}
       </article>

@@ -24,6 +24,25 @@ function getRoleLabel(
   return "Player";
 }
 
+
+function isComputerAccessEmail(
+  email: string | undefined,
+): boolean {
+  return Boolean(
+    email?.toLowerCase().endsWith(
+      "@head2head.invalid",
+    ),
+  );
+}
+
+function getLoginLabel(email: string | undefined): string {
+  if (isComputerAccessEmail(email)) {
+    return "Computer PIN access";
+  }
+
+  return email ?? "Email unavailable";
+}
+
 export default function LinkedPlayerAccountResetPanel() {
   const {
     status,
@@ -64,7 +83,8 @@ export default function LinkedPlayerAccountResetPanel() {
         .filter(
           (record) =>
             record.accountStatus === "linked" &&
-            record.role !== "commissioner",
+            record.role !== "commissioner" &&
+            !isComputerAccessEmail(record.email),
         )
         .sort((left, right) =>
           left.displayName.localeCompare(right.displayName),
@@ -259,7 +279,7 @@ export default function LinkedPlayerAccountResetPanel() {
 
           <div>
             <span>Current login email</span>
-            <strong>{selectedPlayer.email ?? "Email unavailable"}</strong>
+            <strong>{getLoginLabel(selectedPlayer.email)}</strong>
             <small>
               The Supabase Auth user is not deleted by this reset.
             </small>

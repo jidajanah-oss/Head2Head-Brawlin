@@ -1,4 +1,4 @@
-﻿import {
+import {
   createContext,
   useCallback,
   useContext,
@@ -29,6 +29,9 @@ import {
   verifyCloudConnection,
 } from "../services/cloudAccountLinkService";
 import {
+  signInWithComputerAccess as requestComputerAccessSignIn,
+} from "../services/computerAccessService";
+import {
   supabaseClient,
   supabaseConfiguration,
 } from "../services/supabaseClient";
@@ -54,6 +57,10 @@ type AuthContextValue = {
     code: string,
   ) => Promise<void>;
   clearEmailCodeRequest: () => void;
+  signInWithComputerAccess: (
+    username: string,
+    pin: string,
+  ) => Promise<void>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
   refreshAccountLink: () => Promise<void>;
@@ -475,6 +482,71 @@ export function AuthProvider({
     setErrorMessage(null);
   };
 
+  const signInWithComputerAccess = async (
+    username: string,
+    pin: string,
+  ) => {
+    const client = supabaseClient;
+    if (!client) {
+      throw new Error(
+        "Supabase authentication is not configured.",
+      );
+    }
+
+    const normalizedUsername = username
+      .trim()
+      .replace(/\s+/g, " ");
+    const normalizedPin = pin.replace(/\D/g, "");
+
+    if (normalizedUsername.length < 2) {
+      throw new Error(
+        "Enter the player name assigned for Computer Access.",
+      );
+    }
+
+    if (!/^\d{6}$/.test(normalizedPin)) {
+      throw new Error(
+        "Enter the 6-digit Computer Access PIN.",
+      );
+    }
+
+    setErrorMessage(null);
+    setEmailCodeSentTo(null);
+
+    try {
+      const result =
+        await requestComputerAccessSignIn(
+          client,
+          normalizedUsername,
+          normalizedPin,
+        );
+
+      const { data, error } =
+        await client.auth.setSession({
+          access_token: result.accessToken,
+          refresh_token: result.refreshToken,
+        });
+
+      if (error || !data.session) {
+        throw new Error(
+          error?.message ??
+            "Computer Access was verified, but no app session was created.",
+        );
+      }
+
+      await synchronizeSession(
+        data.session,
+      );
+    } catch (error) {
+      const nextMessage =
+        error instanceof Error
+          ? error.message
+          : "Unable to sign in with Computer Access.";
+      setErrorMessage(nextMessage);
+      throw new Error(nextMessage);
+    }
+  };
+
   const signOut = async () => {
     const client = supabaseClient;
     if (!client) {
@@ -515,6 +587,7 @@ export function AuthProvider({
         sendEmailCode,
         verifyEmailCode,
         clearEmailCodeRequest,
+        signInWithComputerAccess,
         signOut,
         refreshSession,
         refreshAccountLink,
