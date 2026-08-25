@@ -68,7 +68,11 @@ function AppLayout() {
       <header className="app-header">
         <div className="brand-lockup">
           <div className="brand-mark">
-            H2H
+            <img
+              alt=""
+              aria-hidden="true"
+              src={`${import.meta.env.BASE_URL}logos/league/head2head-brawlin.png`}
+            />
           </div>
 
           <div>
