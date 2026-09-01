@@ -1,12 +1,13 @@
 import { createClient } from "npm:@supabase/supabase-js@2.110.2";
 
 const PRODUCTION_REDIRECT_URL =
-  "https://jidajanah-oss.github.io/Head2Head-Brawlin/";
+  "https://head2head.poolplayhub.com/";
 
 const PRODUCTION_ORIGIN =
-  "https://jidajanah-oss.github.io";
+  "https://head2head.poolplayhub.com";
 
 const ALLOWED_ORIGINS = new Set([
+  "https://head2head.poolplayhub.com",
   "https://jidajanah-oss.github.io",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
