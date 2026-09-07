@@ -777,13 +777,11 @@ export default function CloudPlayerPickIntentSync() {
               game.id,
             );
           } else if (!wasReady) {
-            const preserveExistingLocalIntent =
-              latestIntent !== null &&
-              mappedCloudIntent === null;
-
+            // The cloud is authoritative on initial hydration.
+            // Preserve only a choice made while the cloud
+            // request itself was in flight.
             desiredIntents[game.id] =
-              changedDuringLoad ||
-              preserveExistingLocalIntent
+              changedDuringLoad
                 ? latestIntent
                 : mappedCloudIntent;
             nextBaseline[game.id] =
