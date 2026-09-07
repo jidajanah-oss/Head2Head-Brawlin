@@ -416,7 +416,7 @@ export default function WeeklyPickSubmissionPanel() {
           nextSubmission,
         );
         setMessage(
-          "All current choices were synchronized and the week was submitted.",
+          "Current choices were synchronized and submitted. Unpicked games remain open until their individual lock times.",
         );
       } catch (error) {
         setMessage(
@@ -477,7 +477,7 @@ export default function WeeklyPickSubmissionPanel() {
     !canReadSelectedSubmission ||
     !isViewingOwnPlayer ||
     !gamesAreReady ||
-    pickProgress.openMissingCount >
+    pickProgress.explicitCount ===
       0 ||
     submissionIntents.length !==
       pickProgress.explicitCount ||
@@ -518,7 +518,7 @@ export default function WeeklyPickSubmissionPanel() {
     );
 
   let description =
-    "Submit only after every still-open game has a manual pick or deliberate Picker Clicker choice.";
+    "Submit the choices you have made so far. You can return and resubmit still-open games until each game reaches its individual lock.";
 
   if (!isLinked) {
     description =
@@ -658,8 +658,8 @@ export default function WeeklyPickSubmissionPanel() {
                 : hasSubmitted
                   ? "Week Submitted"
                   : hasReopened
-                    ? "Sync and Resubmit Week"
-                    : "Sync and Submit Week"}
+                    ? "Sync and Resubmit Current Picks"
+                    : "Sync and Submit Current Picks"}
             </SteelButton>
           ) : null}
 
