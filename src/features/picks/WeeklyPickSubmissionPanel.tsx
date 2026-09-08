@@ -27,6 +27,7 @@ import {
   type CloudWeeklyPickIntentInput,
   type CloudWeeklyPickSubmission,
 } from "../../services/cloudWeeklyPickSubmissionService";
+import { useCloudPickHydration } from "../../services/cloudPickHydrationService";
 import { supabaseClient } from "../../services/supabaseClient";
 
 const STATUS_REFRESH_INTERVAL_MS = 15_000;
@@ -65,6 +66,8 @@ export default function WeeklyPickSubmissionPanel() {
     week,
     snapshot,
   } = useNFL();
+  const hydration = useCloudPickHydration(accountLink, season, week);
+  const picksReady = status === "signed-in-linked" && hydration === "ready";
   const [
     submission,
     setSubmission,
@@ -396,7 +399,9 @@ export default function WeeklyPickSubmissionPanel() {
       if (
         !client ||
         !target ||
-        !isViewingOwnPlayer
+        !isViewingOwnPlayer ||
+        !picksReady ||
+        !games.some(game => !PickLockEngine.isPickLocked(game))
       ) {
         return;
       }
@@ -409,7 +414,9 @@ export default function WeeklyPickSubmissionPanel() {
           await submitCloudWeeklyPicks(
             client,
             target,
-            submissionIntents,
+            submissionIntents.filter(intent => games.some(game =>
+              game.id === intent.gameId && !PickLockEngine.isPickLocked(game),
+            )),
           );
 
         setSubmission(
@@ -481,7 +488,9 @@ export default function WeeklyPickSubmissionPanel() {
       0 ||
     submissionIntents.length !==
       pickProgress.explicitCount ||
-    hasSubmitted ||
+    !picksReady ||
+    loading ||
+    !games.some(game => !PickLockEngine.isPickLocked(game)) ||
     workingAction !== null;
 
   const statusBadge =
@@ -528,6 +537,14 @@ export default function WeeklyPickSubmissionPanel() {
   ) {
     description =
       "The selected player has a separate protected cloud account. Switch back to your linked player to submit.";
+  }
+
+  if (isViewingOwnPlayer && !picksReady) {
+    return <section role="status" className="weekly-pick-submission-shell">
+      <p>{hydration === "error"
+        ? "Saved picks could not be loaded. Submission is unavailable while we retry."
+        : "Loading your saved picks and submission…"}</p>
+    </section>;
   }
 
   return (
@@ -655,9 +672,7 @@ export default function WeeklyPickSubmissionPanel() {
               {workingAction ===
               "submit"
                 ? "Synchronizing and submitting…"
-                : hasSubmitted
-                  ? "Week Submitted"
-                  : hasReopened
+                : hasSubmitted || hasReopened
                     ? "Sync and Resubmit Current Picks"
                     : "Sync and Submit Current Picks"}
             </SteelButton>

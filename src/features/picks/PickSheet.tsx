@@ -4,6 +4,8 @@ import {
   useState,
 } from "react";
 
+import { useAuth } from "../../context/AuthContext";
+import { useCloudPickHydration } from "../../services/cloudPickHydrationService";
 import FranchiseLogo from "../../components/franchise/FranchiseLogo";
 import {
   SteelBadge,
@@ -258,6 +260,11 @@ function PickSheet() {
     loading,
     error,
   } = useNFL();
+
+  const { status: authStatus, accountLink } = useAuth();
+  const hydration = useCloudPickHydration(accountLink, season, week);
+  const waitingForSavedPicks = Boolean(accountLink &&
+    (authStatus !== "signed-in-linked" || hydration !== "ready"));
 
   const pickerClickerAuthority =
     usePickerClickerCloudAuthority();
@@ -517,6 +524,7 @@ function PickSheet() {
     locked: boolean
   ) => {
     if (
+      waitingForSavedPicks ||
       !activePlayerId ||
       locked
     ) {
@@ -659,6 +667,13 @@ function PickSheet() {
       );
     }
   };
+
+  if (waitingForSavedPicks) {
+    return <section role="status" className="picks-state-card">
+      <h2>{hydration === "error" ? "Saved picks could not be loaded" : "Loading your saved picks…"}</h2>
+      <p>{hydration === "error" ? "Your cloud picks are unchanged. We will retry automatically; you can also reload this page." : "Your card will appear when your saved choices are restored."}</p>
+    </section>;
+  }
 
   return (
     <main className="pick-sheet picks-v2">
@@ -941,10 +956,12 @@ function PickSheet() {
             statusLabel,
           }) => {
             const disabled =
+              waitingForSavedPicks ||
               locked ||
               !activePlayerId;
 
             const pickerClickerDisabledReason =
+              waitingForSavedPicks ? "Saved picks are loading" :
               !pickerClickerAuthorityReady
                 ? pickerClickerAuthority.status ===
                     "error"

@@ -1,0 +1,10 @@
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import {MemoryRouter} from 'react-router-dom';
+import {Fixture,assignment} from './fixtures';
+import Sync from '../src/features/auth/CloudPlayerPickIntentSync';
+import PickSheet from '../src/features/picks/PickSheet';
+import Panel from '../src/features/picks/WeeklyPickSubmissionPanel';
+import {publishPickerClickerCloudAuthority} from '../src/services/pickerClickerCloudAuthorityService';
+publishPickerClickerCloudAuthority({status:'ready',leagueId:'test-league',season:2026,week:1,assignment:assignment as any,message:''});
+createRoot(document.getElementById('root')!).render(<React.StrictMode><MemoryRouter><Fixture><Sync/><PickSheet/><Panel/></Fixture></MemoryRouter></React.StrictMode>);

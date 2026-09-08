@@ -16,10 +16,8 @@ import type {
   PickerClickerWeekState,
   PlayerSelectedPickerClickerPick,
 } from "../../engine/pickerClickerTypes";
-import type { NFLGame } from "../../engine/nfl/NFLTypes";
 import type { WeekGame } from "../../engine/weekManager/WeekGameManager";
 import {
-  loadCloudLeagueGames,
   synchronizeCloudLeagueGames,
 } from "../../services/cloudLeagueGameService";
 import {
@@ -33,6 +31,7 @@ import {
   applyLocalSeasonResetIfNeeded,
   loadLatestCloudSeasonReset,
 } from "../../services/cloudSeasonResetService";
+import { publishCloudPickHydration, getCloudPickHydrationKey } from "../../services/cloudPickHydrationService";
 import { supabaseClient } from "../../services/supabaseClient";
 
 const CLOUD_SYNC_INTERVAL_MS = 15_000;
@@ -389,36 +388,11 @@ function applyLocalIntentMap(params: {
   return changed;
 }
 
-function cloudGamesCoverSnapshot(
-  cloudGames: Awaited<
-    ReturnType<typeof loadCloudLeagueGames>
-  >,
-  nflGames: NFLGame[],
-): boolean {
-  const cloudGamesById = new Map(
-    cloudGames.map((game) => [game.gameId, game]),
-  );
-
-  return nflGames.every((nflGame) => {
-    const cloudGame = cloudGamesById.get(nflGame.id);
-
-    return (
-      cloudGame?.season === nflGame.season &&
-      cloudGame.week === nflGame.week &&
-      cloudGame.awayTeam ===
-        normalizeTeam(nflGame.awayTeam.abbreviation) &&
-      cloudGame.homeTeam ===
-        normalizeTeam(nflGame.homeTeam.abbreviation)
-    );
-  });
-}
-
 function isLockedCloudWriteError(error: unknown): boolean {
   return (
     error instanceof Error &&
-    error.message.includes(
-      "locked or the signed-in account does not own the pick",
-    )
+    (error.message.includes("locked or the signed-in account does not own the pick") ||
+      error.message.includes("pick window is closed"))
   );
 }
 
@@ -444,7 +418,6 @@ export default function CloudPlayerPickIntentSync() {
   const [retryVersion, setRetryVersion] = useState(0);
   const baselineRef = useRef<SignatureMap>({});
   const readySyncKeyRef = useRef<string | null>(null);
-  const gamesReadySyncKeyRef = useRef<string | null>(null);
   const hydrationTargetRef =
     useRef<HydrationTarget | null>(null);
   const inFlightGameIdsRef = useRef(new Set<string>());
@@ -524,11 +497,13 @@ export default function CloudPlayerPickIntentSync() {
     weekState,
   ]);
 
+  const hydrationKey = getCloudPickHydrationKey(accountLink, season, week);
+
   useEffect(() => {
+    publishCloudPickHydration(hydrationKey, "loading");
     activeSyncKeyRef.current = syncKey;
     baselineRef.current = {};
     readySyncKeyRef.current = null;
-    gamesReadySyncKeyRef.current = null;
     hydrationTargetRef.current = null;
     inFlightGameIdsRef.current.clear();
     forceRemoteGameIdsRef.current.clear();
@@ -541,7 +516,17 @@ export default function CloudPlayerPickIntentSync() {
     setReadyVersion((currentVersion) =>
       currentVersion + 1,
     );
-  }, [syncKey]);
+  }, [syncKey, hydrationKey]);
+
+  // Publishing the schedule is a commissioner task, never a prerequisite
+  // for an owner to restore saved intents through the protected RPC.
+  useEffect(() => {
+    if (supabaseClient && status === "signed-in-linked" && accountLink &&
+        access.canManageLeague && snapshot && syncKey) {
+      void synchronizeCloudLeagueGames(supabaseClient, accountLink.leagueId, snapshot.nflGames)
+        .catch(error => console.error("Cloud schedule synchronization failed.", error));
+    }
+  }, [status, accountLink, access.canManageLeague, snapshot, syncKey]);
 
   useEffect(() => {
     const client = supabaseClient;
@@ -621,7 +606,6 @@ export default function CloudPlayerPickIntentSync() {
     let canceled = false;
     let running = false;
     let intervalId: number | null = null;
-    const nflGames = snapshot.nflGames;
     const weekGames = snapshot.weekGames;
     const playerId = accountLink.playerId;
     const leagueId = accountLink.leagueId;
@@ -653,38 +637,6 @@ export default function CloudPlayerPickIntentSync() {
       });
 
       try {
-        const cloudGames = access.canManageLeague
-          ? await synchronizeCloudLeagueGames(
-              client,
-              leagueId,
-              nflGames,
-            )
-          : await loadCloudLeagueGames(
-              client,
-              leagueId,
-              season,
-              week,
-            );
-
-        if (
-          canceled ||
-          activeSyncKeyRef.current !== syncKey
-        ) {
-          return;
-        }
-
-        if (
-          !cloudGamesCoverSnapshot(
-            cloudGames,
-            nflGames,
-          )
-        ) {
-          gamesReadySyncKeyRef.current = null;
-          return;
-        }
-
-        gamesReadySyncKeyRef.current = syncKey;
-
         const cloudIntents =
           await loadCloudPlayerPickIntents(
             client,
@@ -835,12 +787,16 @@ export default function CloudPlayerPickIntentSync() {
         } else {
           hydrationTargetRef.current = null;
           readySyncKeyRef.current = syncKey;
+          publishCloudPickHydration(hydrationKey, "ready");
           setReadyVersion((currentVersion) =>
             currentVersion + 1,
           );
         }
-      } catch {
-        gamesReadySyncKeyRef.current = null;
+      } catch (error) {
+        if (!canceled && activeSyncKeyRef.current === syncKey) {
+          publishCloudPickHydration(hydrationKey, "error");
+          console.error("Saved picks could not be loaded.", error);
+        }
       } finally {
         running = false;
       }
@@ -869,6 +825,7 @@ export default function CloudPlayerPickIntentSync() {
     week,
     weekState,
     weekStateId,
+    hydrationKey,
   ]);
 
   useEffect(() => {
@@ -914,6 +871,7 @@ export default function CloudPlayerPickIntentSync() {
 
     hydrationTargetRef.current = null;
     readySyncKeyRef.current = syncKey;
+    publishCloudPickHydration(hydrationKey, "ready");
     setReadyVersion((currentVersion) =>
       currentVersion + 1,
     );
@@ -924,6 +882,7 @@ export default function CloudPlayerPickIntentSync() {
     snapshot,
     syncKey,
     weekStateId,
+    hydrationKey,
   ]);
 
   useEffect(() => {
@@ -933,7 +892,6 @@ export default function CloudPlayerPickIntentSync() {
       !client ||
       !syncKey ||
       readySyncKeyRef.current !== syncKey ||
-      gamesReadySyncKeyRef.current !== syncKey ||
       status !== "signed-in-linked" ||
       !accountLink ||
       !access.isLinked ||
@@ -1077,6 +1035,7 @@ export default function CloudPlayerPickIntentSync() {
     status,
     syncKey,
     weekStateId,
+    hydrationKey,
   ]);
 
   useEffect(
