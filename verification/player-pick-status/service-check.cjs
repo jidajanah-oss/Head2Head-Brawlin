@@ -1,0 +1,32 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const ts = require('typescript');
+const assert = require('node:assert/strict');
+const { pathToFileURL } = require('node:url');
+
+(async () => {
+  const source = path.join(__dirname, '../../src/services/cloudPlayerPickStatusService.ts');
+  const compiled = path.join(__dirname, '.service-check.mjs');
+  fs.writeFileSync(compiled, ts.transpileModule(fs.readFileSync(source, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText);
+  const { getPickCompletionStatus: status, loadCloudPlayerPickStatus: load } = await import(pathToFileURL(compiled).href);
+  const player = { playerId:'p1', name:'Example', nflTeam:'CAR', pickedCount:16, lockedMissingCount:0 };
+  assert.equal(status(player,16),'complete');
+  assert.equal(status({...player,pickedCount:12},16),'in-progress');
+  assert.equal(status({...player,pickedCount:0},16),'not-started');
+  assert.equal(status({...player,pickedCount:12,lockedMissingCount:1},16),'missing-locked');
+  assert.equal(status({...player,pickedCount:0},0),'not-started');
+  const target = {leagueId:'fixture',season:2026,week:2};
+  const response = {league_id:'fixture',season:2026,week:2,total_games:16,locked_games:1,players:[{player_id:'p1',display_name:'Example',nfl_team:'CAR',picked_count:16,locked_missing_count:0,selected_team:'MUST_NOT_RETAIN'}]};
+  let calls=0;
+  const client = value => ({rpc:async (name,args)=>{calls++;assert.equal(name,'load_commissioner_player_pick_status');assert.deepEqual(args,{target_league_id:'fixture',target_season:2026,target_week:2});return {data:value,error:null};}});
+  const report=await load(client(response),target);
+  assert.deepEqual(report.players,[player]);
+  assert.equal(JSON.stringify(report).includes('MUST_NOT_RETAIN'),false);
+  await assert.rejects(load(client({...response,week:1}),target),/selected week/);
+  await assert.rejects(load(client({...response,locked_games:17}),target),/inconsistent/);
+  await assert.rejects(load(client({...response,players:[response.players[0],response.players[0]]}),target),/duplicates/);
+  await assert.rejects(load(client({...response,players:[{...response.players[0],picked_count:-1}]}),target),/invalid count/);
+  await assert.rejects(load({rpc:async()=>({data:null,error:{code:'42501'}})},target),/could not be loaded/);
+  assert.equal((await load(client({...response,total_games:0,locked_games:0,players:[]}),target)).totalGames,0);
+  console.log('PASS: completion states, locked omissions, privacy mapping, response identity, invalid counts, duplicate players, denied access, and empty schedule ('+calls+' RPC checks).');
+})().catch(error=>{console.error(error);process.exitCode=1;});

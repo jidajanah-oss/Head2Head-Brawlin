@@ -1,0 +1,22 @@
+.player-pick-status { display: grid; gap: 18px; margin: 0 0 24px; padding: 24px; color: #fff; background: radial-gradient(circle at top right, #f5c54212, transparent 45%), #111318; }
+.player-pick-status-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.player-pick-status-controls label { display: grid; gap: 5px; color: #c5c9d1; font-size: .8rem; font-weight: 700; }
+.player-pick-status-controls select { padding: 9px 12px; border: 1px solid #ffffff30; border-radius: 9px; color: #fff; background: #191d24; font: inherit; }
+.player-pick-status-totals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.player-pick-status-total { display: grid; gap: 5px; padding: 15px; border: 1px solid #ffffff18; border-radius: 12px; background: #ffffff04; }
+.player-pick-status-total strong { font-size: 1.8rem; font-variant-numeric: tabular-nums; }
+.player-pick-status-total span { font-size: .8rem; color: #c5c9d1; }
+.player-pick-status-total.is-complete strong { color: #87e7a9; }
+.player-pick-status-total.is-in-progress strong { color: #f5c542; }
+.player-pick-status-total.is-missing-locked strong, .player-pick-status-missing { color: #ffaaaa; }
+.player-pick-status-table-wrap { overflow-x: auto; }
+.player-pick-status table { width: 100%; border-collapse: collapse; text-align: left; }
+.player-pick-status th, .player-pick-status td { padding: 13px 12px; border-bottom: 1px solid #ffffff15; font-size: .88rem; }
+.player-pick-status thead th { color: #b4bac5; font-size: .75rem; white-space: nowrap; }
+.player-pick-status tbody th { font-weight: 750; }
+.player-pick-status tbody td:last-child { color: #c5c9d1; font-size: .8rem; }
+.player-pick-status-count { white-space: nowrap; font-weight: 850; font-variant-numeric: tabular-nums; }
+.player-pick-status-note, .player-pick-status-empty { margin: 0; color: #b4bac5; font-size: .8rem; line-height: 1.6; }
+.player-pick-status-empty { padding: 18px; background: #ffffff05; border-radius: 10px; }
+.player-pick-status-caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+@media (max-width: 700px) { .player-pick-status { padding: 16px; } .player-pick-status-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); } .player-pick-status th, .player-pick-status td { padding: 12px 8px; } .player-pick-status table { min-width: 570px; } }

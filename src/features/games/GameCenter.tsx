@@ -10,6 +10,7 @@ import {
 import { useLeague } from "../../context/LeagueContext";
 import { useNFL } from "../../context/NFLContext";
 import { getNFLTeamDisplayName, PickLockEngine } from "../../engine";
+import PlayerPickStatusPanel from "./PlayerPickStatusPanel";
 import {
   formatKickoff,
   getStatusEmoji,
@@ -268,6 +269,8 @@ function GameCenter() {
           </div>
         }
       />
+
+      <PlayerPickStatusPanel />
 
       <section className="game-center-toolbar">
         <div className="game-center-filter-row">
