@@ -2,10 +2,11 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useLeague } from "../../context/LeagueContext";
-import { loadCloudLeagueRoster } from "../../services/cloudLeagueRosterService";
+import { loadCloudLeagueRoster, loadProtectedCloudLeagueRoster } from "../../services/cloudLeagueRosterService";
 import { supabaseClient } from "../../services/supabaseClient";
 import type { Player } from "../../types/player";
 
@@ -164,6 +165,7 @@ function reconcileLinkedPlayer(
 }
 
 export default function CloudPlayerSessionSync() {
+  const [rosterRetryVersion, setRosterRetryVersion] = useState(0);
   const {
     status,
     accountLink,
@@ -207,6 +209,14 @@ export default function CloudPlayerSessionSync() {
     );
 
   useEffect(() => {
+    if (status !== "signed-in-linked") return;
+    const retry = () => setRosterRetryVersion((version) => version + 1);
+    const timer = window.setInterval(retry, 30_000);
+    window.addEventListener("focus", retry);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", retry); };
+  }, [status]);
+
+  useEffect(() => {
     const client = supabaseClient;
 
     if (
@@ -226,7 +236,8 @@ export default function CloudPlayerSessionSync() {
     if (
       lastLoadedSessionKey.current ===
         sessionKey &&
-      linkedPlayerExistsLocally
+      linkedPlayerExistsLocally &&
+      league.players.length === 32
     ) {
       return;
     }
@@ -241,11 +252,18 @@ export default function CloudPlayerSessionSync() {
           );
 
         try {
-          const cloudPlayers =
-            await loadCloudLeagueRoster(
-              client,
-              accountLink.leagueId,
-            );
+          let cloudPlayers: Player[];
+          try {
+            cloudPlayers = await loadCloudLeagueRoster(client, accountLink.leagueId);
+          } catch {
+            cloudPlayers = await loadProtectedCloudLeagueRoster(client, accountLink.leagueId);
+          }
+          if (cloudPlayers.length < 32) {
+            cloudPlayers = await loadProtectedCloudLeagueRoster(client, accountLink.leagueId);
+          }
+          if (cloudPlayers.length !== 32) {
+            throw new Error("The member roster read did not return all 32 active players.");
+          }
 
           if (canceled) {
             return;
@@ -338,9 +356,6 @@ export default function CloudPlayerSessionSync() {
               );
 
             if (recovered) {
-              lastLoadedSessionKey.current =
-                sessionKey;
-
               lastInitialPlayerSyncKey.current =
                 sessionKey;
 
@@ -394,6 +409,7 @@ export default function CloudPlayerSessionSync() {
     league.players,
     linkedPlayerExistsLocally,
     sessionKey,
+    rosterRetryVersion,
     setActivePlayerId,
     setPlayers,
     status,
