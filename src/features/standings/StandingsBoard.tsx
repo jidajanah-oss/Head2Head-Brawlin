@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import FranchiseLogo from "../../components/franchise/FranchiseLogo";
 import {
@@ -10,7 +10,10 @@ import {
   SteelStatCard,
 } from "../../components/steel";
 import { useLeague } from "../../context/LeagueContext";
+import { useAuth } from "../../context/AuthContext";
 import { useNFL } from "../../context/NFLContext";
+import { loadLiveMatchupScores, type LiveMatchupScores } from "../../services/cloudLiveMatchupScoreService";
+import { supabaseClient } from "../../services/supabaseClient";
 import {
   buildEffectiveHeadToHeadPicks,
   buildHeadToHeadMatchupResults,
@@ -651,6 +654,7 @@ function SuperBowlBracketCard({
 }
 
 function StandingsBoard() {
+  const { status: authStatus, accountLink } = useAuth();
   const {
     league,
     picks,
@@ -671,6 +675,30 @@ function StandingsBoard() {
     () => snapshot?.nflGames ?? [],
     [snapshot]
   );
+
+  const [cloudScores, setCloudScores] = useState<(LiveMatchupScores & { leagueId: string }) | null>(null);
+  const [cloudScoreError, setCloudScoreError] = useState<string | null>(null);
+  const cloudLeagueId = authStatus === "signed-in-linked" ? accountLink?.leagueId : null;
+
+  useEffect(() => {
+    if (!cloudLeagueId || !supabaseClient) return;
+    let canceled = false;
+    let running = false;
+    const load = async () => {
+      if (running) return;
+      running = true;
+      try {
+        const scores = await loadLiveMatchupScores(supabaseClient!, cloudLeagueId, season, league.currentWeek);
+        if (!canceled) { setCloudScores({ ...scores, leagueId: cloudLeagueId }); setCloudScoreError(null); }
+      } catch (error) {
+        if (!canceled) setCloudScoreError(error instanceof Error ? error.message : "Unable to load live scores.");
+      } finally { running = false; }
+    };
+    void load();
+    const timer = window.setInterval(() => void load(), 15_000);
+    window.addEventListener("focus", load);
+    return () => { canceled = true; window.clearInterval(timer); window.removeEventListener("focus", load); };
+  }, [cloudLeagueId, season, league.currentWeek, snapshot]);
 
   const allPicks = useMemo(
     () =>
@@ -799,6 +827,15 @@ function StandingsBoard() {
       weekCompletion.totalScheduledGames,
     ]);
 
+  const activeCloudScores = cloudLeagueId &&
+    cloudScores?.leagueId === cloudLeagueId &&
+    cloudScores.season === season &&
+    cloudScores.week === league.currentWeek
+      ? cloudScores : null;
+
+  const cloudScoresAreFinal = weekCompletion.isComplete &&
+    activeCloudScores?.completedGames === weekCompletion.eligibleScoringGameCount;
+
   const divisionStandings = useMemo(
     () =>
       buildSeasonAwareNFLStyleDivisionStandings({
@@ -809,6 +846,8 @@ function StandingsBoard() {
         nflGames,
         season,
         week: league.currentWeek,
+        currentWeekScores: cloudLeagueId ? activeCloudScores?.scores ?? {} : undefined,
+        currentWeekScoresComplete: cloudScoresAreFinal,
       }),
     [
       league.players,
@@ -818,6 +857,9 @@ function StandingsBoard() {
       nflGames,
       season,
       league.currentWeek,
+      cloudLeagueId,
+      activeCloudScores,
+      cloudScoresAreFinal,
     ]
   );
 
@@ -838,20 +880,44 @@ function StandingsBoard() {
   );
 
   const weeklyMatchups = useMemo(
-    () =>
-      buildHeadToHeadMatchupResults(
+    () => {
+      const localMatchups = buildHeadToHeadMatchupResults(
         league.players,
         effectiveAllPicks,
         currentWeekGameResults,
         league.currentWeek,
         nflGames
-      ),
+      );
+      if (!cloudLeagueId) return localMatchups;
+      const scores = activeCloudScores?.scores ?? {};
+      const scoresAreFinal = cloudScoresAreFinal;
+      return localMatchups.map((matchup) => {
+        const playerAScore = scores[matchup.playerA.id] ?? 0;
+        const playerBScore = matchup.playerB ? scores[matchup.playerB.id] ?? 0 : 0;
+        return { ...matchup, playerAScore, playerBScore,
+          possiblePoints: activeCloudScores?.completedGames ?? 0,
+          winnerId: scoresAreFinal && matchup.playerB
+            ? playerAScore > playerBScore ? matchup.playerA.id
+              : playerBScore > playerAScore ? matchup.playerB.id : null
+            : null,
+          resultLabel: !matchup.playerB ? matchup.resultLabel
+            : scoresAreFinal
+            ? playerAScore > playerBScore ? `${matchup.playerA.name} wins`
+              : playerBScore > playerAScore ? `${matchup.playerB.name} wins` : "Tie"
+            : "Provisional",
+          status: scoresAreFinal ? "final" as const : "pending" as const,
+        };
+      });
+    },
     [
       league.players,
       effectiveAllPicks,
       currentWeekGameResults,
       league.currentWeek,
       nflGames,
+      cloudLeagueId,
+      activeCloudScores,
+      cloudScoresAreFinal,
     ]
   );
 
@@ -903,8 +969,11 @@ function StandingsBoard() {
         ? `${weekCompletion.totalScheduledGames} NFL games loaded`
         : "Using rotation fallback";
 
+  const matchupWeekIsComplete = !cloudLeagueId
+    ? weekCompletion.isComplete : cloudScoresAreFinal;
+
   const weeklyBoardStatus =
-    weekCompletion.isComplete
+    matchupWeekIsComplete
       ? "Week Final"
       : weekCompletion.completedGameCount > 0
         ? "In Progress"
@@ -958,7 +1027,7 @@ function StandingsBoard() {
           action={
             <SteelBadge
               variant={
-                weekCompletion.isComplete
+                matchupWeekIsComplete
                   ? "success"
                   : "gold"
               }
@@ -968,8 +1037,16 @@ function StandingsBoard() {
           }
         />
 
+        {cloudLeagueId && cloudScoreError ? (
+          <p role="status">Live cloud scores are temporarily unavailable. {cloudScoreError}</p>
+        ) : null}
+
         <div className="standings-matchups-grid">
-          {weeklyMatchups.map(
+          {cloudLeagueId && league.players.filter((player) => player.status === "active").length < 32 ? (
+            <SteelCard className="standings-empty-card">
+              Loading the full league roster. Matchups will appear when all 32 players are available.
+            </SteelCard>
+          ) : weeklyMatchups.map(
             (matchup) => (
               <article
                 className="standings-matchup-item"
@@ -1006,14 +1083,14 @@ function StandingsBoard() {
 
                   <SteelBadge
                     variant={
-                      weekCompletion.isComplete
+                      matchupWeekIsComplete
                         ? "success"
                         : "neutral"
                     }
                   >
                     {getDisplayedMatchupResult(
                       matchup,
-                      weekCompletion.isComplete
+                      matchupWeekIsComplete
                     )}
                   </SteelBadge>
                 </div>
@@ -1047,7 +1124,7 @@ function StandingsBoard() {
             )
           )}
 
-          {weeklyMatchups.length === 0 ? (
+          {!cloudLeagueId && weeklyMatchups.length === 0 ? (
             <SteelCard className="standings-empty-card">
               No weekly matchups available yet.
             </SteelCard>
