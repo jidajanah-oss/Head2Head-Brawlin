@@ -205,10 +205,6 @@ export async function loadCloudLeagueRoster(
     );
   }
 
-  return mapCloudRosterResponse(data);
-}
-
-function mapCloudRosterResponse(data: unknown): Player[] {
   if (!Array.isArray(data)) {
     throw new Error(
       "The active cloud roster returned an invalid response.",
@@ -233,15 +229,4 @@ function mapCloudRosterResponse(data: unknown): Player[] {
   validateCloudRoster(players);
 
   return players;
-}
-
-export async function loadProtectedCloudLeagueRoster(
-  client: SupabaseClient,
-  leagueId: string,
-): Promise<Player[]> {
-  const { data, error } = await client.rpc("load_member_league_roster", {
-    target_league_id: leagueId,
-  });
-  if (error) throw new Error(`Unable to load the member roster: ${error.message}`);
-  return mapCloudRosterResponse(data);
 }
