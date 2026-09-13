@@ -183,6 +183,11 @@ export default function CloudPlayerSessionSync() {
   const lastInitialPlayerSyncKey =
     useRef<string | null>(null);
 
+  // LeagueContext creates new setter functions on render. Keep the latest
+  // values here so an unrelated render cannot cancel an in-flight roster read.
+  const latest = useRef({ league, activePlayerId, setActivePlayerId, setPlayers });
+  latest.current = { league, activePlayerId, setActivePlayerId, setPlayers };
+
   const sessionKey = useMemo(() => {
     if (!accountLink) {
       return null;
@@ -195,16 +200,6 @@ export default function CloudPlayerSessionSync() {
       accountLink.role,
     ].join(":");
   }, [accountLink]);
-
-  const linkedPlayerExistsLocally =
-    Boolean(
-      accountLink &&
-        league.players.some(
-          (player) =>
-            player.id ===
-            accountLink.playerId,
-        ),
-    );
 
   useEffect(() => {
     const client = supabaseClient;
@@ -223,18 +218,13 @@ export default function CloudPlayerSessionSync() {
       return;
     }
 
-    if (
-      lastLoadedSessionKey.current ===
-        sessionKey &&
-      linkedPlayerExistsLocally
-    ) {
-      return;
-    }
-
     let canceled = false;
+    let running = false;
 
     const synchronizeSessionRoster =
       async () => {
+        if (running) return;
+        running = true;
         const fallbackPlayer =
           buildLinkedPlayerFallback(
             accountLink,
@@ -272,9 +262,10 @@ export default function CloudPlayerSessionSync() {
             );
           }
 
+          const current = latest.current;
           const localRosterSignature =
             getRosterSignature(
-              league.players,
+              current.league.players,
             );
 
           const cloudRosterSignature =
@@ -288,7 +279,7 @@ export default function CloudPlayerSessionSync() {
 
           const regularPlayerMustStayLocked =
             accountLink.role === "player" &&
-            activePlayerId !==
+            current.activePlayerId !==
               accountLink.playerId;
 
           lastLoadedSessionKey.current =
@@ -301,20 +292,20 @@ export default function CloudPlayerSessionSync() {
             localRosterSignature !==
             cloudRosterSignature
           ) {
-            setPlayers(
+            current.setPlayers(
               reconciledPlayers,
             );
           }
 
           if (
-            activePlayerId !==
+            current.activePlayerId !==
               accountLink.playerId &&
             (
               needsInitialPlayerSync ||
               regularPlayerMustStayLocked
             )
           ) {
-            setActivePlayerId(
+            current.setActivePlayerId(
               accountLink.playerId,
             );
           }
@@ -324,9 +315,10 @@ export default function CloudPlayerSessionSync() {
           }
 
           if (fallbackPlayer) {
+            const current = latest.current;
             const recoveredPlayers =
               reconcileLinkedPlayer(
-                league.players,
+                current.league.players,
                 fallbackPlayer,
               );
 
@@ -338,9 +330,6 @@ export default function CloudPlayerSessionSync() {
               );
 
             if (recovered) {
-              lastLoadedSessionKey.current =
-                sessionKey;
-
               lastInitialPlayerSyncKey.current =
                 sessionKey;
 
@@ -349,19 +338,19 @@ export default function CloudPlayerSessionSync() {
                   recoveredPlayers,
                 ) !==
                 getRosterSignature(
-                  league.players,
+                  current.league.players,
                 )
               ) {
-                setPlayers(
+                current.setPlayers(
                   recoveredPlayers,
                 );
               }
 
               if (
-                activePlayerId !==
-                accountLink.playerId
+                current.activePlayerId !==
+                  accountLink.playerId
               ) {
-                setActivePlayerId(
+                current.setActivePlayerId(
                   accountLink.playerId,
                 );
               }
@@ -379,23 +368,27 @@ export default function CloudPlayerSessionSync() {
             "Cloud league roster loading failed.",
             error,
           );
+        } finally {
+          running = false;
         }
       };
 
     void synchronizeSessionRoster();
+    const retryTimer = window.setInterval(() => {
+      void synchronizeSessionRoster();
+    }, 30_000);
+    const retryOnFocus = () => { void synchronizeSessionRoster(); };
+    window.addEventListener("focus", retryOnFocus);
 
     return () => {
       canceled = true;
+      window.clearInterval(retryTimer);
+      window.removeEventListener("focus", retryOnFocus);
     };
   }, [
     access.isLinked,
     accountLink,
-    activePlayerId,
-    league.players,
-    linkedPlayerExistsLocally,
     sessionKey,
-    setActivePlayerId,
-    setPlayers,
     status,
   ]);
 
