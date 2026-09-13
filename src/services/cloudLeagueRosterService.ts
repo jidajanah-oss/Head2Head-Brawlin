@@ -211,7 +211,27 @@ export async function loadCloudLeagueRoster(
     );
   }
 
-  const players = data.map(
+  // A member can have a valid account link while an older league_players
+  // policy filters every row. The protected function returns only roster
+  // fields and performs its own direct account-link check.
+  let rosterData: unknown[] = data;
+  if (rosterData.length === 0) {
+    const { data: memberRoster, error: memberRosterError } =
+      await client.rpc("load_member_league_roster", {
+        target_league_id: normalizedLeagueId,
+      });
+    if (memberRosterError) {
+      throw new Error(
+        `Unable to load the member league roster: ${memberRosterError.message}`,
+      );
+    }
+    if (!Array.isArray(memberRoster)) {
+      throw new Error("The member league roster returned an invalid response.");
+    }
+    rosterData = memberRoster;
+  }
+
+  const players = rosterData.map(
     (value) => {
       const row =
         getCloudLeaguePlayerRow(value);
