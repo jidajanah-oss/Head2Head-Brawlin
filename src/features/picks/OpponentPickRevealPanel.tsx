@@ -325,6 +325,10 @@ export default function OpponentPickRevealPanel({ comparison = false }: { compar
               const mine = getEffectivePlayerPick({ playerId: selectedPlayerId, gameId: game.id, picks, weekState });
               // Only the protected RPC may supply opponent selections, including PC fallbacks.
               const opponent = revealedOpponentPick(reveal, game.id);
+              const ownPickReady = (!accountLink || hydration === "ready") &&
+                (!isLinked || isViewingOwnPlayer || isCommissioner);
+              const picksDiffer = ownPickReady && Boolean(mine.team && opponent?.effectiveTeam &&
+                mine.team.trim().toUpperCase() !== opponent.effectiveTeam.trim().toUpperCase());
               const ownLabel = accountLink && hydration !== "ready"
                 ? hydration === "error" ? "Saved picks unavailable" : "Loading saved picks…"
                 : isLinked && !isViewingOwnPlayer && !isCommissioner ? "Account protected"
@@ -340,8 +344,8 @@ export default function OpponentPickRevealPanel({ comparison = false }: { compar
               return (
                 <article className="pick-comparison-row" key={game.id}>
                   <div className="pick-comparison-game"><strong>{game.awayTeam} @ {game.homeTeam}</strong><small>{formatKickoff(game.kickoff)}</small></div>
-                  <div><span className="pick-comparison-mobile-label">My Picks</span><strong>{ownLabel}</strong></div>
-                  <div><span className="pick-comparison-mobile-label">Opponent Picks</span><strong>{opponent ? getPickSelectionLabel(opponent, true) : hiddenLabel}</strong></div>
+                  <div><span className="pick-comparison-mobile-label">My Picks</span><strong className={picksDiffer ? "pick-comparison-different" : undefined}>{ownLabel}</strong></div>
+                  <div><span className="pick-comparison-mobile-label">Opponent Picks</span><strong className={picksDiffer ? "pick-comparison-different" : undefined}>{opponent ? getPickSelectionLabel(opponent, true) : hiddenLabel}</strong></div>
                 </article>
               );
             })}
