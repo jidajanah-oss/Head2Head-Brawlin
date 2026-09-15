@@ -3,60 +3,10 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import ObscureStatAwardCard from "../features/awards/ObscureStatAwardCard";
-import SeasonAwardsBoard from "../features/awards/SeasonAwardsBoard";
-import PublicPlayoffResults from "../features/playoffs/PublicPlayoffResults";
 import BestDivisionRace from "../features/standings/BestDivisionRace";
 import StandingsBoard from "../features/standings/StandingsBoard";
 import { useLeague } from "../context/LeagueContext";
 import "../styles/standings.css";
-
-function WeeklyAwardsAfterPickerClicker() {
-  const [portalTarget, setPortalTarget] =
-    useState<HTMLElement | null>(null);
-
-  useLayoutEffect(() => {
-    const pickerClickerCard =
-      document.querySelector<HTMLElement>(
-        ".standings-picker-clicker-card",
-      );
-
-    if (!pickerClickerCard) {
-      return;
-    }
-
-    const portalHost =
-      document.createElement("div");
-
-    portalHost.className =
-      "standings-obscure-stat-portal";
-    portalHost.style.display = "contents";
-
-    pickerClickerCard.insertAdjacentElement(
-      "afterend",
-      portalHost,
-    );
-
-    setPortalTarget(portalHost);
-
-    return () => {
-      portalHost.remove();
-    };
-  }, []);
-
-  if (!portalTarget) {
-    return null;
-  }
-
-  return createPortal(
-    <>
-      <ObscureStatAwardCard />
-      <SeasonAwardsBoard />
-      <PublicPlayoffResults />
-    </>,
-    portalTarget,
-  );
-}
 
 function BestDivisionRaceAfterDivisions() {
   const [portalTarget, setPortalTarget] =
@@ -418,9 +368,9 @@ function Standings() {
       <StandingsBoard />
       <StandingsDivisionOrganizer />
       <BestDivisionRaceAfterDivisions />
-      <WeeklyAwardsAfterPickerClicker />
     </div>
   );
 }
 
 export default Standings;
+

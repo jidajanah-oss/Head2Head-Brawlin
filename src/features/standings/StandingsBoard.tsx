@@ -1,3 +1,5 @@
+import SeasonAwardsBoard from "../awards/SeasonAwardsBoard";
+import PublicPlayoffResults from "../playoffs/PublicPlayoffResults";
 import { useEffect, useMemo, useState } from "react";
 
 import FranchiseLogo from "../../components/franchise/FranchiseLogo";
@@ -7,7 +9,6 @@ import {
   SteelCard,
   SteelHero,
   SteelSectionHeader,
-  SteelStatCard,
 } from "../../components/steel";
 import { useLeague } from "../../context/LeagueContext";
 import { useAuth } from "../../context/AuthContext";
@@ -22,7 +23,6 @@ import {
   buildSeasonAwareNFLStyleDivisionStandings,
   formatHeadToHeadRecord,
   formatWeeklyResultLabel,
-  getNFLTeamDisplayName,
   getPickerClickerWeekId,
   getPlayerPickerClickerFallbackCount,
   inspectNFLWeekCompletion,
@@ -724,34 +724,6 @@ function useStandingsData() {
       )
     ] ?? null;
 
-  const pickerClickerAssignment =
-    pickerClickerWeekState?.assignment;
-
-  const pickerClickerSourcePlayer =
-    pickerClickerAssignment
-      ? league.players.find(
-          (player) =>
-            player.id ===
-            pickerClickerAssignment.sourcePlayerId
-        )
-      : null;
-
-  const activePlayerFallbackCount =
-    activePlayerId
-      ? getPlayerPickerClickerFallbackCount(
-          activePlayerId,
-          pickerClickerWeekState
-        )
-      : 0;
-
-  const activePlayerPrizeEligible =
-    activePlayerId
-      ? isPlayerWeeklyPrizeEligible(
-          activePlayerId,
-          pickerClickerWeekState
-        )
-      : true;
-
   const effectiveAllPicks = useMemo(
     () =>
       buildEffectiveHeadToHeadPicks({
@@ -921,21 +893,6 @@ function useStandingsData() {
     ]
   );
 
-  const finalizedWeekCount = useMemo(
-    () =>
-      Object.values(scoringHistory).filter(
-        (record) =>
-          record.season === season &&
-          record.week <=
-            league.currentWeek
-      ).length,
-    [
-      scoringHistory,
-      season,
-      league.currentWeek,
-    ]
-  );
-
   const standings =
     divisionStandings.allRows;
 
@@ -979,7 +936,7 @@ function useStandingsData() {
         ? "In Progress"
         : "Pending";
 
-  return { league, activePlayerId, cloudLeagueId, cloudScoreError, weeklyMatchups, matchupWeekIsComplete, weeklyBoardStatus, scheduleHelper, divisionStandings, finalizedWeekCount, pickerClickerAssignment, pickerClickerSourcePlayer, activePlayerPrizeEligible, activePlayerFallbackCount, playoffPicture, bracketShell, standings, activePlayerStanding, activePlayoffSeed, pickerClickerWeekState, leader };
+  return { league, activePlayerId, cloudLeagueId, cloudScoreError, weeklyMatchups, matchupWeekIsComplete, weeklyBoardStatus, scheduleHelper, divisionStandings, playoffPicture, bracketShell, standings, activePlayerStanding, activePlayoffSeed, pickerClickerWeekState, leader };
 }
 
 export function HeadToHeadMatchupsBoard() {
@@ -1099,7 +1056,7 @@ export function HeadToHeadMatchupsBoard() {
 }
 
 function StandingsBoard() {
-  const { league, activePlayerId, weeklyBoardStatus, scheduleHelper, divisionStandings, finalizedWeekCount, pickerClickerAssignment, pickerClickerSourcePlayer, activePlayerPrizeEligible, activePlayerFallbackCount, playoffPicture, bracketShell, standings, activePlayerStanding, activePlayoffSeed, pickerClickerWeekState, leader } = useStandingsData();
+  const { league, activePlayerId, divisionStandings, playoffPicture, bracketShell, standings, activePlayerStanding, activePlayoffSeed, pickerClickerWeekState, leader } = useStandingsData();
   return (
     <main className="standings standings-v2">
       <SteelHero
@@ -1134,110 +1091,19 @@ function StandingsBoard() {
 
 
 
-      <section className="standings-stat-grid">
-        <SteelStatCard
-          label="Franchises"
-          value={
-            divisionStandings.claimedTeamCount
-          }
-          helper={`${divisionStandings.totalTeamCount} NFL teams`}
-          icon="🏈"
-        />
-
-        <SteelStatCard
-          label="Open Teams"
-          value={
-            divisionStandings.openTeamCount
-          }
-          helper="Available franchises"
-          icon="➕"
-        />
-
-        <SteelStatCard
-          label="Finalized Weeks"
-          value={finalizedWeekCount}
-          helper={`Through Week ${league.currentWeek}`}
-          icon="✅"
-        />
-
-        <SteelStatCard
-          label="Weekly Board"
-          value={weeklyBoardStatus}
-          helper={scheduleHelper}
-          icon="📊"
-        />
-      </section>
-
-      <SteelCard className="standings-picker-clicker-card">
-        <SteelSectionHeader
-          eyebrow={`Week ${league.currentWeek} Picker Clicker`}
-          title={
-            pickerClickerAssignment
-              ? pickerClickerAssignment.sourcePlayerName
-              : "Assigning weekly source..."
-          }
-          description={
-            pickerClickerAssignment
-              ? `${pickerClickerAssignment.sourceNFLTeam} • ${getNFLTeamDisplayName(
-                  pickerClickerAssignment.sourceNFLTeam
-                )} • Nonrepeating random cycle ${pickerClickerAssignment.cycleNumber}`
-              : "A random active player will become this week's automatic fallback source."
-          }
-          action={
-            <SteelBadge
-              variant={
-                activePlayerPrizeEligible
-                  ? "success"
-                  : "danger"
-              }
-            >
-              {activePlayerPrizeEligible
-                ? "Prize Eligible"
-                : "Prize Ineligible"}
-            </SteelBadge>
-          }
-        />
-
-        <div className="standings-picker-clicker-body">
-          <FranchiseLogo
-            nflTeam={
-              pickerClickerSourcePlayer?.nflTeam ??
-              pickerClickerAssignment?.sourceNFLTeam
-            }
-            customLogo={
-              pickerClickerSourcePlayer?.customLogo
-            }
-            displayName={
-              pickerClickerAssignment?.sourcePlayerName ??
-              "Picker Clicker"
-            }
-            size="lg"
-            variant="tile"
-          />
-
-          <div>
-            <span>Active player fallback status</span>
-
-            <strong>
-              {activePlayerFallbackCount > 0
-                ? `${activePlayerFallbackCount} automatic game pick${
-                    activePlayerFallbackCount === 1
-                      ? ""
-                      : "s"
-                  }`
-                : "No Picker Clicker assistance"}
-            </strong>
-
-            <small>
-              Automatic selections count toward the weekly
-              head-to-head matchup, but assisted weeks are
-              excluded from the weekly prize and season
-              correct-pick award.
-            </small>
-          </div>
+      <details className="app-collapsible-panel" data-collapsible-panel>
+        <summary className="app-collapsible__summary">
+          <span className="app-collapsible__title">Season Awards</span>
+          <span className="app-collapsible__state">
+            <span className="app-collapsible__open">Open</span>
+            <span className="app-collapsible__close">Close</span>
+          </span>
+        </summary>
+        <div className="app-collapsible__content">
+          <SeasonAwardsBoard />
         </div>
-      </SteelCard>
-
+      </details>
+      <PublicPlayoffResults />
       <section className="standings-board-section">
         <SteelSectionHeader
           eyebrow="Postseason Race"
@@ -1666,3 +1532,5 @@ function StandingsBoard() {
 }
 
 export default StandingsBoard;
+
+
