@@ -20,12 +20,17 @@ import {
   type PickerClickerWeekSelections,
   type PickerClickerWeekState,
 } from "../../engine";
+import type { NFLGame } from "../../engine/nfl/NFLTypes";
 import { loadCloudLeagueRoster } from "../../services/cloudLeagueRosterService";
 import {
   loadCloudPickerClickerWeekAssignment,
   type CloudPickerClickerWeekAssignment,
 } from "../../services/cloudPickerClickerAssignmentService";
-import { synchronizeCloudLeagueGames } from "../../services/cloudLeagueGameService";
+import {
+  loadCloudLeagueGames,
+  synchronizeCloudLeagueGames,
+  type CloudLeagueGame,
+} from "../../services/cloudLeagueGameService";
 import {
   loadCloudWeeklyScoringPickIntents,
   loadCloudWeeklyScoringRecords,
@@ -41,6 +46,15 @@ type HeadToHeadPicks = Record<
   string,
   Record<string, string>
 >;
+
+type ScoringWeekGame = {
+  id: string;
+  week: number;
+  homeTeam: string;
+  awayTeam: string;
+  kickoff: string;
+  final?: boolean;
+};
 
 function areGameResultsEqual(
   currentResults: Record<string, string>,
@@ -115,18 +129,81 @@ function mapCloudAssignment(
   };
 }
 
+function mapCloudGamesToScoringWeekGames(
+  games: CloudLeagueGame[],
+): ScoringWeekGame[] {
+  return games.map((game) => ({
+    id: game.gameId,
+    week: game.week,
+    homeTeam: game.homeTeam,
+    awayTeam: game.awayTeam,
+    kickoff: game.kickoffAt,
+    final: game.status === "final",
+  }));
+}
+
+function mapCloudGamesToNFLGames(
+  games: CloudLeagueGame[],
+): NFLGame[] {
+  return games.map((game) => ({
+    id: game.gameId,
+    season: game.season,
+    week: game.week,
+    kickoff: game.kickoffAt,
+    status:
+      game.status === "live"
+        ? "in_progress"
+        : game.status,
+    awayTeam: {
+      id: game.awayTeam,
+      abbreviation: game.awayTeam,
+      name: game.awayTeam,
+      displayName: game.awayTeam,
+    },
+    homeTeam: {
+      id: game.homeTeam,
+      abbreviation: game.homeTeam,
+      name: game.homeTeam,
+      displayName: game.homeTeam,
+    },
+    ...(game.awayScore !== null &&
+    game.homeScore !== null
+      ? {
+          score: {
+            away: game.awayScore,
+            home: game.homeScore,
+          },
+        }
+      : {}),
+  }));
+}
+
+function getLatestCloudGameTimestamp(
+  games: CloudLeagueGame[],
+  fallback?: string,
+): string {
+  const timestamps = games
+    .map((game) => game.updatedAt)
+    .filter(
+      (timestamp) =>
+        !Number.isNaN(Date.parse(timestamp)),
+    )
+    .sort(
+      (left, right) =>
+        Date.parse(right) - Date.parse(left),
+    );
+
+  return getValidTimestamp(
+    timestamps[0],
+    fallback,
+  );
+}
+
 function buildCloudWeeklyScoringState(params: {
   players: Player[];
   intents: CloudWeeklyScoringPickIntent[];
   assignment: CloudPickerClickerWeekAssignment;
-  weekGames: Array<{
-    id: string;
-    week: number;
-    homeTeam: string;
-    awayTeam: string;
-    kickoff: string;
-    final?: boolean;
-  }>;
+  weekGames: ScoringWeekGame[];
   appliedAt: string;
 }): {
   picks: HeadToHeadPicks;
@@ -135,12 +212,15 @@ function buildCloudWeeklyScoringState(params: {
   const activePlayers = params.players.filter(
     (player) => player.status === "active",
   );
+
   const activePlayerIds = new Set(
     activePlayers.map((player) => player.id),
   );
+
   const gameIds = new Set(
     params.weekGames.map((game) => game.id),
   );
+
   const picks = activePlayers.reduce<HeadToHeadPicks>(
     (playerPicks, player) => {
       playerPicks[player.id] = {};
@@ -148,6 +228,7 @@ function buildCloudWeeklyScoringState(params: {
     },
     {},
   );
+
   const playerSelectedPicks: PickerClickerWeekSelections =
     {};
 
@@ -169,6 +250,7 @@ function buildCloudWeeklyScoringState(params: {
     ) {
       const playerSelections =
         playerSelectedPicks[intent.playerId] ?? {};
+
       const selectedAt = getValidTimestamp(
         intent.submittedAt,
         intent.updatedAt,
@@ -190,6 +272,7 @@ function buildCloudWeeklyScoringState(params: {
           selectedAt,
         },
       };
+
       continue;
     }
 
@@ -201,21 +284,25 @@ function buildCloudWeeklyScoringState(params: {
     }
   }
 
-  const initialWeekState = createPickerClickerWeekState(
-    mapCloudAssignment(params.assignment),
-  );
+  const initialWeekState =
+    createPickerClickerWeekState(
+      mapCloudAssignment(params.assignment),
+    );
+
   const selectedWeekState: PickerClickerWeekState = {
     ...initialWeekState,
     playerSelectedPicks,
     updatedAt: params.appliedAt,
   };
-  const weekState = applyPickerClickerFallbacks({
-    players: activePlayers,
-    picks,
-    games: params.weekGames,
-    weekState: selectedWeekState,
-    appliedAt: params.appliedAt,
-  });
+
+  const weekState =
+    applyPickerClickerFallbacks({
+      players: activePlayers,
+      picks,
+      games: params.weekGames,
+      weekState: selectedWeekState,
+      appliedAt: params.appliedAt,
+    });
 
   return {
     picks,
@@ -229,6 +316,7 @@ function WeeklyScoringSync() {
     accountLink,
     access,
   } = useAuth();
+
   const {
     league,
     picks,
@@ -239,28 +327,38 @@ function WeeklyScoringSync() {
     pickerClickerHistory,
     upsertPickerClickerWeekState,
   } = useLeague();
+
   const {
     season,
     week,
     snapshot,
   } = useNFL();
+
   const [
     hydratedCloudKey,
     setHydratedCloudKey,
   ] = useState<string | null>(null);
+
   const [retryVersion, setRetryVersion] =
     useState(0);
+
   const latestStateRef = useRef({
     addFinalizedWeeklyScoringRecord,
     upsertPickerClickerWeekState,
   });
-  const cloudRecordIdsRef = useRef<Set<string>>(
-    new Set(),
-  );
-  const publishingRecordIdsRef = useRef<Set<string>>(
-    new Set(),
-  );
-  const retryTimerRef = useRef<number | null>(null);
+
+  const cloudRecordIdsRef =
+    useRef<Set<string>>(
+      new Set(),
+    );
+
+  const publishingRecordIdsRef =
+    useRef<Set<string>>(
+      new Set(),
+    );
+
+  const retryTimerRef =
+    useRef<number | null>(null);
 
   latestStateRef.current = {
     addFinalizedWeeklyScoringRecord,
@@ -273,7 +371,10 @@ function WeeklyScoringSync() {
         league.settings.season,
         accountLink?.season,
       ),
-    [accountLink?.season, league.settings.season],
+    [
+      accountLink?.season,
+      league.settings.season,
+    ],
   );
 
   const cloudKey = useMemo(() => {
@@ -298,8 +399,11 @@ function WeeklyScoringSync() {
   ]);
 
   useEffect(() => {
-    cloudRecordIdsRef.current = new Set();
+    cloudRecordIdsRef.current =
+      new Set();
+
     publishingRecordIdsRef.current.clear();
+
     setHydratedCloudKey(null);
   }, [cloudKey]);
 
@@ -320,62 +424,70 @@ function WeeklyScoringSync() {
     let running = false;
     let intervalId: number | null = null;
 
-    const hydrateCloudScoring = async () => {
-      if (running || canceled) {
-        return;
-      }
-
-      running = true;
-
-      try {
-        const cloudRecords =
-          await loadCloudWeeklyScoringRecords(
-            client,
-            accountLink.leagueId,
-            linkedSeason,
-          );
-
-        if (canceled) {
+    const hydrateCloudScoring =
+      async () => {
+        if (running || canceled) {
           return;
         }
 
-        cloudRecordIdsRef.current = new Set(
-          cloudRecords.map(
-            (cloudRecord) =>
-              cloudRecord.record.id,
-          ),
-        );
+        running = true;
 
-        for (const cloudRecord of cloudRecords) {
-          latestStateRef.current.addFinalizedWeeklyScoringRecord(
-            cloudRecord.record,
-          );
-        }
+        try {
+          const cloudRecords =
+            await loadCloudWeeklyScoringRecords(
+              client,
+              accountLink.leagueId,
+              linkedSeason,
+            );
 
-        setHydratedCloudKey(cloudKey);
-      } catch (error) {
-        if (!canceled) {
-          console.error(
-            "Cloud weekly scoring hydration failed.",
-            error,
+          if (canceled) {
+            return;
+          }
+
+          cloudRecordIdsRef.current =
+            new Set(
+              cloudRecords.map(
+                (cloudRecord) =>
+                  cloudRecord.record.id,
+              ),
+            );
+
+          for (const cloudRecord of cloudRecords) {
+            latestStateRef.current
+              .addFinalizedWeeklyScoringRecord(
+                cloudRecord.record,
+              );
+          }
+
+          setHydratedCloudKey(
+            cloudKey,
           );
+        } catch (error) {
+          if (!canceled) {
+            console.error(
+              "Cloud weekly scoring hydration failed.",
+              error,
+            );
+          }
+        } finally {
+          running = false;
         }
-      } finally {
-        running = false;
-      }
-    };
+      };
 
     void hydrateCloudScoring();
 
-    intervalId = window.setInterval(() => {
-      void hydrateCloudScoring();
-    }, CLOUD_SCORING_POLL_INTERVAL_MS);
+    intervalId =
+      window.setInterval(() => {
+        void hydrateCloudScoring();
+      }, CLOUD_SCORING_POLL_INTERVAL_MS);
 
     return () => {
       canceled = true;
 
       if (intervalId !== null) {
-        window.clearInterval(intervalId);
+        window.clearInterval(
+          intervalId,
+        );
       }
     };
   }, [
@@ -399,11 +511,13 @@ function WeeklyScoringSync() {
       return;
     }
 
-    const completion = inspectNFLWeekCompletion(
-      snapshot.nflGames,
-      season,
-      week,
-    );
+    const completion =
+      inspectNFLWeekCompletion(
+        snapshot.nflGames,
+        season,
+        week,
+      );
+
     const mergedGameResults = {
       ...gameResults,
       ...completion.gameResults,
@@ -415,36 +529,59 @@ function WeeklyScoringSync() {
         mergedGameResults,
       )
     ) {
-      setGameResults(mergedGameResults);
-    }
-
-    if (!completion.isComplete) {
-      return;
+      setGameResults(
+        mergedGameResults,
+      );
     }
 
     const scoringRecordId =
-      getWeeklyScoringRecordId(season, week);
+      getWeeklyScoringRecordId(
+        season,
+        week,
+      );
 
+    /*
+     * Local-only mode still relies on the browser NFL snapshot.
+     */
     if (!cloudKey) {
-      if (scoringHistory[scoringRecordId]) {
+      if (!completion.isComplete) {
+        return;
+      }
+
+      if (
+        scoringHistory[
+          scoringRecordId
+        ]
+      ) {
         return;
       }
 
       const pickerClickerWeekId =
-        getPickerClickerWeekId(season, week);
+        getPickerClickerWeekId(
+          season,
+          week,
+        );
+
       const pickerClickerWeekState =
-        pickerClickerHistory[pickerClickerWeekId];
+        pickerClickerHistory[
+          pickerClickerWeekId
+        ];
 
       if (!pickerClickerWeekState) {
         return;
       }
 
-      const processedLockedGameIds = new Set(
-        pickerClickerWeekState.lockedGameIds,
-      );
+      const processedLockedGameIds =
+        new Set(
+          pickerClickerWeekState.lockedGameIds,
+        );
+
       const completedGamesProcessed =
-        completion.completedGameIds.every((gameId) =>
-          processedLockedGameIds.has(gameId),
+        completion.completedGameIds.every(
+          (gameId) =>
+            processedLockedGameIds.has(
+              gameId,
+            ),
         );
 
       if (!completedGamesProcessed) {
@@ -458,11 +595,13 @@ function WeeklyScoringSync() {
           season,
           throughWeek: week,
         });
+
       const scoringRecord =
         buildFinalizedWeeklyScoringRecord({
           players: league.players,
           picks: effectivePicks,
-          nflGames: snapshot.nflGames,
+          nflGames:
+            snapshot.nflGames,
           season,
           week,
           pickerClickerWeekState,
@@ -472,10 +611,21 @@ function WeeklyScoringSync() {
         return;
       }
 
-      addFinalizedWeeklyScoringRecord(scoringRecord);
+      addFinalizedWeeklyScoringRecord(
+        scoringRecord,
+      );
+
       return;
     }
 
+    /*
+     * Cloud mode:
+     * once signed in as a commissioner, the league_games table is the
+     * authoritative source for deciding when a week is fully complete.
+     *
+     * This prevents a stale browser NFL snapshot from blocking the
+     * standings from finalizing after all cloud games are already final.
+     */
     if (
       hydratedCloudKey !== cloudKey ||
       cloudRecordIdsRef.current.has(
@@ -491,7 +641,8 @@ function WeeklyScoringSync() {
       return;
     }
 
-    const client = supabaseClient;
+    const client =
+      supabaseClient;
 
     if (!client) {
       return;
@@ -503,30 +654,47 @@ function WeeklyScoringSync() {
 
     void (async () => {
       try {
-        await synchronizeCloudLeagueGames(
-          client,
-          accountLink.leagueId,
-          snapshot.nflGames,
-        );
+        /*
+         * If the browser snapshot itself is complete, keep the cloud
+         * schedule synchronized as before. If it is stale, do not let
+         * that stale snapshot overwrite or block already-final cloud data.
+         */
+        if (completion.isComplete) {
+          await synchronizeCloudLeagueGames(
+            client,
+            accountLink.leagueId,
+            snapshot.nflGames,
+          );
+        }
 
         const [
           cloudPlayers,
           cloudAssignment,
           cloudPickIntents,
+          cloudLeagueGames,
         ] = await Promise.all([
           loadCloudLeagueRoster(
             client,
             accountLink.leagueId,
           ),
+
           loadCloudPickerClickerWeekAssignment(
             client,
             accountLink.leagueId,
             season,
             week,
           ),
+
           loadCloudWeeklyScoringPickIntents(
             client,
             accountLink.leagueId,
+            week,
+          ),
+
+          loadCloudLeagueGames(
+            client,
+            accountLink.leagueId,
+            season,
             week,
           ),
         ]);
@@ -537,33 +705,73 @@ function WeeklyScoringSync() {
           );
         }
 
+        const cloudNFLGames =
+          mapCloudGamesToNFLGames(
+            cloudLeagueGames,
+          );
+
+        const cloudWeekGames =
+          mapCloudGamesToScoringWeekGames(
+            cloudLeagueGames,
+          );
+
+        const cloudCompletion =
+          inspectNFLWeekCompletion(
+            cloudNFLGames,
+            season,
+            week,
+          );
+
+        if (
+          !cloudCompletion.isComplete
+        ) {
+          throw new Error(
+            "The cloud NFL schedule is not complete yet.",
+          );
+        }
+
+        const cloudAppliedAt =
+          getLatestCloudGameTimestamp(
+            cloudLeagueGames,
+            snapshot.syncedAt,
+          );
+
         const cloudScoringState =
           buildCloudWeeklyScoringState({
             players: cloudPlayers,
-            intents: cloudPickIntents,
-            assignment: cloudAssignment,
-            weekGames: snapshot.weekGames,
-            appliedAt: getValidTimestamp(
-              snapshot.syncedAt,
-            ),
+            intents:
+              cloudPickIntents,
+            assignment:
+              cloudAssignment,
+            weekGames:
+              cloudWeekGames,
+            appliedAt:
+              cloudAppliedAt,
           });
+
         const cloudPickerClickerHistory = {
           [cloudScoringState.weekState.id]:
             cloudScoringState.weekState,
         };
+
         const effectiveCloudPicks =
           buildEffectiveHeadToHeadPicks({
-            picks: cloudScoringState.picks,
+            picks:
+              cloudScoringState.picks,
             pickerClickerHistory:
               cloudPickerClickerHistory,
             season,
             throughWeek: week,
           });
+
         const scoringRecord =
           buildFinalizedWeeklyScoringRecord({
-            players: cloudPlayers,
-            picks: effectiveCloudPicks,
-            nflGames: snapshot.nflGames,
+            players:
+              cloudPlayers,
+            picks:
+              effectiveCloudPicks,
+            nflGames:
+              cloudNFLGames,
             season,
             week,
             pickerClickerWeekState:
@@ -586,29 +794,40 @@ function WeeklyScoringSync() {
         cloudRecordIdsRef.current.add(
           publishedRecord.record.id,
         );
-        latestStateRef.current.upsertPickerClickerWeekState(
-          cloudScoringState.weekState,
-        );
-        latestStateRef.current.addFinalizedWeeklyScoringRecord(
-          publishedRecord.record,
-        );
+
+        latestStateRef.current
+          .upsertPickerClickerWeekState(
+            cloudScoringState.weekState,
+          );
+
+        latestStateRef.current
+          .addFinalizedWeeklyScoringRecord(
+            publishedRecord.record,
+          );
       } catch (error) {
         console.error(
           "Cloud weekly scoring publication failed.",
           error,
         );
 
-        if (retryTimerRef.current === null) {
-          retryTimerRef.current = window.setTimeout(
-            () => {
-              retryTimerRef.current = null;
-              setRetryVersion(
-                (currentVersion) =>
-                  currentVersion + 1,
-              );
-            },
-            CLOUD_SCORING_POLL_INTERVAL_MS,
-          );
+        if (
+          retryTimerRef.current ===
+          null
+        ) {
+          retryTimerRef.current =
+            window.setTimeout(
+              () => {
+                retryTimerRef.current =
+                  null;
+
+                setRetryVersion(
+                  (currentVersion) =>
+                    currentVersion +
+                    1,
+                );
+              },
+              CLOUD_SCORING_POLL_INTERVAL_MS,
+            );
         }
       } finally {
         publishingRecordIdsRef.current.delete(
@@ -638,8 +857,13 @@ function WeeklyScoringSync() {
 
   useEffect(
     () => () => {
-      if (retryTimerRef.current !== null) {
-        window.clearTimeout(retryTimerRef.current);
+      if (
+        retryTimerRef.current !==
+        null
+      ) {
+        window.clearTimeout(
+          retryTimerRef.current,
+        );
       }
     },
     [],
