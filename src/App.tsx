@@ -1,4 +1,4 @@
-import {
+﻿import {
   useEffect,
   useState,
 } from "react";
@@ -10,7 +10,11 @@ import {
 } from "react-router-dom";
 import StartupLoadingScreen from "./components/system/StartupLoadingScreen";
 import { useAuth } from "./context/AuthContext";
-import { NFLProvider } from "./context/NFLContext";
+import { useLeague } from "./context/LeagueContext";
+import {
+  NFLProvider,
+  useNFL,
+} from "./context/NFLContext";
 import { ObscureStatProvider } from "./context/ObscureStatContext";
 import { SeasonAwardProvider } from "./context/SeasonAwardContext";
 import CloudPickerClickerAssignmentSync from "./features/auth/CloudPickerClickerAssignmentSync";
@@ -61,9 +65,59 @@ function CommissionerRoute() {
   return <Commissioner />;
 }
 
+function LeagueNFLWeekSync() {
+  const { league } = useLeague();
+
+  const {
+    season,
+    week,
+    setSeason,
+    setWeek,
+  } = useNFL();
+
+  const leagueSeason =
+    Number.parseInt(
+      String(
+        league.settings.season,
+      ),
+      10,
+    );
+
+  useEffect(() => {
+    if (
+      Number.isInteger(
+        leagueSeason,
+      ) &&
+      season !== leagueSeason
+    ) {
+      setSeason(leagueSeason);
+    }
+
+    if (
+      week !==
+      league.currentWeek
+    ) {
+      setWeek(
+        league.currentWeek,
+      );
+    }
+  }, [
+    league.currentWeek,
+    leagueSeason,
+    season,
+    setSeason,
+    setWeek,
+    week,
+  ]);
+
+  return null;
+}
+
 function AppRuntime() {
   return (
     <NFLProvider>
+      <LeagueNFLWeekSync />
+
       <ObscureStatProvider>
         <SeasonAwardProvider>
           <CloudPickerClickerAssignmentSync />
@@ -130,10 +184,13 @@ function AppRuntime() {
 
 function App() {
   const { status } = useAuth();
+
   const [
     startupResolved,
     setStartupResolved,
-  ] = useState(status !== "loading");
+  ] = useState(
+    status !== "loading",
+  );
 
   useEffect(() => {
     if (status !== "loading") {
