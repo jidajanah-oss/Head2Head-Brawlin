@@ -1,8 +1,9 @@
-import {
+﻿import {
   useEffect,
   useRef,
 } from "react";
 
+import { useAuth } from "../../context/AuthContext";
 import { useLeague } from "../../context/LeagueContext";
 import { useNFL } from "../../context/NFLContext";
 import {
@@ -11,8 +12,17 @@ import {
   getPickerClickerWeekId,
   type PickerClickerWeekState,
 } from "../../engine";
+import {
+  useCloudPickHydration,
+} from "../../services/cloudPickHydrationService";
 
 function PickerClickerSync() {
+  const {
+    status,
+    accountLink,
+    access,
+  } = useAuth();
+
   const {
     league,
     picks,
@@ -26,12 +36,25 @@ function PickerClickerSync() {
     snapshot,
   } = useNFL();
 
+  const hydrationStatus =
+    useCloudPickHydration(
+      accountLink,
+      season,
+      week,
+    );
+
   const pendingWeekStatesRef = useRef<
     Record<string, PickerClickerWeekState>
   >({});
 
   useEffect(() => {
-    if (!snapshot) {
+    if (
+      status !== "signed-in-linked" ||
+      !accountLink ||
+      !access.isLinked ||
+      hydrationStatus !== "ready" ||
+      !snapshot
+    ) {
       return;
     }
 
@@ -43,10 +66,19 @@ function PickerClickerSync() {
       return;
     }
 
+    const linkedPlayer = league.players.find(
+      (player) =>
+        player.id === accountLink.playerId,
+    );
+
+    if (!linkedPlayer) {
+      return;
+    }
+
     const weekStateId =
       getPickerClickerWeekId(
         season,
-        week
+        week,
       );
 
     const persistedWeekState =
@@ -76,7 +108,7 @@ function PickerClickerSync() {
 
     const updatedWeekState =
       applyPickerClickerFallbacks({
-        players: league.players,
+        players: [linkedPlayer],
         picks,
         games: snapshot.weekGames,
         weekState:
@@ -93,7 +125,7 @@ function PickerClickerSync() {
       ] = updatedWeekState;
 
       upsertPickerClickerWeekState(
-        updatedWeekState
+        updatedWeekState,
       );
 
       return;
@@ -103,12 +135,16 @@ function PickerClickerSync() {
       weekStateId
     ];
   }, [
+    access.isLinked,
+    accountLink,
+    hydrationStatus,
     league.currentWeek,
     league.players,
     pickerClickerHistory,
     picks,
     season,
     snapshot,
+    status,
     upsertPickerClickerWeekState,
     week,
   ]);
