@@ -1,4 +1,4 @@
-import {
+﻿import {
   createContext,
   useContext,
   useEffect,
@@ -498,7 +498,14 @@ export function LeagueProvider({
 
     setScoringHistory(
       (previousHistory) => {
-        if (previousHistory[record.id]) {
+        const existingRecord =
+          previousHistory[record.id];
+
+        if (
+          existingRecord &&
+          JSON.stringify(existingRecord) ===
+            JSON.stringify(record)
+        ) {
           return previousHistory;
         }
 
@@ -509,7 +516,6 @@ export function LeagueProvider({
       },
     );
   };
-
   const upsertPickerClickerWeekState = (
     weekState: PickerClickerWeekState,
   ) => {
@@ -1102,3 +1108,4 @@ export function useLeague() {
 
   return context;
 }
+
