@@ -9,12 +9,103 @@ import { useNFL } from "../../context/NFLContext";
 import {
   applyPickerClickerFallbacks,
   ensurePickerClickerWeekState,
+  getPickerClickerFallbackPickId,
   getPickerClickerWeekId,
   type PickerClickerWeekState,
 } from "../../engine";
 import {
   useCloudPickHydration,
 } from "../../services/cloudPickHydrationService";
+
+function repairWeekOneFallbackState(
+  weekState: PickerClickerWeekState,
+  players: Array<{
+    id: string;
+    name: string;
+  }>,
+): PickerClickerWeekState {
+  if (
+    weekState.season !== 2026 ||
+    weekState.week !== 1
+  ) {
+    return weekState;
+  }
+
+  const jax = players.find(
+    (player) =>
+      player.name.trim().toLowerCase() === "jax",
+  );
+
+  const gMan = players.find(
+    (player) =>
+      player.name.trim().toLowerCase() === "g-man",
+  );
+
+  if (!jax || !gMan) {
+    return weekState;
+  }
+
+  const gameId = "401872657";
+
+  const fallback = {
+    id: getPickerClickerFallbackPickId(
+      2026,
+      1,
+      jax.id,
+      gameId,
+    ),
+    season: 2026,
+    week: 1,
+    gameId,
+    playerId: jax.id,
+    sourcePlayerId: gMan.id,
+    team: "LAR",
+    status: "copied" as const,
+    appliedAt:
+      weekState.updatedAt ||
+      new Date().toISOString(),
+  };
+
+  const existingSelected =
+    weekState.playerSelectedPicks ?? {};
+
+  const nextSelected = {
+    ...existingSelected,
+  };
+
+  if (nextSelected[jax.id]) {
+    const jaxSelections = {
+      ...nextSelected[jax.id],
+    };
+
+    delete jaxSelections[gameId];
+
+    if (
+      Object.keys(jaxSelections).length === 0
+    ) {
+      delete nextSelected[jax.id];
+    } else {
+      nextSelected[jax.id] =
+        jaxSelections;
+    }
+  }
+
+  return {
+    ...weekState,
+    fallbackPicks: {
+      [jax.id]: {
+        [gameId]: fallback,
+      },
+    },
+    playerSelectedPicks:
+      nextSelected,
+    ineligiblePlayerIds: [
+      jax.id,
+    ],
+    updatedAt:
+      new Date().toISOString(),
+  };
+}
 
 function PickerClickerSync() {
   const {
@@ -106,13 +197,19 @@ function PickerClickerSync() {
       return;
     }
 
+    const repairedWeekState =
+      repairWeekOneFallbackState(
+        ensuredWeekState,
+        league.players,
+      );
+
     const updatedWeekState =
       applyPickerClickerFallbacks({
         players: [linkedPlayer],
         picks,
         games: snapshot.weekGames,
         weekState:
-          ensuredWeekState,
+          repairedWeekState,
       });
 
     if (
