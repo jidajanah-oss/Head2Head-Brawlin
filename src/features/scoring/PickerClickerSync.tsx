@@ -33,12 +33,14 @@ function repairWeekOneFallbackState(
 
   const jax = players.find(
     (player) =>
-      player.name.trim().toLowerCase() === "jax",
+      player.name.trim().toLowerCase() ===
+      "jax",
   );
 
   const gMan = players.find(
     (player) =>
-      player.name.trim().toLowerCase() === "g-man",
+      player.name.trim().toLowerCase() ===
+      "g-man",
   );
 
   if (!jax || !gMan) {
@@ -46,6 +48,66 @@ function repairWeekOneFallbackState(
   }
 
   const gameId = "401872657";
+
+  const existingJaxFallback =
+    weekState.fallbackPicks?.[
+      jax.id
+    ]?.[gameId];
+
+  const fallbackPlayerIds =
+    Object.keys(
+      weekState.fallbackPicks ?? {},
+    ).filter(
+      (playerId) =>
+        Object.keys(
+          weekState.fallbackPicks[
+            playerId
+          ] ?? {},
+        ).length > 0,
+    );
+
+  const totalFallbacks =
+    Object.values(
+      weekState.fallbackPicks ?? {},
+    ).reduce(
+      (total, playerFallbacks) =>
+        total +
+        Object.keys(
+          playerFallbacks ?? {},
+        ).length,
+      0,
+    );
+
+  const jaxSelectedThisGame =
+    Boolean(
+      weekState
+        .playerSelectedPicks?.[
+          jax.id
+        ]?.[gameId],
+    );
+
+  const alreadyCorrect =
+    totalFallbacks === 1 &&
+    fallbackPlayerIds.length === 1 &&
+    fallbackPlayerIds[0] === jax.id &&
+    existingJaxFallback?.gameId ===
+      gameId &&
+    existingJaxFallback?.playerId ===
+      jax.id &&
+    existingJaxFallback
+      ?.sourcePlayerId === gMan.id &&
+    existingJaxFallback?.team === "LAR" &&
+    existingJaxFallback?.status ===
+      "copied" &&
+    weekState.ineligiblePlayerIds
+      .length === 1 &&
+    weekState.ineligiblePlayerIds[0] ===
+      jax.id &&
+    !jaxSelectedThisGame;
+
+  if (alreadyCorrect) {
+    return weekState;
+  }
 
   const fallback = {
     id: getPickerClickerFallbackPickId(
@@ -62,15 +124,13 @@ function repairWeekOneFallbackState(
     team: "LAR",
     status: "copied" as const,
     appliedAt:
-      weekState.updatedAt ||
-      new Date().toISOString(),
+      existingJaxFallback?.appliedAt ??
+      weekState.assignment.assignedAt,
   };
 
-  const existingSelected =
-    weekState.playerSelectedPicks ?? {};
-
   const nextSelected = {
-    ...existingSelected,
+    ...(weekState
+      .playerSelectedPicks ?? {}),
   };
 
   if (nextSelected[jax.id]) {
@@ -81,7 +141,8 @@ function repairWeekOneFallbackState(
     delete jaxSelections[gameId];
 
     if (
-      Object.keys(jaxSelections).length === 0
+      Object.keys(jaxSelections)
+        .length === 0
     ) {
       delete nextSelected[jax.id];
     } else {
@@ -134,13 +195,18 @@ function PickerClickerSync() {
       week,
     );
 
-  const pendingWeekStatesRef = useRef<
-    Record<string, PickerClickerWeekState>
-  >({});
+  const pendingWeekStatesRef =
+    useRef<
+      Record<
+        string,
+        PickerClickerWeekState
+      >
+    >({});
 
   useEffect(() => {
     if (
-      status !== "signed-in-linked" ||
+      status !==
+        "signed-in-linked" ||
       !accountLink ||
       !access.isLinked ||
       hydrationStatus !== "ready" ||
@@ -157,10 +223,12 @@ function PickerClickerSync() {
       return;
     }
 
-    const linkedPlayer = league.players.find(
-      (player) =>
-        player.id === accountLink.playerId,
-    );
+    const linkedPlayer =
+      league.players.find(
+        (player) =>
+          player.id ===
+          accountLink.playerId,
+      );
 
     if (!linkedPlayer) {
       return;
@@ -207,15 +275,15 @@ function PickerClickerSync() {
       applyPickerClickerFallbacks({
         players: [linkedPlayer],
         picks,
-        games: snapshot.weekGames,
+        games:
+          snapshot.weekGames,
         weekState:
           repairedWeekState,
       });
 
     if (
-      !persistedWeekState ||
       updatedWeekState !==
-        persistedWeekState
+      persistedWeekState
     ) {
       pendingWeekStatesRef.current[
         weekStateId
@@ -228,9 +296,8 @@ function PickerClickerSync() {
       return;
     }
 
-    delete pendingWeekStatesRef.current[
-      weekStateId
-    ];
+    delete pendingWeekStatesRef
+      .current[weekStateId];
   }, [
     access.isLinked,
     accountLink,
