@@ -7,6 +7,10 @@ import {
 } from "../../components/steel";
 import { useAuth } from "../../context/AuthContext";
 import { useLeague } from "../../context/LeagueContext";
+import { useNFL } from "../../context/NFLContext";
+import { useCloudPickHydration } from "../../services/cloudPickHydrationService";
+import { usePickerClickerCloudAuthority } from "../../services/pickerClickerCloudAuthorityService";
+import { getEffectivePlayerPick, getPickerClickerWeekId } from "../../engine";
 import { getNFLTeamDisplayName } from "../../engine";
 import {
   loadCloudOpponentPickReveal,
@@ -15,6 +19,7 @@ import {
   type CloudOpponentSubmissionStatus,
 } from "../../services/cloudOpponentPickRevealService";
 import { supabaseClient } from "../../services/supabaseClient";
+import { visibleOpponentReveal, revealedOpponentPick } from "./visibleOpponentReveal";
 
 const REFRESH_INTERVAL_MS = 15_000;
 
@@ -117,10 +122,18 @@ function OpponentPickRow({ pick }: { pick: CloudOpponentRevealedPick }) {
   );
 }
 
-export default function OpponentPickRevealPanel() {
+export default function OpponentPickRevealPanel({ comparison = false }: { comparison?: boolean }) {
   const { status, accountLink } = useAuth();
-  const { league, activePlayerId } = useLeague();
-  const [reveal, setReveal] = useState<CloudOpponentPickReveal | null>(null);
+  const { league, activePlayerId, picks, pickerClickerHistory } = useLeague();
+  const { season, snapshot, loading: scheduleLoading } = useNFL();
+  const hydration = useCloudPickHydration(accountLink, season, league.currentWeek);
+  const authority = usePickerClickerCloudAuthority();
+  const localWeekState = pickerClickerHistory[getPickerClickerWeekId(season, league.currentWeek)] ?? null;
+  const weekState = authority.status === "ready" && authority.season === season &&
+    authority.week === league.currentWeek && authority.assignment &&
+    authority.assignment.sourcePlayerId === localWeekState?.assignment.sourcePlayerId
+      ? localWeekState : null;
+  const [loadedReveal, setReveal] = useState<CloudOpponentPickReveal | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const requestIdRef = useRef(0);
@@ -141,6 +154,12 @@ export default function OpponentPickRevealPanel() {
   const canRequestReveal = Boolean(
     isLinked && selectedPlayerId && (isViewingOwnPlayer || isCommissioner),
   );
+
+  // Never render a response retained from another account, entry, season, or week.
+  const reveal = visibleOpponentReveal(loadedReveal, {
+    allowed: canRequestReveal, leagueId: accountLink?.leagueId,
+    playerId: selectedPlayerId, season, week: league.currentWeek,
+  });
 
   const target = useMemo(() => {
     if (!accountLink || !selectedPlayerId) {
@@ -234,7 +253,7 @@ export default function OpponentPickRevealPanel() {
       <SteelCard className="opponent-reveal-card" variant="gold">
         <SteelSectionHeader
           eyebrow={`Season ${league.settings.season} • Week ${league.currentWeek}`}
-          title="Head-to-Head Opponent Picks"
+          title={comparison ? "My Picks vs Oppponent Picks" : "Head-to-Head Opponent Picks"}
           description={description}
           action={statusBadge}
         />
@@ -297,7 +316,38 @@ export default function OpponentPickRevealPanel() {
 
         {message ? <p className="opponent-reveal-message">{message}</p> : null}
 
-        {reveal?.matchupType === "bye" ? (
+        {comparison ? (
+          <div className="pick-comparison">
+            <div className="pick-comparison-heading">
+              <span>Game</span><strong>My Picks</strong><strong>Opponent Picks</strong>
+            </div>
+            {(snapshot?.weekGames ?? []).filter(game => game.week === league.currentWeek).map(game => {
+              const mine = getEffectivePlayerPick({ playerId: selectedPlayerId, gameId: game.id, picks, weekState });
+              // Only the protected RPC may supply opponent selections, including PC fallbacks.
+              const opponent = revealedOpponentPick(reveal, game.id);
+              const ownLabel = accountLink && hydration !== "ready"
+                ? hydration === "error" ? "Saved picks unavailable" : "Loading saved picks…"
+                : isLinked && !isViewingOwnPlayer && !isCommissioner ? "Account protected"
+                : mine.team ? `${mine.source === "manual" ? "" : "Picker Clicker → "}${mine.team}`
+                : mine.source === "missing" ? "No pick recorded" : "Picker Clicker pending";
+              const hiddenLabel = reveal?.matchupType === "bye" ? "Bye — no opponent"
+                : reveal?.matchupType === "open-opponent" ? "Open team — no entry"
+                : !isLinked ? "Sign in to reveal"
+                : !canRequestReveal ? "Account protected"
+                : message ? "Opponent picks unavailable"
+                : reveal && !reveal.canReveal ? "Waiting for both entries"
+                : "Hidden until lock";
+              return (
+                <article className="pick-comparison-row" key={game.id}>
+                  <div className="pick-comparison-game"><strong>{game.awayTeam} @ {game.homeTeam}</strong><small>{formatKickoff(game.kickoff)}</small></div>
+                  <div><span className="pick-comparison-mobile-label">My Picks</span><strong>{ownLabel}</strong></div>
+                  <div><span className="pick-comparison-mobile-label">Opponent Picks</span><strong>{opponent ? getPickSelectionLabel(opponent) : hiddenLabel}</strong></div>
+                </article>
+              );
+            })}
+            {!snapshot?.weekGames.some(game => game.week === league.currentWeek) ? <p className="opponent-reveal-waiting">{scheduleLoading ? "Loading this week's games…" : "No games available for this week yet."}</p> : null}
+          </div>
+        ) : reveal?.matchupType === "bye" ? (
           <p className="opponent-reveal-waiting">
             This franchise has a bye, so there are no opponent picks to reveal.
           </p>

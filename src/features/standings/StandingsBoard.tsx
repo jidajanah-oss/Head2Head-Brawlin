@@ -653,7 +653,7 @@ function SuperBowlBracketCard({
   );
 }
 
-function StandingsBoard() {
+function useStandingsData() {
   const { status: authStatus, accountLink } = useAuth();
   const {
     league,
@@ -979,47 +979,12 @@ function StandingsBoard() {
         ? "In Progress"
         : "Pending";
 
-  return (
-    <main className="standings standings-v2">
-      <SteelHero
-        eyebrow="NFL-Style League Table"
-        title="Standings"
-        subtitle={`Season records, Week ${league.currentWeek} matchups, playoff seeds, and division races.`}
-        primaryLabel="Make Picks"
-        primaryHref="/picks"
-        secondaryLabel="Game Center"
-        secondaryHref="/games"
-        rightContent={
-          <div className="standings-hero-panel">
-            <span>Current Top Seed</span>
+  return { league, activePlayerId, cloudLeagueId, cloudScoreError, weeklyMatchups, matchupWeekIsComplete, weeklyBoardStatus, scheduleHelper, divisionStandings, finalizedWeekCount, pickerClickerAssignment, pickerClickerSourcePlayer, activePlayerPrizeEligible, activePlayerFallbackCount, playoffPicture, bracketShell, standings, activePlayerStanding, activePlayoffSeed, pickerClickerWeekState, leader };
+}
 
-            <strong>
-              {leader
-                ? `${leader.nflTeamAbbreviation} • ${leader.name}`
-                : "—"}
-            </strong>
-
-            <small>
-              {leader
-                ? `${leader.division} • ${formatHeadToHeadRecord(
-                    leader
-                  )} • ${leader.leaguePoints} pts`
-                : "No finalized results yet"}
-            </small>
-          </div>
-        }
-      />
-
-<details className="app-collapsible-panel standings-head-to-head-collapsible" data-collapsible-panel>
-  <summary className="app-collapsible__summary">
-    <span className="app-collapsible__title">Head-to-Head Matchups</span>
-    <span className="app-collapsible__state">
-      <span className="app-collapsible__open">Open</span>
-      <span className="app-collapsible__close">Close</span>
-    </span>
-  </summary>
-  <div className="app-collapsible__content">
-<SteelCard className="standings-matchups-card">
+export function HeadToHeadMatchupsBoard() {
+  const { league, cloudLeagueId, cloudScoreError, weeklyMatchups, matchupWeekIsComplete, weeklyBoardStatus, scheduleHelper } = useStandingsData();
+  return (<SteelCard className="standings-matchups-card">
         <SteelSectionHeader
           eyebrow={`Week ${league.currentWeek}`}
           title="Head-to-Head Matchups"
@@ -1130,9 +1095,43 @@ function StandingsBoard() {
             </SteelCard>
           ) : null}
         </div>
-      </SteelCard>
-  </div>
-</details>
+      </SteelCard>);
+}
+
+function StandingsBoard() {
+  const { league, activePlayerId, weeklyBoardStatus, scheduleHelper, divisionStandings, finalizedWeekCount, pickerClickerAssignment, pickerClickerSourcePlayer, activePlayerPrizeEligible, activePlayerFallbackCount, playoffPicture, bracketShell, standings, activePlayerStanding, activePlayoffSeed, pickerClickerWeekState, leader } = useStandingsData();
+  return (
+    <main className="standings standings-v2">
+      <SteelHero
+        eyebrow="NFL-Style League Table"
+        title="Standings"
+        subtitle={`Season records, Week ${league.currentWeek} matchups, playoff seeds, and division races.`}
+        primaryLabel="Make Picks"
+        primaryHref="/picks"
+        secondaryLabel="Game Center"
+        secondaryHref="/games"
+        rightContent={
+          <div className="standings-hero-panel">
+            <span>Current Top Seed</span>
+
+            <strong>
+              {leader
+                ? `${leader.nflTeamAbbreviation} • ${leader.name}`
+                : "—"}
+            </strong>
+
+            <small>
+              {leader
+                ? `${leader.division} • ${formatHeadToHeadRecord(
+                    leader
+                  )} • ${leader.leaguePoints} pts`
+                : "No finalized results yet"}
+            </small>
+          </div>
+        }
+      />
+
+
 
 
       <section className="standings-stat-grid">

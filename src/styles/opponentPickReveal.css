@@ -4,6 +4,24 @@
   color: #ffffff;
 }
 
+.pick-comparison-heading,
+.pick-comparison-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px 0;
+}
+.pick-comparison-row { border-top: 1px solid rgba(255, 255, 255, 0.14); }
+.pick-comparison-row > div { min-width: 0; overflow-wrap: anywhere; }
+.pick-comparison-game small { display: block; margin-top: 6px; color: #aeb9cb; }
+.pick-comparison-mobile-label { display: none; }
+@media (max-width: 600px) {
+  .pick-comparison-heading { display: none; }
+  .pick-comparison-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pick-comparison-game { grid-column: 1 / -1; }
+  .pick-comparison-mobile-label { display: block; color: #aeb9cb; font-size: 0.75rem; margin-bottom: 6px; }
+}
+
 .opponent-reveal-card {
   position: relative;
   display: grid;
