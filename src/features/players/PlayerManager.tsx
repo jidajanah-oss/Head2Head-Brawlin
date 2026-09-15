@@ -5,7 +5,6 @@ import {
   SteelBadge,
   SteelButton,
   SteelCard,
-  SteelHero,
   SteelSectionHeader,
   SteelStatCard,
 } from "../../components/steel";
@@ -136,11 +135,6 @@ function PlayerManager() {
           "backup_commissioner",
     );
 
-  const activePlayer =
-    players.find(
-      (player) =>
-        player.id === activePlayerId,
-    );
 
   const filteredPlayers =
     players.filter((player) => {
@@ -313,76 +307,6 @@ function PlayerManager() {
 
   return (
     <div className="player-manager">
-      <SteelHero
-        eyebrow="Franchise Command Center"
-        title="Player Manager"
-        subtitle="One player per NFL franchise. Divisions mirror the real NFL alignment."
-        rightContent={
-          <div className="standings-hero-panel">
-            <span>
-              Active Player
-            </span>
-
-            <div className="player-manager-logo-shell">
-              <FranchiseLogo
-                nflTeam={
-                  activePlayer?.nflTeam
-                }
-                customLogo={
-                  activePlayer?.customLogo
-                }
-                displayName={
-                  activePlayer
-                    ? getNFLTeamDisplayName(
-                        activePlayer.nflTeam,
-                      )
-                    : "No active franchise"
-                }
-                size="md"
-                variant="tile"
-              />
-
-              <div>
-                <strong>
-                  {activePlayer
-                    ? activePlayer.name
-                    : "None"}
-                </strong>
-
-                <small>
-                  {activePlayer
-                    ? `${
-                        activePlayer.nflTeam
-                      } • ${
-                        getNFLTeamInfo(
-                          activePlayer.nflTeam,
-                        )?.division ??
-                        "No Division"
-                      }`
-                    : "Select below"}
-                </small>
-              </div>
-            </div>
-
-            {activePlayer ? (
-              <SteelBadge
-                variant={getRoleBadgeVariant(
-                  activePlayer.role,
-                )}
-              >
-                {getRoleLabel(
-                  activePlayer.role,
-                )}
-              </SteelBadge>
-            ) : (
-              <SteelBadge variant="neutral">
-                Unselected
-              </SteelBadge>
-            )}
-          </div>
-        }
-      />
-
       <div className="standings-stat-grid">
         <SteelStatCard
           label="Claimed"
