@@ -74,9 +74,9 @@ function getPickBadge(
   return { label: "No Pick", variant: "danger" };
 }
 
-function getPickSelectionLabel(pick: CloudOpponentRevealedPick): string {
+function getPickSelectionLabel(pick: CloudOpponentRevealedPick, abbreviationsOnly = false): string {
   if (pick.effectiveTeam) {
-    const teamLabel = `${pick.effectiveTeam} • ${getNFLTeamDisplayName(
+    const teamLabel = abbreviationsOnly ? pick.effectiveTeam : `${pick.effectiveTeam} • ${getNFLTeamDisplayName(
       pick.effectiveTeam,
     )}`;
     if (pick.intentType === "picker-clicker-selected") {
@@ -341,7 +341,7 @@ export default function OpponentPickRevealPanel({ comparison = false }: { compar
                 <article className="pick-comparison-row" key={game.id}>
                   <div className="pick-comparison-game"><strong>{game.awayTeam} @ {game.homeTeam}</strong><small>{formatKickoff(game.kickoff)}</small></div>
                   <div><span className="pick-comparison-mobile-label">My Picks</span><strong>{ownLabel}</strong></div>
-                  <div><span className="pick-comparison-mobile-label">Opponent Picks</span><strong>{opponent ? getPickSelectionLabel(opponent) : hiddenLabel}</strong></div>
+                  <div><span className="pick-comparison-mobile-label">Opponent Picks</span><strong>{opponent ? getPickSelectionLabel(opponent, true) : hiddenLabel}</strong></div>
                 </article>
               );
             })}
