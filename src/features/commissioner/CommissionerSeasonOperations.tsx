@@ -36,6 +36,10 @@ function CommissionerSeasonOperations() {
   const {
     league,
     pickerClickerHistory,
+    weekSyncError,
+    isSavingWeek,
+    canChangeWeek,
+    refreshCurrentWeek,
     setCurrentWeek,
     goToPreviousWeek,
     goToNextWeek,
@@ -153,9 +157,19 @@ function CommissionerSeasonOperations() {
           }
         />
 
+        <p role="status">
+          {isSavingWeek ? "Saving league week…" : "Week changes are saved automatically for all devices."}
+        </p>
+        {weekSyncError && (
+          <div role="alert">
+            <p>{weekSyncError}</p>
+            <button type="button" disabled={isSavingWeek} onClick={refreshCurrentWeek}>Refresh league week</button>
+          </div>
+        )}
+
         <div className="commissioner-week-control-body">
           <SteelButton
-            disabled={!weekControlState.canGoPrevious}
+            disabled={!canChangeWeek || !weekControlState.canGoPrevious}
             onClick={goToPreviousWeek}
             size="md"
             variant="secondary"
@@ -167,6 +181,7 @@ function CommissionerSeasonOperations() {
             <span>Active League Week</span>
 
             <select
+              disabled={!canChangeWeek}
               aria-label="Select active league week"
               value={weekControlState.currentWeek}
               onChange={(event) => {
@@ -188,7 +203,7 @@ function CommissionerSeasonOperations() {
           </label>
 
           <SteelButton
-            disabled={!weekControlState.canGoNext}
+            disabled={!canChangeWeek || !weekControlState.canGoNext}
             onClick={goToNextWeek}
             size="md"
             variant="primary"

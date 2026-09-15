@@ -1,10 +1,13 @@
-﻿import {
+import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import StartupLoadingScreen from "../components/system/StartupLoadingScreen";
+import { useCloudLeagueWeek } from "./useCloudLeagueWeek";
 import { useSeasonCloseout } from "./SeasonCloseoutContext";
 import {
   clearPersistedLeagueState,
@@ -74,6 +77,10 @@ type LeagueContextType = {
   updateGame: (game: Game) => void;
 
   // CURRENT NFL WEEK
+  weekSyncError: string | null;
+  isSavingWeek: boolean;
+  canChangeWeek: boolean;
+  refreshCurrentWeek: () => void;
   setCurrentWeek: (week: number) => void;
   goToPreviousWeek: () => void;
   goToNextWeek: () => void;
@@ -440,35 +447,16 @@ export function LeagueProvider({
     }));
   };
 
-  const setCurrentWeek = (
-    week: number,
-  ) => {
-    setLeague((previousLeague) => ({
-      ...previousLeague,
-      currentWeek:
-        clampRegularSeasonWeek(week),
-    }));
-  };
+  const applyCloudWeek = useCallback((week: number) => {
+    setLeague((previousLeague) => previousLeague.currentWeek === week
+      ? previousLeague
+      : { ...previousLeague, currentWeek: week });
+  }, []);
 
-  const goToPreviousWeek = () => {
-    setLeague((previousLeague) => ({
-      ...previousLeague,
-      currentWeek:
-        getPreviousRegularSeasonWeek(
-          previousLeague.currentWeek,
-        ),
-    }));
-  };
-
-  const goToNextWeek = () => {
-    setLeague((previousLeague) => ({
-      ...previousLeague,
-      currentWeek:
-        getNextRegularSeasonWeek(
-          previousLeague.currentWeek,
-        ),
-    }));
-  };
+  const weekSync = useCloudLeagueWeek(getLeagueSeasonNumber(league), applyCloudWeek);
+  const setCurrentWeek = weekSync.change;
+  const goToPreviousWeek = () => setCurrentWeek(getPreviousRegularSeasonWeek(league.currentWeek));
+  const goToNextWeek = () => setCurrentWeek(getNextRegularSeasonWeek(league.currentWeek));
 
   const setPick = (
     playerId: string,
@@ -1060,6 +1048,10 @@ export function LeagueProvider({
         addPlayer,
         deletePlayer,
         updateGame,
+        weekSyncError: weekSync.error,
+        isSavingWeek: weekSync.saving,
+        canChangeWeek: weekSync.canChange,
+        refreshCurrentWeek: weekSync.refresh,
         setCurrentWeek,
         goToPreviousWeek,
         goToNextWeek,
@@ -1092,7 +1084,15 @@ export function LeagueProvider({
         resetLeaguePersistence,
       }}
     >
-      {children}
+      {weekSync.loading ? (
+        weekSync.error ? (
+          <section role="alert" className="steel-card">
+            <h2>Unable to load the active league week</h2>
+            <p>{weekSync.error}</p>
+            <button type="button" onClick={weekSync.refresh}>Retry</button>
+          </section>
+        ) : <StartupLoadingScreen />
+      ) : children}
     </LeagueContext.Provider>
   );
 }

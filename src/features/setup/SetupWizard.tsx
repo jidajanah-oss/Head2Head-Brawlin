@@ -70,6 +70,10 @@ function SetupWizard() {
   const {
     league,
     pickerClickerHistory,
+    weekSyncError,
+    isSavingWeek,
+    canChangeWeek,
+    refreshCurrentWeek,
     setCurrentWeek,
     goToPreviousWeek,
     goToNextWeek,
@@ -228,10 +232,20 @@ function SetupWizard() {
           }
         />
 
+        <p role="status">
+          {isSavingWeek ? "Saving league week…" : "Week changes are saved automatically for all devices."}
+        </p>
+        {weekSyncError && (
+          <div role="alert">
+            <p>{weekSyncError}</p>
+            <button type="button" disabled={isSavingWeek} onClick={refreshCurrentWeek}>Refresh league week</button>
+          </div>
+        )}
+
         <div className="commissioner-week-control-body">
           <SteelButton
             disabled={
-              !weekControlState.canGoPrevious
+              !canChangeWeek || !weekControlState.canGoPrevious
             }
             onClick={goToPreviousWeek}
             size="md"
@@ -245,6 +259,7 @@ function SetupWizard() {
             <span>Active League Week</span>
 
             <select
+              disabled={!canChangeWeek}
               aria-label="Select active league week"
               value={weekControlState.currentWeek}
               onChange={(event) => {
@@ -273,7 +288,7 @@ function SetupWizard() {
 
           <SteelButton
             disabled={
-              !weekControlState.canGoNext
+              !canChangeWeek || !weekControlState.canGoNext
             }
             onClick={goToNextWeek}
             size="md"
