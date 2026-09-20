@@ -18,6 +18,7 @@ import {
   type CloudOpponentRevealedPick,
   type CloudOpponentSubmissionStatus,
 } from "../../services/cloudOpponentPickRevealService";
+import { createLiveReadRefresh, refreshOnReturn } from "../../services/liveReadRefresh";
 import { supabaseClient } from "../../services/supabaseClient";
 import { visibleOpponentReveal, revealedOpponentPick } from "./visibleOpponentReveal";
 
@@ -136,7 +137,7 @@ export default function OpponentPickRevealPanel({ comparison = false }: { compar
   const [loadedReveal, setReveal] = useState<CloudOpponentPickReveal | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const requestIdRef = useRef(0);
+  const readerRef = useRef<ReturnType<typeof createLiveReadRefresh<CloudOpponentPickReveal>> | null>(null);
 
   const selectedPlayerId = activePlayerId || accountLink?.playerId || "";
   const selectedPlayer = league.players.find(
@@ -172,57 +173,28 @@ export default function OpponentPickRevealPanel({ comparison = false }: { compar
     };
   }, [accountLink, league.currentWeek, selectedPlayerId]);
 
-  const loadReveal = useCallback(
-    async (showLoading: boolean) => {
-      const client = supabaseClient;
-      if (!client || !target || !canRequestReveal) {
-        requestIdRef.current += 1;
-        setReveal(null);
-        setLoading(false);
-        return;
-      }
-
-      const requestId = requestIdRef.current + 1;
-      requestIdRef.current = requestId;
-      if (showLoading) {
-        setLoading(true);
-      }
-
-      try {
-        const nextReveal = await loadCloudOpponentPickReveal(client, target);
-        if (requestId === requestIdRef.current) {
-          setReveal(nextReveal);
-          setMessage(null);
-        }
-      } catch (error) {
-        if (requestId === requestIdRef.current) {
-          setReveal(null);
-          setMessage(getErrorMessage(error));
-        }
-      } finally {
-        if (requestId === requestIdRef.current) {
-          setLoading(false);
-        }
-      }
-    },
-    [canRequestReveal, target],
-  );
+  const loadReveal = useCallback(async (_showLoading: boolean) => {
+    await readerRef.current?.refresh();
+  }, []);
 
   useEffect(() => {
-    void loadReveal(true);
-    if (!canRequestReveal) {
-      return undefined;
-    }
-
-    const timerId = window.setInterval(() => {
-      void loadReveal(false);
-    }, REFRESH_INTERVAL_MS);
-
-    return () => {
-      window.clearInterval(timerId);
-      requestIdRef.current += 1;
-    };
-  }, [canRequestReveal, loadReveal]);
+    const client = supabaseClient;
+    setReveal(null);
+    setMessage(null);
+    setLoading(false);
+    if (!client || !target || !canRequestReveal) return;
+    const reader = createLiveReadRefresh({
+      load: () => loadCloudOpponentPickReveal(client, target),
+      apply: value => { setReveal(value); setMessage(null); },
+      error: error => { setReveal(null); setMessage(getErrorMessage(error)); },
+      loading: setLoading,
+      intervalMs: REFRESH_INTERVAL_MS,
+    });
+    readerRef.current = reader;
+    const stop = refreshOnReturn(reader.refresh);
+    void reader.refresh();
+    return () => { reader.dispose(); stop(); readerRef.current = null; };
+  }, [canRequestReveal, target, season, accountLink?.userId]);
 
   const revealedPickCount =
     reveal?.revealedPicks.length ?? 0;

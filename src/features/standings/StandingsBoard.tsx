@@ -15,6 +15,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useNFL } from "../../context/NFLContext";
 import { loadLiveMatchupScores, type LiveMatchupScores } from "../../services/cloudLiveMatchupScoreService";
 import { supabaseClient } from "../../services/supabaseClient";
+import { createLiveReadRefresh, refreshOnReturn } from "../../services/liveReadRefresh";
 import {
   buildEffectiveHeadToHeadPicks,
   buildHeadToHeadMatchupResults,
@@ -682,23 +683,18 @@ function useStandingsData() {
 
   useEffect(() => {
     if (!cloudLeagueId || !supabaseClient) return;
-    let canceled = false;
-    let running = false;
-    const load = async () => {
-      if (running) return;
-      running = true;
-      try {
-        const scores = await loadLiveMatchupScores(supabaseClient!, cloudLeagueId, season, league.currentWeek);
-        if (!canceled) { setCloudScores({ ...scores, leagueId: cloudLeagueId }); setCloudScoreError(null); }
-      } catch (error) {
-        if (!canceled) setCloudScoreError(error instanceof Error ? error.message : "Unable to load live scores.");
-      } finally { running = false; }
-    };
-    void load();
-    const timer = window.setInterval(() => void load(), 15_000);
-    window.addEventListener("focus", load);
-    return () => { canceled = true; window.clearInterval(timer); window.removeEventListener("focus", load); };
-  }, [cloudLeagueId, season, league.currentWeek, snapshot]);
+    setCloudScores(null);
+    setCloudScoreError(null);
+    const reader = createLiveReadRefresh({
+      load: () => loadLiveMatchupScores(supabaseClient!, cloudLeagueId, season, league.currentWeek),
+      apply: (scores) => { setCloudScores({ ...scores, leagueId: cloudLeagueId }); setCloudScoreError(null); },
+      error: (error) => setCloudScoreError(error instanceof Error ? error.message : "Unable to load live scores."),
+      intervalMs: 15_000,
+    });
+    const unsubscribe = refreshOnReturn(reader.refresh);
+    void reader.refresh();
+    return () => { reader.dispose(); unsubscribe(); };
+  }, [cloudLeagueId, accountLink?.userId, season, league.currentWeek]);
 
   const allPicks = useMemo(
     () =>
@@ -936,11 +932,12 @@ function useStandingsData() {
         ? "In Progress"
         : "Pending";
 
-  return { league, activePlayerId, cloudLeagueId, cloudScoreError, weeklyMatchups, matchupWeekIsComplete, weeklyBoardStatus, scheduleHelper, divisionStandings, playoffPicture, bracketShell, standings, activePlayerStanding, activePlayoffSeed, pickerClickerWeekState, leader };
+  const cloudScoresLoading = authStatus === "loading" || Boolean(cloudLeagueId && !activeCloudScores);
+  return { league, activePlayerId, cloudLeagueId, cloudScoreError, cloudScoresLoading, weeklyMatchups, matchupWeekIsComplete, weeklyBoardStatus, scheduleHelper, divisionStandings, playoffPicture, bracketShell, standings, activePlayerStanding, activePlayoffSeed, pickerClickerWeekState, leader };
 }
 
 export function HeadToHeadMatchupsBoard() {
-  const { league, cloudLeagueId, cloudScoreError, weeklyMatchups, matchupWeekIsComplete, weeklyBoardStatus, scheduleHelper } = useStandingsData();
+  const { league, cloudLeagueId, cloudScoreError, cloudScoresLoading, weeklyMatchups, matchupWeekIsComplete, weeklyBoardStatus, scheduleHelper } = useStandingsData();
   return (<SteelCard className="standings-matchups-card">
         <SteelSectionHeader
           eyebrow={`Week ${league.currentWeek}`}
@@ -964,7 +961,11 @@ export function HeadToHeadMatchupsBoard() {
         ) : null}
 
         <div className="standings-matchups-grid">
-          {cloudLeagueId && league.players.filter((player) => player.status === "active").length < 32 ? (
+          {cloudScoresLoading ? (
+            <SteelCard className="standings-empty-card">
+              <p role="status">{cloudScoreError ? "Waiting for live scores. Retrying automatically…" : "Loading the latest matchup scores…"}</p>
+            </SteelCard>
+          ) : cloudLeagueId && league.players.filter((player) => player.status === "active").length < 32 ? (
             <SteelCard className="standings-empty-card">
               Loading the full league roster. Matchups will appear when all 32 players are available.
             </SteelCard>

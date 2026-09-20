@@ -1,3 +1,4 @@
+import { readWithDeadline } from "../services/liveReadRefresh";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { supabaseClient } from "../services/supabaseClient";
@@ -20,12 +21,17 @@ export function useCloudLeagueWeek(season: number, apply: (week: number) => void
   useEffect(() => {
     const client = supabaseClient;
     if (!key || !leagueId || !client) return;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
     const sync = createLeagueWeekSync({
-      load: () => loadCloudLeagueWeek(client, leagueId, season),
+      load: () => readWithDeadline(() => loadCloudLeagueWeek(client, leagueId, season)),
       save: (expected, week) => saveCloudLeagueWeek(client, leagueId, season, expected, week),
       apply,
       canManage,
-      publish: (state) => setSnapshot({ ...state, key }),
+      publish: (state) => {
+        setSnapshot({ ...state, key });
+        clearTimeout(retryTimer);
+        if (state.error && !state.saving) retryTimer = setTimeout(() => { void sync.refresh(); }, 2_000);
+      },
     });
     active.current = { key, sync };
     setSnapshot({ key, hydrated: false, saving: false, error: null });
@@ -39,6 +45,7 @@ export function useCloudLeagueWeek(season: number, apply: (week: number) => void
     document.addEventListener("visibilitychange", visible);
     return () => {
       sync.dispose();
+      clearTimeout(retryTimer);
       active.current = null;
       window.clearInterval(timer);
       window.removeEventListener("focus", refresh);

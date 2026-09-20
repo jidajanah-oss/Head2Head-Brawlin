@@ -1,7 +1,7 @@
 const SHELL_CACHE =
-  "head2head-brawlin-shell-v2";
+  "head2head-brawlin-shell-v3";
 const RUNTIME_CACHE =
-  "head2head-brawlin-runtime-v2";
+  "head2head-brawlin-runtime-v3";
 const CACHE_PREFIX =
   "head2head-brawlin-";
 

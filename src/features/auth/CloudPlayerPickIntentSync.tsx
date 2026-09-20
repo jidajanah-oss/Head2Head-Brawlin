@@ -1,3 +1,4 @@
+import { readWithDeadline, refreshOnReturn } from "../../services/liveReadRefresh";
 import {
   useEffect,
   useMemo,
@@ -606,6 +607,7 @@ export default function CloudPlayerPickIntentSync() {
     let canceled = false;
     let running = false;
     let intervalId: number | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
     const weekGames = snapshot.weekGames;
     const playerId = accountLink.playerId;
     const leagueId = accountLink.leagueId;
@@ -638,12 +640,12 @@ export default function CloudPlayerPickIntentSync() {
 
       try {
         const cloudIntents =
-          await loadCloudPlayerPickIntents(
+          await readWithDeadline(() => loadCloudPlayerPickIntents(
             client,
             leagueId,
             playerId,
             week,
-          );
+          ));
 
         if (
           canceled ||
@@ -796,12 +798,15 @@ export default function CloudPlayerPickIntentSync() {
         if (!canceled && activeSyncKeyRef.current === syncKey) {
           publishCloudPickHydration(hydrationKey, "error");
           console.error("Saved picks could not be loaded.", error);
+          clearTimeout(retryTimer);
+          retryTimer = setTimeout(() => { void reconcileCloudState(); }, 2_000);
         }
       } finally {
         running = false;
       }
     };
 
+    const stopWake = refreshOnReturn(reconcileCloudState);
     void reconcileCloudState();
     intervalId = window.setInterval(() => {
       void reconcileCloudState();
@@ -809,21 +814,22 @@ export default function CloudPlayerPickIntentSync() {
 
     return () => {
       canceled = true;
+      stopWake();
+      clearTimeout(retryTimer);
 
       if (intervalId !== null) {
         window.clearInterval(intervalId);
       }
     };
+  // syncKey includes account, schedule identity and Picker Clicker source.
+  // Score ticks and local pick edits must not cancel a pending cloud read.
   }, [
     access.canManageLeague,
     access.isLinked,
-    accountLink,
     season,
-    snapshot,
     status,
     syncKey,
     week,
-    weekState,
     weekStateId,
     hydrationKey,
   ]);

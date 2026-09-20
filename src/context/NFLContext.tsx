@@ -4,11 +4,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 
 import { NFLService, type NFLWeekSnapshot } from "../engine";
+import { createLiveReadRefresh, refreshOnReturn } from "../services/liveReadRefresh";
 
 interface NFLContextValue {
   season: number;
@@ -38,35 +40,32 @@ export function NFLProvider({
 }: NFLProviderProps) {
   const [season, setSeason] = useState(initialSeason);
   const [week, setWeek] = useState(initialWeek);
-  const [snapshot, setSnapshot] = useState<NFLWeekSnapshot | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loadedSnapshot, setSnapshot] = useState<NFLWeekSnapshot | null>(null);
+  const snapshot = loadedSnapshot?.season === season && loadedSnapshot.week === week ? loadedSnapshot : null;
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const nextSnapshot = await NFLService.loadWeek(season, week);
-      setSnapshot(nextSnapshot);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load NFL data");
-    } finally {
-      setLoading(false);
-    }
-  }, [season, week]);
+  const refresher = useRef<ReturnType<typeof createLiveReadRefresh<NFLWeekSnapshot>> | null>(null);
+  const refresh = useCallback(() => refresher.current?.refresh() ?? Promise.resolve(), []);
 
   useEffect(() => {
-    void refresh();
-
-    const timerId = setInterval(() => {
-      void refresh();
-    }, pollingMs);
-
+    setError(null);
+    const reader = createLiveReadRefresh({
+      load: () => NFLService.loadWeek(season, week),
+      apply: (value) => { setSnapshot(value); setError(null); },
+      error: (err) => setError(err instanceof Error ? err.message : "Unable to load NFL data"),
+      loading: setLoading,
+      intervalMs: pollingMs,
+    });
+    refresher.current = reader;
+    const unsubscribe = refreshOnReturn(reader.refresh);
+    void reader.refresh();
     return () => {
-      clearInterval(timerId);
+      unsubscribe();
+      reader.dispose();
+      if (refresher.current === reader) refresher.current = null;
     };
-  }, [refresh, pollingMs]);
+  }, [season, week, pollingMs]);
 
   const value = useMemo<NFLContextValue>(
     () => ({

@@ -1,3 +1,4 @@
+import { readWithDeadline, refreshOnReturn } from "../../services/liveReadRefresh";
 import {
   useEffect,
   useMemo,
@@ -220,6 +221,15 @@ export default function CloudPlayerSessionSync() {
 
     let canceled = false;
     let running = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    // Select the trusted account immediately, without waiting for the full roster.
+    if (lastInitialPlayerSyncKey.current !== sessionKey || accountLink.role === "player") {
+      const current = latest.current;
+      if (current.league.players.some(player => player.id === accountLink.playerId)) {
+        lastInitialPlayerSyncKey.current = sessionKey;
+        if (current.activePlayerId !== accountLink.playerId) current.setActivePlayerId(accountLink.playerId);
+      }
+    }
 
     const synchronizeSessionRoster =
       async () => {
@@ -232,17 +242,17 @@ export default function CloudPlayerSessionSync() {
 
         try {
           const cloudPlayers =
-            await loadCloudLeagueRoster(
+            await readWithDeadline(() => loadCloudLeagueRoster(
               client,
               accountLink.leagueId,
-            );
+            ));
 
           if (canceled) {
             return;
           }
 
           const reconciledPlayers =
-            fallbackPlayer
+            fallbackPlayer && !cloudPlayers.some(player => player.id === accountLink.playerId)
               ? reconcileLinkedPlayer(
                   cloudPlayers,
                   fallbackPlayer,
@@ -314,6 +324,9 @@ export default function CloudPlayerSessionSync() {
             return;
           }
 
+          clearTimeout(retryTimer);
+          retryTimer = setTimeout(() => { void synchronizeSessionRoster(); }, 2_000);
+
           if (fallbackPlayer) {
             const current = latest.current;
             const recoveredPlayers =
@@ -330,6 +343,7 @@ export default function CloudPlayerSessionSync() {
               );
 
             if (recovered) {
+              const shouldSelect = lastInitialPlayerSyncKey.current !== sessionKey || accountLink.role === "player";
               lastInitialPlayerSyncKey.current =
                 sessionKey;
 
@@ -347,7 +361,7 @@ export default function CloudPlayerSessionSync() {
               }
 
               if (
-                current.activePlayerId !==
+                shouldSelect && current.activePlayerId !==
                   accountLink.playerId
               ) {
                 current.setActivePlayerId(
@@ -374,16 +388,16 @@ export default function CloudPlayerSessionSync() {
       };
 
     void synchronizeSessionRoster();
-    const retryTimer = window.setInterval(() => {
+    const pollTimer = window.setInterval(() => {
       void synchronizeSessionRoster();
     }, 30_000);
-    const retryOnFocus = () => { void synchronizeSessionRoster(); };
-    window.addEventListener("focus", retryOnFocus);
+    const stopWake = refreshOnReturn(synchronizeSessionRoster);
 
     return () => {
       canceled = true;
-      window.clearInterval(retryTimer);
-      window.removeEventListener("focus", retryOnFocus);
+      window.clearInterval(pollTimer);
+      clearTimeout(retryTimer);
+      stopWake();
     };
   }, [
     access.isLinked,
