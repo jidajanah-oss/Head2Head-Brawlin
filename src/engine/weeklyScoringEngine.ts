@@ -548,25 +548,37 @@ export function buildFinalizedWeeklyScoringRecord({
         pickerClickerWeekState
       );
 
+    const playerAEligible =
+      playerAPickerClickerStatus.weeklyPrizeEligible;
+    const playerBEligible =
+      playerBPickerClickerStatus.weeklyPrizeEligible;
+    const bothIneligible =
+      !playerAEligible && !playerBEligible;
     const isTie =
-      playerAScore.correct ===
-      playerBScore.correct;
-
+      playerAEligible && playerBEligible &&
+      playerAScore.correct === playerBScore.correct;
     const playerAWins =
-      playerAScore.correct >
-      playerBScore.correct;
+      playerAEligible &&
+      (!playerBEligible ||
+        playerAScore.correct > playerBScore.correct);
+    const playerBWins =
+      playerBEligible &&
+      (!playerAEligible ||
+        playerBScore.correct > playerAScore.correct);
 
-    const winnerId = isTie
-      ? null
-      : playerAWins
-        ? matchup.playerA.id
-        : matchup.playerB.id;
+    const winnerId = playerAWins
+      ? matchup.playerA.id
+      : playerBWins
+        ? matchup.playerB.id
+        : null;
 
-    const resultLabel = isTie
-      ? "Tie"
-      : playerAWins
-        ? `${matchup.playerA.name} wins`
-        : `${matchup.playerB.name} wins`;
+    const resultLabel = bothIneligible
+      ? "No eligible winner"
+      : isTie
+        ? "Tie"
+        : playerAWins
+          ? `${matchup.playerA.name} wins`
+          : `${matchup.playerB.name} wins`;
 
     finalizedMatchups.push({
       id: `${recordId}-${matchup.id}`,
@@ -612,11 +624,7 @@ export function buildFinalizedWeeklyScoringRecord({
       score: playerAScore,
       pickerClickerStatus:
         playerAPickerClickerStatus,
-      outcome: isTie
-        ? "tie"
-        : playerAWins
-          ? "win"
-          : "loss",
+      outcome: isTie ? "tie" : playerAWins ? "win" : "loss",
       leaguePointsAwarded: isTie
         ? 1
         : playerAWins
@@ -636,16 +644,12 @@ export function buildFinalizedWeeklyScoringRecord({
       score: playerBScore,
       pickerClickerStatus:
         playerBPickerClickerStatus,
-      outcome: isTie
-        ? "tie"
-        : playerAWins
-          ? "loss"
-          : "win",
+      outcome: isTie ? "tie" : playerBWins ? "win" : "loss",
       leaguePointsAwarded: isTie
         ? 1
-        : playerAWins
-          ? 0
-          : 3,
+        : playerBWins
+          ? 3
+          : 0,
     });
   }
 
@@ -758,6 +762,21 @@ export function buildSeasonPlayerScoringSummaries({
       const weeklyPrizeEligible =
         playerResult.weeklyPrizeEligible ??
         true;
+      const opponentResult = playerResult.opponentId
+        ? weeklyRecord.playerResults[playerResult.opponentId]
+        : undefined;
+      const opponentEligible =
+        opponentResult?.weeklyPrizeEligible ?? true;
+      const correctedOutcome = !weeklyPrizeEligible && opponentResult
+        ? "loss"
+        : weeklyPrizeEligible && opponentResult && !opponentEligible
+          ? "win"
+          : playerResult.outcome;
+      const correctedLeaguePoints = !weeklyPrizeEligible && opponentResult
+        ? 0
+        : weeklyPrizeEligible && opponentResult && !opponentEligible
+          ? 3
+          : playerResult.leaguePointsAwarded;
 
       const usedPickerClicker =
         playerResult.usedPickerClicker ??
@@ -769,9 +788,9 @@ export function buildSeasonPlayerScoringSummaries({
         0;
 
       const eligibleCorrectPicks =
-        playerResult
-          .seasonEligibleCorrectPicks ??
-        playerResult.correctPicks;
+        weeklyPrizeEligible
+          ? playerResult.seasonEligibleCorrectPicks ?? playerResult.correctPicks
+          : 0;
 
       summary.headToHeadCorrectPicks =
         (summary.headToHeadCorrectPicks ??
@@ -824,10 +843,10 @@ export function buildSeasonPlayerScoringSummaries({
       }
 
       summary.leaguePoints +=
-        playerResult.leaguePointsAwarded;
+        correctedLeaguePoints;
 
       if (
-        playerResult.outcome === "win"
+        correctedOutcome === "win"
       ) {
         summary.wins += 1;
         summary.completedHeadToHeadWeeks +=
@@ -836,7 +855,7 @@ export function buildSeasonPlayerScoringSummaries({
       }
 
       if (
-        playerResult.outcome === "loss"
+        correctedOutcome === "loss"
       ) {
         summary.losses += 1;
         summary.completedHeadToHeadWeeks +=
@@ -845,7 +864,7 @@ export function buildSeasonPlayerScoringSummaries({
       }
 
       if (
-        playerResult.outcome === "tie"
+        correctedOutcome === "tie"
       ) {
         summary.ties += 1;
         summary.completedHeadToHeadWeeks +=
@@ -854,7 +873,7 @@ export function buildSeasonPlayerScoringSummaries({
       }
 
       if (
-        playerResult.outcome === "bye"
+        correctedOutcome === "bye"
       ) {
         summary.byeWeeks += 1;
         continue;

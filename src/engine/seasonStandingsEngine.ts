@@ -36,6 +36,7 @@ type BuildSeasonAwareStandingsParams = {
   week: number;
   currentWeekScores?: Record<string, number>;
   currentWeekScoresComplete?: boolean;
+  currentWeekIneligiblePlayerIds?: string[];
 };
 
 function applySeasonSummaryToStandingRow<
@@ -104,6 +105,7 @@ export function buildSeasonAwareNFLStyleDivisionStandings({
   week,
   currentWeekScores,
   currentWeekScoresComplete,
+  currentWeekIneligiblePlayerIds,
 }: BuildSeasonAwareStandingsParams): NFLStyleDivisionStandings {
   const completion = inspectNFLWeekCompletion(
     nflGames,
@@ -150,6 +152,8 @@ export function buildSeasonAwareNFLStyleDivisionStandings({
       const score = currentWeekScores[row.id] ?? 0;
       const opponentScore = row.weeklyOpponentId
         ? currentWeekScores[row.weeklyOpponentId] ?? 0 : 0;
+      const playerEligible = !currentWeekIneligiblePlayerIds?.includes(row.id);
+      const opponentEligible = !currentWeekIneligiblePlayerIds?.includes(row.weeklyOpponentId ?? "");
       return {
         ...updated,
         weeklyScoreLabel: row.weeklyOpponentId
@@ -157,7 +161,9 @@ export function buildSeasonAwareNFLStyleDivisionStandings({
           : row.weeklyResult === "open" ? `${score}-Open` : `${score}-0`,
         weeklyResult: !row.weeklyOpponentId ? updated.weeklyResult
           : currentWeekScoresComplete
-            ? score > opponentScore ? "win" as const
+            ? !playerEligible ? "loss" as const
+              : !opponentEligible ? "win" as const
+              : score > opponentScore ? "win" as const
               : score < opponentScore ? "loss" as const : "tie" as const
             : "pending" as const,
       };
