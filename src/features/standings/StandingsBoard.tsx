@@ -719,6 +719,18 @@ function useStandingsData() {
         league.currentWeek
       )
     ] ?? null;
+  const currentWeekIneligiblePlayerIds = useMemo(() => {
+    const ids = new Set(pickerClickerWeekState?.ineligiblePlayerIds ?? []);
+    const finalizedRecord = Object.values(scoringHistory).find(
+      (record) => record.season === season && record.week === league.currentWeek
+    );
+    if (finalizedRecord) {
+      for (const result of Object.values(finalizedRecord.playerResults)) {
+        if (result.weeklyPrizeEligible === false) ids.add(result.playerId);
+      }
+    }
+    return [...ids];
+  }, [pickerClickerWeekState, scoringHistory, season, league.currentWeek]);
 
   const effectiveAllPicks = useMemo(
     () =>
@@ -816,6 +828,7 @@ function useStandingsData() {
         week: league.currentWeek,
         currentWeekScores: cloudLeagueId ? activeCloudScores?.scores ?? {} : undefined,
         currentWeekScoresComplete: cloudScoresAreFinal,
+        currentWeekIneligiblePlayerIds,
       }),
     [
       league.players,
@@ -828,6 +841,7 @@ function useStandingsData() {
       cloudLeagueId,
       activeCloudScores,
       cloudScoresAreFinal,
+      currentWeekIneligiblePlayerIds,
     ]
   );
 
@@ -862,16 +876,21 @@ function useStandingsData() {
       return localMatchups.map((matchup) => {
         const playerAScore = scores[matchup.playerA.id] ?? 0;
         const playerBScore = matchup.playerB ? scores[matchup.playerB.id] ?? 0 : 0;
+        const playerAEligible = !currentWeekIneligiblePlayerIds.includes(matchup.playerA.id);
+        const playerBEligible = !matchup.playerB || !currentWeekIneligiblePlayerIds.includes(matchup.playerB.id);
+        const playerAWins = playerAEligible && (!playerBEligible || playerAScore > playerBScore);
+        const playerBWins = playerBEligible && (!playerAEligible || playerBScore > playerAScore);
         return { ...matchup, playerAScore, playerBScore,
           possiblePoints: activeCloudScores?.completedGames ?? 0,
           winnerId: scoresAreFinal && matchup.playerB
-            ? playerAScore > playerBScore ? matchup.playerA.id
-              : playerBScore > playerAScore ? matchup.playerB.id : null
+            ? playerAWins ? matchup.playerA.id
+              : playerBWins ? matchup.playerB.id : null
             : null,
           resultLabel: !matchup.playerB ? matchup.resultLabel
             : scoresAreFinal
-            ? playerAScore > playerBScore ? `${matchup.playerA.name} wins`
-              : playerBScore > playerAScore ? `${matchup.playerB.name} wins` : "Tie"
+            ? playerAWins ? `${matchup.playerA.name} wins`
+              : playerBWins ? `${matchup.playerB.name} wins`
+              : !playerAEligible && !playerBEligible ? "No eligible winner" : "Tie"
             : "Provisional",
           status: scoresAreFinal ? "final" as const : "pending" as const,
         };
@@ -886,6 +905,7 @@ function useStandingsData() {
       cloudLeagueId,
       activeCloudScores,
       cloudScoresAreFinal,
+      currentWeekIneligiblePlayerIds,
     ]
   );
 
