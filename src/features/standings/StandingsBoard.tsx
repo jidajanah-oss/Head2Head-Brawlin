@@ -1285,6 +1285,11 @@ function StandingsBoard() {
                                   <small>PTS</small>
                                 </div>
 
+                                <div className="standings-division-points">
+                                  <strong>{player.pickPoints}</strong>
+                                  <small>Correct picks</small>
+                                </div>
+
                                 <SteelBadge
                                   variant={
                                     player.isDivisionLeader
