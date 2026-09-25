@@ -575,6 +575,11 @@ export function applyPickerClickerFallbacks({
   appliedAt,
 }: ApplyPickerClickerFallbacksParams): PickerClickerWeekState {
   const activePlayers = getActivePlayers(players);
+
+  const weekGames = games.filter(
+    (game) => game.week === weekState.week
+  );
+
   const lockedGames = getLockedWeekGames(
     games,
     weekState.week
@@ -589,15 +594,15 @@ export function applyPickerClickerFallbacks({
 
   const timestamp =
     appliedAt ?? new Date().toISOString();
+
   const nextFallbackPicks = cloneFallbackPicks(
     weekState.fallbackPicks
   );
-  const nextIneligiblePlayerIds = new Set(
-    weekState.ineligiblePlayerIds
-  );
+
   const nextLockedGameIds = new Set(
     weekState.lockedGameIds
   );
+
   let changed = false;
 
   for (const game of lockedGames) {
@@ -631,11 +636,6 @@ export function applyPickerClickerFallbacks({
         continue;
       }
 
-      if (!nextIneligiblePlayerIds.has(player.id)) {
-        nextIneligiblePlayerIds.add(player.id);
-        changed = true;
-      }
-
       const existingFallback =
         nextFallbackPicks[player.id]?.[game.id];
 
@@ -659,8 +659,86 @@ export function applyPickerClickerFallbacks({
           appliedAt: timestamp,
         }),
       };
+
       changed = true;
     }
+  }
+
+  /*
+   * Weekly ineligibility applies only when the entire
+   * week has locked and the player made zero deliberate
+   * submissions.
+   *
+   * A normal team pick or a player-selected Picker
+   * Clicker choice made before lock is deliberate.
+   * Automatic fallback is not.
+   */
+  const allWeekGamesLocked =
+    weekGames.length > 0 &&
+    weekGames.every((game) =>
+      nextLockedGameIds.has(game.id)
+    );
+
+  const nextIneligiblePlayerIds =
+    new Set<string>();
+
+  if (allWeekGamesLocked) {
+    const weekGameIds = new Set(
+      weekGames.map((game) => game.id)
+    );
+
+    for (const player of activePlayers) {
+      const manualPicks =
+        picks[player.id] ?? {};
+
+      const hasManualWeekPick =
+        Object.entries(manualPicks).some(
+          ([gameId, team]) =>
+            weekGameIds.has(gameId) &&
+            Boolean(team?.trim())
+        );
+
+      const selectedPickerClickerPicks =
+        weekState.playerSelectedPicks?.[
+          player.id
+        ] ?? {};
+
+      const hasSelectedPickerClickerPick =
+        Object.keys(
+          selectedPickerClickerPicks
+        ).some((gameId) =>
+          weekGameIds.has(gameId)
+        );
+
+      if (
+        !hasManualWeekPick &&
+        !hasSelectedPickerClickerPick
+      ) {
+        nextIneligiblePlayerIds.add(
+          player.id
+        );
+      }
+    }
+  }
+
+  const previousIneligibleIds = [
+    ...weekState.ineligiblePlayerIds,
+  ].sort();
+
+  const recalculatedIneligibleIds = [
+    ...nextIneligiblePlayerIds,
+  ].sort();
+
+  if (
+    previousIneligibleIds.length !==
+      recalculatedIneligibleIds.length ||
+    previousIneligibleIds.some(
+      (playerId, index) =>
+        playerId !==
+        recalculatedIneligibleIds[index]
+    )
+  ) {
+    changed = true;
   }
 
   if (!changed) {
@@ -670,10 +748,11 @@ export function applyPickerClickerFallbacks({
   return {
     ...weekState,
     fallbackPicks: nextFallbackPicks,
-    ineligiblePlayerIds: Array.from(
-      nextIneligiblePlayerIds
+    ineligiblePlayerIds:
+      recalculatedIneligibleIds,
+    lockedGameIds: Array.from(
+      nextLockedGameIds
     ),
-    lockedGameIds: Array.from(nextLockedGameIds),
     updatedAt: timestamp,
   };
 }

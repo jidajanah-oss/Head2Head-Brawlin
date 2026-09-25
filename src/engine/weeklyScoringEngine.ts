@@ -162,6 +162,10 @@ function getPlayerPickScore(
       continue;
     }
 
+    if (effectivePick.source === "picker-clicker") {
+      continue;
+    }
+
     if (selectedTeam === winningTeam) {
       correct += 1;
     }
@@ -552,19 +556,40 @@ export function buildFinalizedWeeklyScoringRecord({
       playerAPickerClickerStatus.weeklyPrizeEligible;
     const playerBEligible =
       playerBPickerClickerStatus.weeklyPrizeEligible;
+
+    /*
+     * Each automatic fallback is a missed locked-game
+     * pick and awards one Head2Head point to the
+     * opponent regardless of the NFL result.
+     */
+    const playerAHeadToHeadScore =
+      playerAScore.correct +
+      playerBPickerClickerStatus.fallbackCount;
+
+    const playerBHeadToHeadScore =
+      playerBScore.correct +
+      playerAPickerClickerStatus.fallbackCount;
+
     const bothIneligible =
       !playerAEligible && !playerBEligible;
+
     const isTie =
-      playerAEligible && playerBEligible &&
-      playerAScore.correct === playerBScore.correct;
+      playerAEligible &&
+      playerBEligible &&
+      playerAHeadToHeadScore ===
+        playerBHeadToHeadScore;
+
     const playerAWins =
       playerAEligible &&
       (!playerBEligible ||
-        playerAScore.correct > playerBScore.correct);
+        playerAHeadToHeadScore >
+          playerBHeadToHeadScore);
+
     const playerBWins =
       playerBEligible &&
       (!playerAEligible ||
-        playerBScore.correct > playerAScore.correct);
+        playerBHeadToHeadScore >
+          playerAHeadToHeadScore);
 
     const winnerId = playerAWins
       ? matchup.playerA.id
@@ -601,9 +626,9 @@ export function buildFinalizedWeeklyScoringRecord({
       playerBTeam:
         matchup.playerB.nflTeam,
       playerAScore:
-        playerAScore.correct,
-      playerBScore:
-        playerBScore.correct,
+          playerAHeadToHeadScore,
+        playerBScore:
+          playerBHeadToHeadScore,
       possiblePoints:
         completion.eligibleScoringGameCount,
       winnerId,
