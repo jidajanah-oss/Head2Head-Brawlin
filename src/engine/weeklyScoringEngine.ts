@@ -456,7 +456,8 @@ export function buildFinalizedWeeklyScoringRecord({
     const matchupType =
       resolveMatchupType(matchup);
 
-    const playerAScore =
+    const isBye = matchupType === "bye";
+    const playerAScore = isBye ? { correct: 0, possible: 0, missing: 0 } :
       getPlayerPickScore(
         matchup.playerA.id,
         picks,
@@ -465,8 +466,9 @@ export function buildFinalizedWeeklyScoringRecord({
         pickerClickerWeekState
       );
 
-    const playerAPickerClickerStatus =
-      getPlayerPickerClickerStatus(
+    const playerAPickerClickerStatus = isBye
+      ? { weeklyPrizeEligible: true, usedPickerClicker: false, fallbackCount: 0, playerSelectedCount: 0 }
+      : getPlayerPickerClickerStatus(
         matchup.playerA.id,
         pickerClickerWeekState
       );
@@ -781,6 +783,12 @@ export function buildSeasonPlayerScoringSummaries({
         summaries[playerResult.playerId];
 
       if (!summary) {
+        continue;
+      }
+
+      // A bye contributes no pick or eligibility statistics, including older records.
+      if (playerResult.matchupType === "bye") {
+        summary.byeWeeks += 1;
         continue;
       }
 

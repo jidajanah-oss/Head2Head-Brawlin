@@ -1,3 +1,4 @@
+import { isNFLByeWeek } from "./isNFLByeWeek";
 import type { Player } from "../types/player";
 import type { HeadToHeadPicks } from "./h2hEngine";
 import { PickLockEngine } from "./pickLock/PickLockEngine";
@@ -574,7 +575,21 @@ export function applyPickerClickerFallbacks({
   weekState,
   appliedAt,
 }: ApplyPickerClickerFallbacksParams): PickerClickerWeekState {
-  const activePlayers = getActivePlayers(players);
+  const byePlayerIds = new Set(players.filter(player =>
+    isNFLByeWeek(player.nflTeam, weekState.week, games)).map(player => player.id));
+  const activePlayers = getActivePlayers(players).filter(player => !byePlayerIds.has(player.id));
+  const cleanedFallbacks = { ...weekState.fallbackPicks };
+  const cleanedSelections = { ...weekState.playerSelectedPicks };
+  let cleaned = false;
+  for (const id of byePlayerIds) {
+    if (cleanedFallbacks[id] || cleanedSelections[id] || weekState.ineligiblePlayerIds.includes(id)) cleaned = true;
+    delete cleanedFallbacks[id];
+    delete cleanedSelections[id];
+  }
+  if (cleaned) weekState = { ...weekState, fallbackPicks: cleanedFallbacks,
+    playerSelectedPicks: cleanedSelections,
+    ineligiblePlayerIds: weekState.ineligiblePlayerIds.filter(id => !byePlayerIds.has(id)),
+    updatedAt: appliedAt ?? new Date().toISOString() };
 
   const weekGames = games.filter(
     (game) => game.week === weekState.week

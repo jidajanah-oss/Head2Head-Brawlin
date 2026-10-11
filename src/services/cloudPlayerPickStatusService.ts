@@ -4,6 +4,7 @@ export type PlayerPickStatus = {
   playerId: string;
   name: string;
   nflTeam: string;
+  isBye: boolean;
   pickedCount: number;
   lockedMissingCount: number;
 };
@@ -17,9 +18,10 @@ export type PlayerPickStatusReport = {
   players: PlayerPickStatus[];
 };
 
-export type PickCompletionStatus = "complete" | "in-progress" | "not-started" | "missing-locked";
+export type PickCompletionStatus = "bye" | "complete" | "in-progress" | "not-started" | "missing-locked";
 
 export function getPickCompletionStatus(player: PlayerPickStatus, totalGames: number): PickCompletionStatus {
+  if (player.isBye) return "bye";
   if (player.lockedMissingCount > 0) return "missing-locked";
   if (totalGames > 0 && player.pickedCount === totalGames) return "complete";
   return player.pickedCount > 0 ? "in-progress" : "not-started";
@@ -69,7 +71,7 @@ export async function loadCloudPlayerPickStatus(
       throw new Error("The player pick counts are inconsistent.");
     }
     // Explicitly map the count-only contract; never retain arbitrary response fields.
-    return { playerId: text(player.player_id), name: text(player.display_name), nflTeam: text(player.nfl_team), pickedCount, lockedMissingCount };
+    return { isBye: player.is_bye === true, playerId: text(player.player_id), name: text(player.display_name), nflTeam: text(player.nfl_team), pickedCount, lockedMissingCount };
   });
   if (new Set(players.map(player => player.playerId)).size !== players.length) throw new Error("The player status list contains duplicates.");
   return { leagueId: target.leagueId, season: target.season, week: target.week, totalGames, lockedGames, players };

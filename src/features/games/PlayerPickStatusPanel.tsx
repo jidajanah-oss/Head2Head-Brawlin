@@ -7,12 +7,13 @@ import { supabaseClient } from "../../services/supabaseClient";
 import "../../styles/playerPickStatus.css";
 
 const labels: Record<PickCompletionStatus, string> = {
+  bye: "Bye — no picks required",
   complete: "Complete",
   "in-progress": "In Progress",
   "not-started": "Not Started",
   "missing-locked": "Missing Locked Pick",
 };
-const variants = { complete: "success", "in-progress": "gold", "not-started": "neutral", "missing-locked": "danger" } as const;
+const variants = { bye: "neutral", complete: "success", "in-progress": "gold", "not-started": "neutral", "missing-locked": "danger" } as const;
 const statuses = Object.keys(labels) as PickCompletionStatus[];
 
 function CommissionerPickStatus({ leagueId, season, currentWeek }: { leagueId: string; season: number; currentWeek: number }) {
@@ -66,7 +67,7 @@ function CommissionerPickStatus({ leagueId, season, currentWeek }: { leagueId: s
         <thead><tr><th scope="col">Player</th><th scope="col">Franchise</th><th scope="col">Games Picked</th><th scope="col">Pick Status</th><th scope="col">Locks</th></tr></thead>
         <tbody>{report.players.map(player => {
           const status = getPickCompletionStatus(player, report.totalGames);
-          return <tr key={player.playerId}><th scope="row">{player.name}</th><td>{player.nflTeam}</td><td className="player-pick-status-count">{player.pickedCount}/{report.totalGames}</td><td><SteelBadge variant={variants[status]}>{labels[status]}</SteelBadge></td><td>{player.lockedMissingCount > 0 ? <span className="player-pick-status-missing">{player.lockedMissingCount} missed locked {player.lockedMissingCount === 1 ? "game" : "games"}<br /></span> : null}{report.lockedGames === report.totalGames ? "Fully Locked" : `${report.totalGames - report.lockedGames} games still open`}</td></tr>;
+          return <tr key={player.playerId}><th scope="row">{player.name}</th><td>{player.nflTeam}</td><td className="player-pick-status-count">{player.isBye ? "Not required" : `${player.pickedCount}/${report.totalGames}`}</td><td><SteelBadge variant={variants[status]}>{labels[status]}</SteelBadge></td><td>{!player.isBye && player.lockedMissingCount > 0 ? <span className="player-pick-status-missing">{player.lockedMissingCount} missed locked {player.lockedMissingCount === 1 ? "game" : "games"}<br /></span> : null}{player.isBye ? "Bye week" : report.lockedGames === report.totalGames ? "Fully Locked" : `${report.totalGames - report.lockedGames} games still open`}</td></tr>;
         })}</tbody>
       </table></div>}
       <p className="player-pick-status-note">Manual picks and deliberate Picker Clicker choices count. Automatic fallback does not count as a made pick. Completion reflects saved choices, not the last submission checkpoint.</p>
