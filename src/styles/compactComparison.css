@@ -1,0 +1,24 @@
+.compact-home .opponent-reveal-compact { margin: 0 0 12px; }
+.compact-home .opponent-reveal-compact .opponent-reveal-card { padding: 12px; gap: 8px; border-radius: 8px; background: #1c1d20; border-color: #37383c; box-shadow: none; }
+.compact-comparison-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.compact-comparison-header h2 { margin: 0; font: 800 16px/1.2 Arial, sans-serif; }
+.compact-comparison-header .steel-ui-badge { font-size: 9px; padding: 4px 6px; white-space: normal; text-align: center; }
+.compact-comparison-note { margin: 0; color: #afb1b6; font-size: 10px; line-height: 1.4; }
+.compact-home .opponent-reveal-compact .pick-comparison-heading,
+.compact-home .opponent-reveal-compact .pick-comparison-row { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr); gap: 6px; padding: 6px 0; align-items: center; font-size: 12px; line-height: 1.3; }
+.compact-home .opponent-reveal-compact .pick-comparison-heading { color: #afb1b6; font-size: 11px; padding: 4px 0 6px; }
+.compact-home .opponent-reveal-compact .pick-comparison-heading strong { min-width: 0; overflow-wrap: anywhere; font-size: 11px; }
+.compact-home .opponent-reveal-compact .pick-comparison-game { grid-column: auto; }
+.compact-home .opponent-reveal-compact .pick-comparison-row strong { font-weight: 700; font-size: 12px; }
+.compact-home .opponent-reveal-compact .pick-comparison-game small { margin-top: 2px; font-size: 10px; }
+.compact-home .opponent-reveal-compact .pick-comparison-mobile-label { display: none; }
+.compact-home .opponent-reveal-compact .pick-comparison-row > div:nth-child(n+2),
+.compact-home .opponent-reveal-compact .pick-comparison-heading > strong { text-align: center; }
+.compact-home .opponent-reveal-compact .opponent-reveal-actions { justify-content: flex-end; }
+.compact-home .opponent-reveal-compact .opponent-reveal-actions > * { width: auto; min-height: 40px; font-size: 11px; padding: 6px 10px; }
+.compact-home .opponent-reveal-compact .opponent-reveal-message,
+.compact-home .opponent-reveal-compact .opponent-reveal-waiting { padding: 8px; font-size: 11px; }
+@media (max-width: 600px) {
+  .compact-home .opponent-reveal-compact .pick-comparison-row { min-height: 29px; }
+  .compact-home .opponent-reveal-compact .pick-comparison-game small { display: none; }
+}

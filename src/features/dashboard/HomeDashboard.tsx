@@ -10,6 +10,7 @@ import { getStatusLabel } from "../games/gameCenterUtils";
 import { isNFLByeWeek } from "../../engine/isNFLByeWeek";
 import "../../styles/opponentPickReveal.css";
 import "../../styles/compactHome.css";
+import "../../styles/compactComparison.css";
 
 const LEAGUE_LOGO_PATH = `${import.meta.env.BASE_URL}logos/league/head2head-brawlin.png`;
 function HomeDetail({ title, children }: { title: string; children: ReactNode }) {
@@ -47,8 +48,8 @@ export default function HomeDashboard() {
     {viewingCurrentWeek ? <>
       {onBye ? <section className="compact-home-bye" role="status"><strong>Week {league.currentWeek}: You’re on a bye</strong><p>No picks required. Your picks resume next week.</p></section> : <HeadToHeadMatchupsBoard playerOnly compact />}
       <p className="compact-home-live">{liveGames.length ? `${liveGames.length} NFL game${liveGames.length === 1 ? "" : "s"} live now` : currentSnapshot ? `${currentSnapshot.weekGames.length} NFL games this week` : "Schedule loading…"} · Week {league.currentWeek}</p>
+      {!onBye && <OpponentPickRevealPanel comparison compact />}
       <div key={`${league.currentWeek}:${activePlayerId ?? "none"}`} className="compact-home-details">
-        {!onBye && <HomeDetail title="My picks vs. opponent"><OpponentPickRevealPanel comparison /></HomeDetail>}
         <HomeDetail title="All league matchups"><HeadToHeadMatchupsBoard compact /></HomeDetail>
         <HomeDetail title="Weekly obscure stat"><ObscureStatAwardCard className="dashboard-obscure-stat-award" /></HomeDetail>
       </div>

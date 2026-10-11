@@ -24,6 +24,21 @@ import { visibleOpponentReveal, revealedOpponentPick } from "./visibleOpponentRe
 
 const REFRESH_INTERVAL_MS = 15_000;
 
+function compactPickLabel(label: string): string {
+  const statusLabels: Record<string, string> = {
+    "No pick recorded": "No pick", "Picker Clicker pending": "PC pending",
+    "Hidden until lock": "Hidden", "Waiting for both entries": "Waiting",
+    "Sign in to reveal": "Sign in", "Account protected": "Protected",
+    "Opponent picks unavailable": "Unavailable", "Saved picks unavailable": "Unavailable",
+    "Loading saved picks…": "Loading…", "Bye — no opponent": "Bye",
+    "Open team — no entry": "Open team",
+    "Picker Clicker source had no pick": "PC: no pick",
+    "Picker Clicker source pick pending": "PC pending",
+    "Automatic Picker Clicker source had no pick": "Auto PC: no pick",
+  };
+  return statusLabels[label] ?? label.replace("Automatic Picker Clicker → ", "Auto PC → ").replace("Picker Clicker → ", "PC → ");
+}
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message
@@ -123,7 +138,7 @@ function OpponentPickRow({ pick }: { pick: CloudOpponentRevealedPick }) {
   );
 }
 
-export default function OpponentPickRevealPanel({ comparison = false }: { comparison?: boolean }) {
+export default function OpponentPickRevealPanel({ comparison = false, compact = false }: { comparison?: boolean; compact?: boolean }) {
   const { status, accountLink } = useAuth();
   const { league, activePlayerId, picks, pickerClickerHistory } = useLeague();
   const { season, snapshot, loading: scheduleLoading } = useNFL();
@@ -221,15 +236,16 @@ export default function OpponentPickRevealPanel({ comparison = false }: { compar
   }
 
   return (
-    <section className="opponent-reveal-shell">
+    <section className={`opponent-reveal-shell ${compact ? "opponent-reveal-compact" : ""}`}>
       <SteelCard className="opponent-reveal-card" variant="gold">
-        <SteelSectionHeader
+        {compact ? <div className="compact-comparison-header"><h2>My Picks vs. Opponent</h2>{statusBadge}</div> : <SteelSectionHeader
           eyebrow={`Season ${league.settings.season} • Week ${league.currentWeek}`}
           title={comparison ? "My Picks vs Oppponent Picks" : "Head-to-Head Opponent Picks"}
           description={description}
           action={statusBadge}
-        />
+        />}
 
+        {!compact && <>
         <div className="opponent-reveal-matchup">
           <div>
             <span>Selected entry</span>
@@ -286,12 +302,14 @@ export default function OpponentPickRevealPanel({ comparison = false }: { compar
           </div>
         ) : null}
 
+        </>}
+        {compact && <p className="compact-comparison-note">{description} PC = Picker Clicker.</p>}
         {message ? <p className="opponent-reveal-message">{message}</p> : null}
 
         {comparison ? (
           <div className="pick-comparison">
             <div className="pick-comparison-heading">
-              <span>Game</span><strong>My Picks</strong><strong>Opponent Picks</strong>
+              <span>Game</span><strong title={selectedPlayer?.name}>{compact ? selectedPlayer?.name ?? "My Pick" : "My Picks"}</strong><strong title={reveal?.opponentPlayerName ?? "Opponent"}>{compact ? reveal?.opponentPlayerName ?? "Opponent" : "Opponent Picks"}</strong>
             </div>
             {(snapshot?.weekGames ?? []).filter(game => game.week === league.currentWeek).map(game => {
               const mine = getEffectivePlayerPick({ playerId: selectedPlayerId, gameId: game.id, picks, weekState });
@@ -316,8 +334,8 @@ export default function OpponentPickRevealPanel({ comparison = false }: { compar
               return (
                 <article className="pick-comparison-row" key={game.id}>
                   <div className="pick-comparison-game"><strong>{game.awayTeam} @ {game.homeTeam}</strong><small>{formatKickoff(game.kickoff)}</small></div>
-                  <div><span className="pick-comparison-mobile-label">My Picks</span><strong className={picksDiffer ? "pick-comparison-different" : undefined}>{ownLabel}</strong></div>
-                  <div><span className="pick-comparison-mobile-label">Opponent Picks</span><strong className={picksDiffer ? "pick-comparison-different" : undefined}>{opponent ? getPickSelectionLabel(opponent, true) : hiddenLabel}</strong></div>
+                  <div><span className="pick-comparison-mobile-label">My Picks</span><strong title={ownLabel} className={picksDiffer ? "pick-comparison-different" : undefined}>{compact ? compactPickLabel(ownLabel) : ownLabel}</strong></div>
+                  <div><span className="pick-comparison-mobile-label">Opponent Picks</span><strong title={opponent ? getPickSelectionLabel(opponent, true) : hiddenLabel} className={picksDiffer ? "pick-comparison-different" : undefined}>{compact ? compactPickLabel(opponent ? getPickSelectionLabel(opponent, true) : hiddenLabel) : opponent ? getPickSelectionLabel(opponent, true) : hiddenLabel}</strong></div>
                 </article>
               );
             })}
@@ -363,7 +381,7 @@ export default function OpponentPickRevealPanel({ comparison = false }: { compar
               size="sm"
               variant="ghost"
             >
-              {loading ? "Checking…" : "Refresh Opponent Status"}
+              {loading ? "Checking…" : compact ? "Refresh" : "Refresh Opponent Status"}
             </SteelButton>
           </div>
         ) : null}
