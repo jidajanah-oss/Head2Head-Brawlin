@@ -518,8 +518,6 @@ function CommissionerSeasonCloseout() {
           </span>
         </div>
       </header>
-  </div>
-</details>
 
       {!payoutLedger || !evaluation ? (
         <div className="season-closeout-unavailable">
@@ -758,6 +756,8 @@ function CommissionerSeasonCloseout() {
           </div>
         </div>
       ) : null}
+  </div>
+</details>
     </section>
   );
 }

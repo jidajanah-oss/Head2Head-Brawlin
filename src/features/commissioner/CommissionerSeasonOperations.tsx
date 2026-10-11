@@ -1,9 +1,9 @@
+import CommissionerToolSection from "./CommissionerToolSection";
 import FranchiseLogo from "../../components/franchise/FranchiseLogo";
 import {
   SteelBadge,
   SteelButton,
   SteelCard,
-  SteelHero,
   SteelSectionHeader,
   SteelStatCard,
 } from "../../components/steel";
@@ -91,25 +91,7 @@ function CommissionerSeasonOperations() {
 
   return (
     <main className="setup-wizard commissioner-hq-v2">
-      <SteelHero
-        eyebrow="Commissioner Control Room"
-        title="Commissioner HQ"
-        subtitle={`${league.settings.leagueName} • ${league.settings.season}`}
-        primaryLabel="Game Center"
-        primaryHref="/games"
-        secondaryLabel="Standings"
-        secondaryHref="/standings"
-        rightContent={
-          <div className="commissioner-hero-panel">
-            <span>Active Season</span>
-            <strong>{league.settings.season}</strong>
-            <small>
-              Week {weekControlState.currentWeek} of{" "}
-              {LAST_REGULAR_SEASON_WEEK}
-            </small>
-          </div>
-        }
-      />
+      <header className="commissioner-compact-header"><div><h1>Commissioner</h1><p>{league.settings.leagueName} · {league.settings.season} · Week {league.currentWeek}</p></div></header>
 
       <section className="commissioner-stat-grid">
         <SteelStatCard
@@ -141,6 +123,7 @@ function CommissionerSeasonOperations() {
         />
       </section>
 
+      <CommissionerToolSection title="Week control">
       <SteelCard
         className="commissioner-week-control-card"
         as="section"
@@ -253,6 +236,7 @@ function CommissionerSeasonOperations() {
           deleted.
         </p>
       </SteelCard>
+      </CommissionerToolSection>
 
       <ObscureStatAwardCard
         className="commissioner-obscure-stat-award"
@@ -260,6 +244,7 @@ function CommissionerSeasonOperations() {
         showCoinFlipControls
       />
 
+      <CommissionerToolSection title="Picker Clicker">
       <SteelCard
         className="commissioner-picker-clicker-card"
         as="section"
@@ -341,8 +326,9 @@ function CommissionerSeasonOperations() {
           NFL game is scored incorrect.
         </p>
       </SteelCard>
+      </CommissionerToolSection>
 
-      <ProtectedSeasonResetCard />
+      <CommissionerToolSection title="Protected season reset"><ProtectedSeasonResetCard /></CommissionerToolSection>
     </main>
   );
 }

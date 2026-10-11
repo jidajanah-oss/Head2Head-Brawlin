@@ -1,0 +1,59 @@
+/* Commissioner-only density: shared player pages keep their own presentation. */
+.compact-commissioner { font-family: Arial, Helvetica, sans-serif; display: grid; gap: 8px; font-size: 14px; }
+.compact-commissioner .setup-wizard { padding: 0; margin: 0; display: grid; gap: 8px; }
+.compact-commissioner .commissioner-compact-header { padding: 10px 2px; }
+.compact-commissioner h1 { font-size: 22px; margin: 0 0 4px; }
+.compact-commissioner :is(h2,h3,h4) { font-family: inherit; font-size: 16px; line-height: 1.25; margin: 0 0 6px; }
+.compact-commissioner h3 { font-size: 15px; }
+.compact-commissioner h4 { font-size: 14px; }
+.compact-commissioner p { font-size: 13px; line-height: 1.45; margin: 5px 0; }
+.compact-commissioner :is(.commissioner-tool,.app-collapsible-panel) { border: 1px solid #484027; border-radius: 8px; background: #171717; margin: 0; overflow: hidden; }
+.compact-commissioner :is(.commissioner-tool > summary,.app-collapsible__summary) { padding: 12px; min-height: 44px; box-sizing: border-box; cursor: pointer; color: #f4f4f4; font: 600 14px/1.3 Arial, Helvetica, sans-serif; }
+.compact-commissioner summary:focus-visible { outline: 2px solid #ffca28; outline-offset: -3px; }
+.compact-commissioner .commissioner-tool[open] > summary { border-bottom: 1px solid #38332a; color: #ffca28; }
+.compact-commissioner :is(.commissioner-tool__content,.app-collapsible__content) { padding: 10px; }
+.compact-commissioner .app-collapsible__title { font-size: 14px; }
+.compact-commissioner .app-collapsible__state { font-size: 11px; }
+.compact-commissioner :is(.steel-ui-card,.computer-access-manager,.linked-account-reset-panel,.payout-ledger,.season-closeout-panel) { padding: 10px; margin: 0; border-radius: 8px; box-shadow: none; }
+.compact-commissioner .commissioner-tool__content > :is(.steel-ui-card,section) { padding: 0; border: 0; background: transparent; }
+.compact-commissioner :is(.steel-ui-section-header,.computer-access-manager__header,.linked-account-reset-panel__header,.season-closeout-panel-header) { gap: 8px; margin-bottom: 10px; }
+.compact-commissioner .steel-ui-eyebrow { font-size: 10px; letter-spacing: .08em; margin-bottom: 3px; }
+.compact-commissioner .steel-ui-badge { padding: 4px 7px; font-size: 10px; }
+.compact-commissioner :is(button,.steel-ui-button) { min-height: 40px; height: auto; padding: 8px 12px; font: 600 13px/1.3 Arial, Helvetica, sans-serif; border-radius: 6px; white-space: normal; }
+.compact-commissioner :is(input:not([type=checkbox]):not([type=radio]),select,textarea) { min-height: 40px; max-width: 100%; box-sizing: border-box; padding: 8px; font: 16px/1.3 Arial, Helvetica, sans-serif; border-radius: 6px; }
+.compact-commissioner label { font-size: 12px; }
+.compact-commissioner table { font-size: 12px; }
+.compact-commissioner :is(th,td) { padding: 7px 8px; }
+.compact-commissioner .commissioner-stat-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; margin: 0; }
+.compact-commissioner .steel-ui-stat-card { padding: 8px; min-height: 0; }
+.compact-commissioner .steel-ui-stat-card :is(h2,h3,strong) { font-size: 18px; }
+.compact-commissioner .steel-ui-stat-icon { display: none; }
+.compact-commissioner .steel-ui-stat-card p { font-size: 11px; }
+.compact-commissioner .commissioner-week-control-body { gap: 8px; margin: 8px 0; }
+.compact-commissioner .commissioner-week-progress { margin: 10px 0; }
+.compact-commissioner .commissioner-picker-clicker-body { padding: 8px 0; gap: 10px; }
+.compact-commissioner .commissioner-picker-clicker-source strong { font-size: 17px; }
+.compact-commissioner .commissioner-picker-clicker-stats { gap: 6px; }
+.compact-commissioner .commissioner-picker-clicker-stats > div { padding: 8px; }
+.compact-commissioner :is([class$="__grid"],[class$="__status-grid"],[class$="__summary-grid"],[class$="__planning-grid"],[class$="__roster-grid"],[class$="-grid"]) { gap: 8px; }
+.compact-commissioner :is([class$="__card"],[class$="__planning-card"],[class$="__entry"],[class$="__review-alert"],[class$="__safety"],[class$="-notice"],[class$="-warning"],[class$="-summary"]) { padding: 10px; border-radius: 6px; }
+.compact-commissioner :is(.computer-access-manager__status-grid > div,.payout-ledger__summary-grid > div) { padding: 8px; }
+.compact-commissioner :is(.future-season-player,.future-season-draft__planning-card,.season-award-card) { padding: 10px; }
+.compact-commissioner :is([class$="__actions"],[class$="-actions"]) { gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.compact-commissioner :is(.payout-ledger__summary-grid,.computer-access-manager__status-grid) { display: grid; grid-template-columns: repeat(auto-fit,minmax(130px,1fr)); }
+.compact-commissioner :is(.commissioner-playoff-results,.season-closeout-panel,.future-season-draft) { gap: 10px; margin: 0; }
+.compact-commissioner :is(.commissioner-playoff-results__hero,.playoff-initialization-panel,.playoff-results-toolbar,.playoff-results-round,.playoff-result-card,.data-transfer-card,.data-transfer-safety,.season-closeout-checklist,.season-closeout-history,.payout-ledger__plan-card,.payout-ledger__manual-panel) { padding: 10px; border-radius: 6px; box-shadow: none; }
+.compact-commissioner :is(.data-transfer-header,.season-awards-board-header,.commissioner-playoff-results__hero) { gap: 10px; margin-bottom: 10px; }
+.compact-commissioner :is(.data-transfer-header-badge strong,.season-awards-board-summary strong,.commissioner-playoff-results__season strong) { font-size: 18px; }
+.compact-commissioner :is(.commissioner-playoff-results__season,.playoff-seed-readiness > div,.playoff-champion-summary > div) { padding: 8px; min-width: 0; }
+.compact-commissioner :is(.steel-ui-stat-top span,.steel-ui-stat-card small) { font-size: 11px; line-height: 1.3; }
+.compact-commissioner .steel-ui-stat-top { margin-bottom: 4px; }
+@media (max-width: 640px) {
+  .compact-commissioner .commissioner-stat-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .compact-commissioner :is(.computer-access-manager__grid,.future-season-draft__planning-grid,.future-season-draft__roster-grid) { grid-template-columns: minmax(0,1fr); }
+  .compact-commissioner :is(.steel-ui-section-header,.season-closeout-panel-header) { flex-wrap: wrap; }
+  .compact-commissioner .commissioner-week-control-body { display: grid; grid-template-columns: 1fr 1fr; }
+  .compact-commissioner .commissioner-week-selector { grid-column: 1 / -1; grid-row: 1; }
+  .compact-commissioner .commissioner-picker-clicker-body { flex-wrap: wrap; }
+  .compact-commissioner .commissioner-picker-clicker-stats { width: 100%; }
+}
