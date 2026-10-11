@@ -925,13 +925,14 @@ function useStandingsData() {
   return { league, activePlayerId, cloudLeagueId, cloudScoreError, cloudScoresLoading, weeklyMatchups, matchupWeekIsComplete, weeklyBoardStatus, scheduleHelper, divisionStandings, playoffPicture, bracketShell, standings, activePlayerStanding, activePlayoffSeed, pickerClickerWeekState, leader };
 }
 
-export function HeadToHeadMatchupsBoard() {
-  const { league, cloudLeagueId, cloudScoreError, cloudScoresLoading, weeklyMatchups, matchupWeekIsComplete, weeklyBoardStatus, scheduleHelper } = useStandingsData();
-  return (<SteelCard className="standings-matchups-card">
+export function HeadToHeadMatchupsBoard({ playerOnly = false, compact = false }: { playerOnly?: boolean; compact?: boolean } = {}) {
+  const { league, activePlayerId, cloudLeagueId, cloudScoreError, cloudScoresLoading, weeklyMatchups, matchupWeekIsComplete, weeklyBoardStatus, scheduleHelper } = useStandingsData();
+  const visibleMatchups = playerOnly ? weeklyMatchups.filter(matchup => matchup.playerA.id === activePlayerId || matchup.playerB?.id === activePlayerId) : weeklyMatchups;
+  return (<SteelCard className={`standings-matchups-card ${compact ? "home-matchups-compact" : ""} ${playerOnly ? "home-matchups-personal" : ""}`}>
         <SteelSectionHeader
           eyebrow={`Week ${league.currentWeek}`}
-          title="Head-to-Head Matchups"
-          description={`${scheduleHelper}. Scores include frozen Picker Clicker fallbacks and remain provisional until the entire NFL week is complete.`}
+          title={playerOnly ? "Your Matchup" : "Head-to-Head Matchups"}
+          description={compact ? `Week ${league.currentWeek} · ${matchupWeekIsComplete ? "Final scores" : "Scores provisional until the week is complete"}` : `${scheduleHelper}. Scores include frozen Picker Clicker fallbacks and remain provisional until the entire NFL week is complete.`}
           action={
             <SteelBadge
               variant={
@@ -958,7 +959,7 @@ export function HeadToHeadMatchupsBoard() {
             <SteelCard className="standings-empty-card">
               Loading the full league roster. Matchups will appear when all 32 players are available.
             </SteelCard>
-          ) : weeklyMatchups.map(
+          ) : visibleMatchups.map(
             (matchup) => (
               <article
                 className="standings-matchup-item"
@@ -1036,9 +1037,9 @@ export function HeadToHeadMatchupsBoard() {
             )
           )}
 
-          {!cloudLeagueId && weeklyMatchups.length === 0 ? (
+          {!cloudScoresLoading && visibleMatchups.length === 0 ? (
             <SteelCard className="standings-empty-card">
-              No weekly matchups available yet.
+              {playerOnly ? "Your matchup will appear when your franchise and the week’s schedule are available." : "No weekly matchups available yet."}
             </SteelCard>
           ) : null}
         </div>
