@@ -1,3 +1,6 @@
+import { Link } from "react-router-dom";
+import CompactDivisionStandings from "./CompactDivisionStandings";
+import BestDivisionRace from "./BestDivisionRace";
 import SeasonAwardsBoard from "../awards/SeasonAwardsBoard";
 import PublicPlayoffResults from "../playoffs/PublicPlayoffResults";
 import { useEffect, useMemo, useState } from "react";
@@ -7,7 +10,6 @@ import {
   SteelBadge,
   SteelButton,
   SteelCard,
-  SteelHero,
   SteelSectionHeader,
 } from "../../components/steel";
 import { useLeague } from "../../context/LeagueContext";
@@ -35,8 +37,6 @@ import {
   type NFLPlayoffBracketSlot,
   type NFLPlayoffBubbleRow,
   type NFLPlayoffSeedRow,
-  type NFLStyleDivisionStandingGroup,
-  type NFLStyleDivisionStandingRow,
 } from "../../engine";
 
 type BadgeVariant =
@@ -66,20 +66,6 @@ function getResultBadgeVariant(result: string): BadgeVariant {
   return "neutral";
 }
 
-function getSeedBadgeLabel(
-  player: NFLStyleDivisionStandingRow
-) {
-  if (player.isDivisionLeader) {
-    return "Division Leader";
-  }
-
-  if (player.isWildcardSeed) {
-    return "Wildcard Watch";
-  }
-
-  return `#${player.divisionRank} Division`;
-}
-
 function getPlayoffBadgeVariant(
   status: string
 ): BadgeVariant {
@@ -92,23 +78,6 @@ function getPlayoffBadgeVariant(
   }
 
   return "neutral";
-}
-
-function getOpenTeamAbbreviations(
-  division: NFLStyleDivisionStandingGroup
-) {
-  const claimedTeams = new Set(
-    division.rows.map(
-      (row) => row.nflTeamAbbreviation
-    )
-  );
-
-  return division.teams
-    .filter(
-      (team) =>
-        !claimedTeams.has(team.abbreviation)
-    )
-    .map((team) => team.abbreviation);
 }
 
 function formatBubblePointsBack(
@@ -1077,53 +1046,15 @@ export function HeadToHeadMatchupsBoard() {
 }
 
 function StandingsBoard() {
-  const { league, activePlayerId, divisionStandings, playoffPicture, bracketShell, standings, activePlayerStanding, activePlayoffSeed, pickerClickerWeekState, leader } = useStandingsData();
-  return (
-    <main className="standings standings-v2">
-      <SteelHero
-        eyebrow="NFL-Style League Table"
-        title="Standings"
-        subtitle={`Season records, Week ${league.currentWeek} matchups, playoff seeds, and division races.`}
-        primaryLabel="Make Picks"
-        primaryHref="/picks"
-        secondaryLabel="Game Center"
-        secondaryHref="/games"
-        rightContent={
-          <div className="standings-hero-panel">
-            <span>Current Top Seed</span>
-
-            <strong>
-              {leader
-                ? `${leader.nflTeamAbbreviation} • ${leader.name}`
-                : "—"}
-            </strong>
-
-            <small>
-              {leader
-                ? `${leader.division} • ${formatHeadToHeadRecord(
-                    leader
-                  )} • ${leader.leaguePoints} pts`
-                : "No finalized results yet"}
-            </small>
-          </div>
-        }
-      />
-
-
-
-
-      <details className="app-collapsible-panel" data-collapsible-panel>
-        <summary className="app-collapsible__summary">
-          <span className="app-collapsible__title">Season Awards</span>
-          <span className="app-collapsible__state">
-            <span className="app-collapsible__open">Open</span>
-            <span className="app-collapsible__close">Close</span>
-          </span>
-        </summary>
-        <div className="app-collapsible__content">
-          <SeasonAwardsBoard />
-        </div>
-      </details>
+  const { league, activePlayerId, divisionStandings, playoffPicture, bracketShell, standings, activePlayerStanding, activePlayoffSeed, pickerClickerWeekState } = useStandingsData();
+  return <main className="standings standings-v2 compact-standings">
+    <header className="compact-heading">
+      <div><h1>Standings</h1><p>Week {league.currentWeek} · Season records</p></div>
+      <Link to="/picks">Make Picks →</Link>
+    </header>
+    <CompactDivisionStandings key={activePlayerId ?? "no-player"} standings={divisionStandings} activePlayerId={activePlayerId} />
+    <details><summary>Week {league.currentWeek} matchups</summary><div className="compact-details-content"><HeadToHeadMatchupsBoard /></div></details>
+    <details><summary>Playoff picture &amp; brackets</summary><div className="compact-details-content">
       <PublicPlayoffResults />
       <section className="standings-board-section">
         <SteelSectionHeader
@@ -1168,226 +1099,10 @@ function StandingsBoard() {
       </section>
 
       
-      <section className="standings-conference-stack">
-        {divisionStandings.conferences.map(
-          (conference) => (
-            <SteelCard
-              className="standings-conference-card"
-              key={conference.conference}
-            >
-              <SteelSectionHeader
-                eyebrow={`${conference.conference} Conference`}
-                title={`${conference.conference} Divisions`}
-                description="Division leaders receive the first four playoff seeds."
-              />
 
-              <div className="standings-division-grid">
-                {conference.divisions.map(
-                  (division) => {
-                    const openTeams =
-                      getOpenTeamAbbreviations(
-                        division
-                      );
-
-                    return (
-                      <article
-                        className="standings-division-card"
-                        key={division.division}
-                      >
-                        <div className="standings-division-topline">
-                          <div>
-                            <span>
-                              {
-                                division.division
-                              }
-                            </span>
-
-                            <strong>
-                              {division.leader
-                                ? `${division.leader.nflTeamAbbreviation} • ${division.leader.name}`
-                                : "Open Division"}
-                            </strong>
-                          </div>
-
-                          <SteelBadge variant="neutral">
-                            {
-                              division.claimedCount
-                            }
-                            /4 Claimed
-                          </SteelBadge>
-                        </div>
-
-                        <div className="standings-division-table">
-                          {division.rows.map(
-                            (player) => (
-                              <div
-                                className={`standings-division-row ${
-                                  player.id ===
-                                  activePlayerId
-                                    ? "is-active-player"
-                                    : ""
-                                }`.trim()}
-                                key={player.id}
-                              >
-                                <div className="standings-division-rank">
-                                  <FranchiseLogo
-                                    nflTeam={
-                                      player.nflTeamAbbreviation
-                                    }
-                                    displayName={
-                                      player.nflTeamDisplayName
-                                    }
-                                    size="xs"
-                                  />
-
-                                  <strong>
-                                    {
-                                      player.divisionRank
-                                    }
-                                  </strong>
-
-                                  <small>
-                                    {
-                                      player.nflTeamAbbreviation
-                                    }
-                                  </small>
-                                </div>
-
-                                <div className="standings-division-player">
-                                  <strong>
-                                    {player.name}
-                                  </strong>
-
-                                  <small>
-                                    {
-                                      player.nflTeamDisplayName
-                                    }
-                                  </small>
-                                </div>
-
-                                <div className="standings-division-record">
-                                  <strong>
-                                    {formatHeadToHeadRecord(
-                                      player
-                                    )}
-                                  </strong>
-
-                                  <small>REC</small>
-                                </div>
-
-                                <div className="standings-division-points">
-                                  <strong>
-                                    {
-                                      player.leaguePoints
-                                    }
-                                  </strong>
-
-                                  <small>PTS</small>
-                                </div>
-
-                                <div className="standings-division-points">
-                                  <strong>{player.pickPoints}</strong>
-                                  <small>Correct picks</small>
-                                </div>
-
-                                <SteelBadge
-                                  variant={
-                                    player.isDivisionLeader
-                                      ? "gold"
-                                      : player.isWildcardSeed
-                                        ? "success"
-                                        : "neutral"
-                                  }
-                                >
-                                  {getSeedBadgeLabel(
-                                    player
-                                  )}
-                                </SteelBadge>
-                              </div>
-                            )
-                          )}
-
-                          {division.rows.length ===
-                          0 ? (
-                            <p className="standings-muted">
-                              No franchise owner in
-                              this division yet.
-                            </p>
-                          ) : null}
-                        </div>
-
-                        {openTeams.length > 0 ? (
-                          <div className="standings-open-teams">
-                            <span>
-                              Open teams
-                            </span>
-
-                            <strong>
-                              {openTeams.join(
-                                " • "
-                              )}
-                            </strong>
-                          </div>
-                        ) : null}
-                      </article>
-                    );
-                  }
-                )}
-              </div>
-            </SteelCard>
-          )
-        )}
-      </section>
-
-      <SteelCard className="standings-podium-card">
-        <SteelSectionHeader
-          eyebrow="League Leaders"
-          title="Current Podium"
-          description="Ranked by league points, wins, and season award-eligible correct picks."
-        />
-
-        <div className="standings-podium-grid">
-          {standings
-            .slice(0, 3)
-            .map((player, index) => (
-              <article
-                className={`standings-podium-item standings-podium-item--${
-                  index + 1
-                }`}
-                key={player.id}
-              >
-                <span>
-                  {index === 0
-                    ? "🏆"
-                    : index === 1
-                      ? "🥈"
-                      : "🥉"}
-                </span>
-
-                <strong>
-                  {getRankDisplay(index)}{" "}
-                  {player.nflTeamAbbreviation} •{" "}
-                  {player.name}
-                </strong>
-
-                <small>
-                  {player.division} •{" "}
-                  {formatHeadToHeadRecord(
-                    player
-                  )}{" "}
-                  • {player.leaguePoints} pts
-                </small>
-              </article>
-            ))}
-
-          {standings.length === 0 ? (
-            <p className="standings-muted">
-              No standings available yet.
-            </p>
-          ) : null}
-        </div>
-      </SteelCard>
-
+    </div></details>
+    <details><summary>Best division race</summary><div className="compact-details-content"><BestDivisionRace /></div></details>
+    <details><summary>Full league details</summary><div className="compact-details-content">
       <section className="standings-board-section">
         <SteelSectionHeader
           eyebrow="Season Table"
@@ -1553,10 +1268,10 @@ function StandingsBoard() {
           </p>
         ) : null}
       </section>
-    </main>
-  );
+
+    </div></details>
+    <details><summary>Season awards</summary><div className="compact-details-content"><SeasonAwardsBoard /></div></details>
+  </main>;
 }
 
 export default StandingsBoard;
-
-
