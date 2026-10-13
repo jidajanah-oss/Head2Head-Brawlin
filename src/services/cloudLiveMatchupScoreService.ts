@@ -4,6 +4,7 @@ export type LiveMatchupScores = {
   season: number;
   week: number;
   completedGames: number;
+  lockedGames: number;
   scores: Record<string, number>;
 };
 
@@ -21,17 +22,21 @@ export async function loadLiveMatchupScores(
   if (error) throw new Error(`Unable to load live matchup scores: ${error.message}`);
   if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Invalid live matchup scores.");
   const row = data as Record<string, unknown>;
+  // Older deployments omit this field. Automatic points can precede NFL finals.
+  const lockedGames = row.locked_games ?? 0;
   if (row.season !== season || row.week !== week ||
       typeof row.completed_games !== "number" || !Number.isInteger(row.completed_games) || row.completed_games < 0 ||
+      typeof lockedGames !== "number" || !Number.isInteger(lockedGames) || lockedGames < 0 ||
+      (row.locked_games !== undefined && lockedGames < row.completed_games) ||
       !row.scores || typeof row.scores !== "object" || Array.isArray(row.scores)) {
     throw new Error("Invalid live matchup score summary.");
   }
   const scores: Record<string, number> = {};
   for (const [playerId, value] of Object.entries(row.scores)) {
-    if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > row.completed_games) {
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > row.completed_games + lockedGames) {
       throw new Error("Invalid player matchup score.");
     }
     scores[playerId] = value;
   }
-  return { season, week, completedGames: row.completed_games, scores };
+  return { season, week, completedGames: row.completed_games, lockedGames, scores };
 }

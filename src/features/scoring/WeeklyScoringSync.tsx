@@ -9,7 +9,6 @@ import { useLeague } from "../../context/LeagueContext";
 import { useNFL } from "../../context/NFLContext";
 import {
   applyPickerClickerFallbacks,
-  buildEffectiveHeadToHeadPicks,
   buildFinalizedWeeklyScoringRecord,
   createPickerClickerWeekState,
   getPickerClickerAssignmentId,
@@ -588,18 +587,11 @@ function WeeklyScoringSync() {
         return;
       }
 
-      const effectivePicks =
-        buildEffectiveHeadToHeadPicks({
-          picks,
-          pickerClickerHistory,
-          season,
-          throughWeek: week,
-        });
-
       const scoringRecord =
         buildFinalizedWeeklyScoringRecord({
           players: league.players,
-          picks: effectivePicks,
+          // Preserve intent provenance; the engine resolves deliberate PC itself.
+          picks,
           nflGames:
             snapshot.nflGames,
           season,
@@ -749,27 +741,12 @@ function WeeklyScoringSync() {
               cloudAppliedAt,
           });
 
-        const cloudPickerClickerHistory = {
-          [cloudScoringState.weekState.id]:
-            cloudScoringState.weekState,
-        };
-
-        const effectiveCloudPicks =
-          buildEffectiveHeadToHeadPicks({
-            picks:
-              cloudScoringState.picks,
-            pickerClickerHistory:
-              cloudPickerClickerHistory,
-            season,
-            throughWeek: week,
-          });
-
         const scoringRecord =
           buildFinalizedWeeklyScoringRecord({
             players:
               cloudPlayers,
             picks:
-              effectiveCloudPicks,
+              cloudScoringState.picks,
             nflGames:
               cloudNFLGames,
             season,
