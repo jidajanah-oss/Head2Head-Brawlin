@@ -403,6 +403,34 @@ export function canFinalizeWeeklyScoring(
   ).isComplete;
 }
 
+export function buildLiveHeadToHeadScores({
+  players,
+  picks,
+  nflGames,
+  season,
+  week,
+  pickerClickerWeekState,
+}: BuildFinalizedWeeklyScoringRecordParams): Record<string, number> {
+  const completion = inspectNFLWeekCompletion(nflGames, season, week);
+  const scores: Record<string, number> = {};
+  for (const matchup of buildWeeklyHeadToHeadMatchups(players, week, getWeekGames(nflGames, season, week))) {
+    const participants = [matchup.playerA, matchup.playerB].filter((player): player is Player => player !== null);
+    for (const player of participants) {
+      if (resolveMatchupType(matchup) === "bye") {
+        scores[player.id] = 0;
+        continue;
+      }
+      const opponent = player.id === matchup.playerA.id ? matchup.playerB : matchup.playerA;
+      const ownScore = getPlayerPickScore(player.id, picks, completion.eligibleScoringGameIds,
+        completion.gameResults, pickerClickerWeekState);
+      const missedOpponentPicks = opponent
+        ? getPlayerPickerClickerStatus(opponent.id, pickerClickerWeekState).fallbackCount : 0;
+      scores[player.id] = ownScore.correct + missedOpponentPicks;
+    }
+  }
+  return scores;
+}
+
 export function buildFinalizedWeeklyScoringRecord({
   players,
   picks,
