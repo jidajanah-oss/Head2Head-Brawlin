@@ -18,6 +18,7 @@ import { useNFL } from "../../context/NFLContext";
 import { loadLiveMatchupScores, type LiveMatchupScores } from "../../services/cloudLiveMatchupScoreService";
 import { supabaseClient } from "../../services/supabaseClient";
 import { createLiveReadRefresh, refreshOnReturn } from "../../services/liveReadRefresh";
+import { buildLiveHeadToHeadScores } from "../../engine/weeklyScoringEngine";
 import {
   buildEffectiveHeadToHeadPicks,
   buildHeadToHeadMatchupResults,
@@ -839,9 +840,11 @@ function useStandingsData() {
         league.currentWeek,
         nflGames
       );
-      if (!cloudLeagueId) return localMatchups;
-      const scores = activeCloudScores?.scores ?? {};
-      const scoresAreFinal = cloudScoresAreFinal;
+      const scores = cloudLeagueId ? activeCloudScores?.scores ?? {} : buildLiveHeadToHeadScores({
+        players: league.players, picks: allPicks, nflGames, season, week: league.currentWeek,
+        pickerClickerWeekState,
+      });
+      const scoresAreFinal = cloudLeagueId ? cloudScoresAreFinal : weekCompletion.isComplete;
       return localMatchups.map((matchup) => {
         const playerAScore = scores[matchup.playerA.id] ?? 0;
         const playerBScore = matchup.playerB ? scores[matchup.playerB.id] ?? 0 : 0;
@@ -850,7 +853,8 @@ function useStandingsData() {
         const playerAWins = playerAEligible && (!playerBEligible || playerAScore > playerBScore);
         const playerBWins = playerBEligible && (!playerAEligible || playerBScore > playerAScore);
         return { ...matchup, playerAScore, playerBScore,
-          possiblePoints: activeCloudScores?.completedGames ?? 0,
+          isTie: scoresAreFinal && Boolean(matchup.playerB) && playerAEligible && playerBEligible && playerAScore === playerBScore,
+          possiblePoints: cloudLeagueId ? activeCloudScores?.completedGames ?? 0 : matchup.possiblePoints,
           winnerId: scoresAreFinal && matchup.playerB
             ? playerAWins ? matchup.playerA.id
               : playerBWins ? matchup.playerB.id : null
@@ -875,6 +879,10 @@ function useStandingsData() {
       activeCloudScores,
       cloudScoresAreFinal,
       currentWeekIneligiblePlayerIds,
+      allPicks,
+      season,
+      pickerClickerWeekState,
+      weekCompletion.isComplete,
     ]
   );
 
@@ -932,7 +940,7 @@ export function HeadToHeadMatchupsBoard({ playerOnly = false, compact = false }:
         <SteelSectionHeader
           eyebrow={`Week ${league.currentWeek}`}
           title={playerOnly ? "Your Matchup" : "Head-to-Head Matchups"}
-          description={compact ? `Week ${league.currentWeek} · ${matchupWeekIsComplete ? "Final scores" : "Scores provisional until the week is complete"}` : `${scheduleHelper}. Scores include frozen Picker Clicker fallbacks and remain provisional until the entire NFL week is complete.`}
+          description={compact ? `Week ${league.currentWeek} · ${matchupWeekIsComplete ? "Final scores" : "Scores provisional until the week is complete"}` : `${scheduleHelper}. Missing locked picks award the opponent a point immediately. Scores remain provisional until the entire NFL week is complete.`}
           action={
             <SteelBadge
               variant={
