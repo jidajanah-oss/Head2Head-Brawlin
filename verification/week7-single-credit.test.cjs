@@ -48,7 +48,23 @@ for(const own of ['PIT','NO']) for(const source of ['PIT','NO',null]) {
   assert.equal(final.playerResults.mike.correctPicks,own==='PIT'?2:1,'raw prize stats remain separate');
   assert.equal(final.playerResults.travis.weeklyPrizeEligible,true,'partial omission remains eligible');
 }
-assert.equal(buildLiveHeadToHeadScores(fixture({pending:true})).mike,2,'automatic win exists before NFL final');
+assert.equal(buildLiveHeadToHeadScores(fixture({pending:true})).mike,1,'automatic win waits for NFL final');
+for (const status of ['scheduled','live','halftime']) {
+  const f=fixture(); f.nflGames[1].status=status;
+  assert.equal(buildLiveHeadToHeadScores(f).mike,1,'no automatic win while game is unfinished');
+}
+const invalidFinal=fixture(); delete invalidFinal.nflGames[1].score;
+assert.equal(buildLiveHeadToHeadScores(invalidFinal).mike,1,'final needs valid scores');
+const tiedFinal=fixture(); tiedFinal.nflGames[1].score={home:10,away:10};
+assert.equal(buildLiveHeadToHeadScores(tiedFinal).mike,2,'automatic win applies to a tied NFL final');
+const tiedRecord=buildFinalizedWeeklyScoringRecord(tiedFinal);
+const tiedMatchup=tiedRecord.matchups.find(m=>m.playerAId==='mike'||m.playerBId==='mike');
+assert.equal(tiedMatchup.playerAId==='mike'?tiedMatchup.playerAScore:tiedMatchup.playerBScore,2);
+const canceled=fixture(); canceled.nflGames[1].status='canceled';
+assert.equal(buildLiveHeadToHeadScores(canceled).mike,1,'canceled game supplies no completed-game win');
+const canceledRecord=buildFinalizedWeeklyScoringRecord(canceled);
+const canceledMatchup=canceledRecord.matchups.find(m=>m.playerAId==='mike'||m.playerBId==='mike');
+assert.equal(canceledMatchup.playerAId==='mike'?canceledMatchup.playerAScore:canceledMatchup.playerBScore,1);
 const selected=fixture({selected:true});
 assert.equal(buildLiveHeadToHeadScores(selected).mike,2);
 assert.equal(buildLiveHeadToHeadScores(selected).travis,1,'deliberate PC earns normal credit');
