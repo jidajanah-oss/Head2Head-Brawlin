@@ -403,6 +403,28 @@ export function canFinalizeWeeklyScoring(
   ).isComplete;
 }
 
+// The approved correction is limited to 2026 Week 7. Preserve historical
+// calculations and keep raw correct-pick/prize statistics separate from H2H wins.
+function getWeek7OverlappingWins(
+  playerId: string,
+  opponentId: string,
+  picks: HeadToHeadPicks,
+  completion: NFLWeekCompletionSummary,
+  weekState: PickerClickerWeekState | null | undefined
+): number {
+  if (completion.season !== 2026 || completion.week !== 7) return 0;
+  const opponentMisses = weekState?.fallbackPicks[opponentId] ?? {};
+  return getPlayerPickScore(
+    playerId,
+    picks,
+    completion.eligibleScoringGameIds.filter((gameId) =>
+      Object.prototype.hasOwnProperty.call(opponentMisses, gameId)
+    ),
+    completion.gameResults,
+    weekState
+  ).correct;
+}
+
 export function buildLiveHeadToHeadScores({
   players,
   picks,
@@ -425,7 +447,10 @@ export function buildLiveHeadToHeadScores({
         completion.gameResults, pickerClickerWeekState);
       const missedOpponentPicks = opponent
         ? getPlayerPickerClickerStatus(opponent.id, pickerClickerWeekState).fallbackCount : 0;
-      scores[player.id] = ownScore.correct + missedOpponentPicks;
+      const overlappingWins = opponent ? getWeek7OverlappingWins(
+        player.id, opponent.id, picks, completion, pickerClickerWeekState
+      ) : 0;
+      scores[player.id] = ownScore.correct + missedOpponentPicks - overlappingWins;
     }
   }
   return scores;
@@ -594,11 +619,15 @@ export function buildFinalizedWeeklyScoringRecord({
      */
     const playerAHeadToHeadScore =
       playerAScore.correct +
-      playerBPickerClickerStatus.fallbackCount;
+      playerBPickerClickerStatus.fallbackCount -
+      getWeek7OverlappingWins(matchup.playerA.id, matchup.playerB.id,
+        picks, completion, pickerClickerWeekState);
 
     const playerBHeadToHeadScore =
       playerBScore.correct +
-      playerAPickerClickerStatus.fallbackCount;
+      playerAPickerClickerStatus.fallbackCount -
+      getWeek7OverlappingWins(matchup.playerB.id, matchup.playerA.id,
+        picks, completion, pickerClickerWeekState);
 
     const bothIneligible =
       !playerAEligible && !playerBEligible;
