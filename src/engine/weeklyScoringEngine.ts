@@ -405,6 +405,22 @@ export function canFinalizeWeeklyScoring(
 
 // The approved correction is limited to 2026 Week 7. Preserve historical
 // calculations and keep raw correct-pick/prize statistics separate from H2H wins.
+function getOpponentMissedPickWins(
+  opponentId: string,
+  completion: NFLWeekCompletionSummary,
+  weekState: PickerClickerWeekState | null | undefined
+): number {
+  const missedGames = weekState?.fallbackPicks[opponentId] ?? {};
+  if (completion.season !== 2026 || completion.week !== 7) {
+    return Object.keys(missedGames).length;
+  }
+  // Missing picks still lock normally; their wins appear only after valid finals.
+  // A tied NFL final still awards the automatic win, regardless of its result.
+  return completion.completedGameIds.filter((gameId) =>
+    Object.prototype.hasOwnProperty.call(missedGames, gameId)
+  ).length;
+}
+
 function getWeek7OverlappingWins(
   playerId: string,
   opponentId: string,
@@ -446,7 +462,7 @@ export function buildLiveHeadToHeadScores({
       const ownScore = getPlayerPickScore(player.id, picks, completion.eligibleScoringGameIds,
         completion.gameResults, pickerClickerWeekState);
       const missedOpponentPicks = opponent
-        ? getPlayerPickerClickerStatus(opponent.id, pickerClickerWeekState).fallbackCount : 0;
+        ? getOpponentMissedPickWins(opponent.id, completion, pickerClickerWeekState) : 0;
       const overlappingWins = opponent ? getWeek7OverlappingWins(
         player.id, opponent.id, picks, completion, pickerClickerWeekState
       ) : 0;
@@ -619,13 +635,13 @@ export function buildFinalizedWeeklyScoringRecord({
      */
     const playerAHeadToHeadScore =
       playerAScore.correct +
-      playerBPickerClickerStatus.fallbackCount -
+      getOpponentMissedPickWins(matchup.playerB.id, completion, pickerClickerWeekState) -
       getWeek7OverlappingWins(matchup.playerA.id, matchup.playerB.id,
         picks, completion, pickerClickerWeekState);
 
     const playerBHeadToHeadScore =
       playerBScore.correct +
-      playerAPickerClickerStatus.fallbackCount -
+      getOpponentMissedPickWins(matchup.playerA.id, completion, pickerClickerWeekState) -
       getWeek7OverlappingWins(matchup.playerB.id, matchup.playerA.id,
         picks, completion, pickerClickerWeekState);
 
