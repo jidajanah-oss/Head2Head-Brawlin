@@ -1,4 +1,4 @@
-﻿name: Deploy Head2Head Brawlin to GitHub Pages
+name: Deploy Head2Head Brawlin to GitHub Pages
 
 on:
   push:
@@ -31,6 +31,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Validate before deployment
+        run: npm test
 
       - name: Build GitHub Pages release
         env:

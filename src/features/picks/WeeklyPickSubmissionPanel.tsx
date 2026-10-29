@@ -126,7 +126,7 @@ export default function WeeklyPickSubmissionPanel() {
       ),
     );
   const currentWeek =
-    league.currentWeek;
+    week;
   const gamesAreReady = Boolean(
     snapshot &&
       snapshot.season === season &&
