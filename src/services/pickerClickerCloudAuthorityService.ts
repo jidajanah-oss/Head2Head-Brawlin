@@ -38,6 +38,9 @@ let currentState:
   PickerClickerCloudAuthorityState =
     IDLE_STATE;
 
+const states = new Map<string, PickerClickerCloudAuthorityState>();
+const authorityKey = (season: number | null, week: number | null, leagueId: string | null) => `${leagueId}:${season}:${week}`;
+
 const listeners =
   new Set<() => void>();
 
@@ -52,6 +55,7 @@ publishPickerClickerCloudAuthority(
   state:
     PickerClickerCloudAuthorityState,
 ): void {
+  states.set(authorityKey(state.season, state.week, state.leagueId), state);
   currentState = state;
   emitChange();
 }
@@ -62,6 +66,7 @@ resetPickerClickerCloudAuthority(): void {
     return;
   }
 
+  states.clear();
   currentState = IDLE_STATE;
   emitChange();
 }
@@ -83,11 +88,13 @@ function subscribe(
 }
 
 export function
-usePickerClickerCloudAuthority():
+usePickerClickerCloudAuthority(season?: number, week?: number, leagueId?: string):
   PickerClickerCloudAuthorityState {
   return useSyncExternalStore(
     subscribe,
-    getPickerClickerCloudAuthoritySnapshot,
-    getPickerClickerCloudAuthoritySnapshot,
+    () => season !== undefined && week !== undefined
+      ? states.get(authorityKey(season, week, leagueId ?? null)) ?? IDLE_STATE
+      : currentState,
+    () => IDLE_STATE,
   );
 }

@@ -58,7 +58,7 @@ function getLeagueSeason(
     : new Date().getFullYear();
 }
 
-function mapCloudAssignment(
+export function mapCloudAssignment(
   cloudAssignment: CloudPickerClickerWeekAssignment,
 ): PickerClickerAssignment {
   return {
@@ -234,7 +234,7 @@ function buildCloudAssignmentHistory(
   );
 }
 
-function getAssignmentCreationCandidate(params: {
+export function getAssignmentCreationCandidate(params: {
   cloudAssignments: CloudPickerClickerWeekAssignment[];
   cloudPlayers: Player[];
   season: number;
@@ -277,7 +277,7 @@ function getAssignmentCreationCandidate(params: {
   };
 }
 
-export default function CloudPickerClickerAssignmentSync() {
+export default function CloudPickerClickerAssignmentSync({ targetWeek }: { targetWeek?: number } = {}) {
   const {
     status,
     accountLink,
@@ -288,6 +288,7 @@ export default function CloudPickerClickerAssignmentSync() {
     pickerClickerHistory,
     upsertPickerClickerWeekState,
   } = useLeague();
+  const assignmentWeek = targetWeek ?? league.currentWeek;
   const [retryVersion, setRetryVersion] = useState(0);
   const lastCompletedSyncKey = useRef<string | null>(null);
   const historyRef = useRef(pickerClickerHistory);
@@ -328,9 +329,9 @@ export default function CloudPickerClickerAssignmentSync() {
     return [
       sessionKey,
       season,
-      league.currentWeek,
+      assignmentWeek,
     ].join(":");
-  }, [league.currentWeek, season, sessionKey]);
+  }, [assignmentWeek, season, sessionKey]);
 
   useEffect(() => {
     const client = supabaseClient;
@@ -344,7 +345,7 @@ export default function CloudPickerClickerAssignmentSync() {
       !syncKey
     ) {
       lastCompletedSyncKey.current = null;
-      resetPickerClickerCloudAuthority();
+      if (targetWeek === undefined) resetPickerClickerCloudAuthority();
       return;
     }
 
@@ -356,7 +357,7 @@ export default function CloudPickerClickerAssignmentSync() {
       status: "syncing",
       leagueId: accountLink.leagueId,
       season,
-      week: league.currentWeek,
+      week: assignmentWeek,
       assignment: null,
       message: "Synchronizing the weekly source.",
     });
@@ -403,7 +404,7 @@ export default function CloudPickerClickerAssignmentSync() {
         const currentCloudAssignment =
           cloudAssignments.find(
             (assignment) =>
-              assignment.week === league.currentWeek,
+              assignment.week === assignmentWeek,
           ) ?? null;
 
         if (currentCloudAssignment) {
@@ -411,7 +412,7 @@ export default function CloudPickerClickerAssignmentSync() {
             status: "ready",
             leagueId: accountLink.leagueId,
             season,
-            week: league.currentWeek,
+            week: assignmentWeek,
             assignment: currentCloudAssignment,
             message: "Weekly source synchronized.",
           });
@@ -419,12 +420,12 @@ export default function CloudPickerClickerAssignmentSync() {
           return;
         }
 
-        if (!access.canManageLeague) {
+        if (!access.canManageLeague || targetWeek !== undefined) {
           publishPickerClickerCloudAuthority({
             status: "waiting",
             leagueId: accountLink.leagueId,
             season,
-            week: league.currentWeek,
+            week: assignmentWeek,
             assignment: null,
             message:
               "Waiting for a commissioner to publish the weekly source.",
@@ -463,7 +464,7 @@ export default function CloudPickerClickerAssignmentSync() {
             cloudAssignments,
             cloudPlayers,
             season,
-            week: league.currentWeek,
+            week: assignmentWeek,
           });
 
         if (!creationCandidate) {
@@ -471,7 +472,7 @@ export default function CloudPickerClickerAssignmentSync() {
             status: "waiting",
             leagueId: accountLink.leagueId,
             season,
-            week: league.currentWeek,
+            week: assignmentWeek,
             assignment: null,
             message:
               "The active cloud roster is not ready for weekly source assignment.",
@@ -486,7 +487,7 @@ export default function CloudPickerClickerAssignmentSync() {
             {
               leagueId: accountLink.leagueId,
               season,
-              week: league.currentWeek,
+              week: assignmentWeek,
               sourcePlayerId:
                 creationCandidate.sourcePlayerId,
               cycleNumber:
@@ -506,7 +507,7 @@ export default function CloudPickerClickerAssignmentSync() {
 
         const currentWeekId = getPickerClickerWeekId(
           season,
-          league.currentWeek,
+          assignmentWeek,
         );
         const latestExistingWeekState =
           historyRef.current[currentWeekId] ??
@@ -530,7 +531,7 @@ export default function CloudPickerClickerAssignmentSync() {
           status: "ready",
           leagueId: accountLink.leagueId,
           season,
-          week: league.currentWeek,
+          week: assignmentWeek,
           assignment: creationResult.assignment,
           message: "Weekly source synchronized.",
         });
@@ -546,7 +547,7 @@ export default function CloudPickerClickerAssignmentSync() {
             status: "error",
             leagueId: accountLink.leagueId,
             season,
-            week: league.currentWeek,
+            week: assignmentWeek,
             assignment: null,
             message,
           });
@@ -570,9 +571,10 @@ export default function CloudPickerClickerAssignmentSync() {
     };
   }, [
     access.canManageLeague,
+    targetWeek,
     access.isLinked,
     accountLink,
-    league.currentWeek,
+    assignmentWeek,
     retryVersion,
     season,
     sessionKey,

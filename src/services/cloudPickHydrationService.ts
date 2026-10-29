@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 
 type Account = { userId: string; leagueId: string; playerId: string };
 type Status = "loading" | "ready" | "error";
-let current: { key: string | null; status: Status } = { key: null, status: "loading" };
+const states = new Map<string | null, Status>();
 const listeners = new Set<() => void>();
 
 export function getCloudPickHydrationKey(account: Account | null, season: number, week: number) {
@@ -10,8 +10,8 @@ export function getCloudPickHydrationKey(account: Account | null, season: number
 }
 
 export function publishCloudPickHydration(key: string | null, status: Status) {
-  if (current.key === key && current.status === status) return;
-  current = { key, status };
+  if (states.get(key) === status) return;
+  states.set(key, status);
   listeners.forEach(listener => listener());
 }
 
@@ -23,6 +23,6 @@ function subscribe(listener: () => void) {
 export function useCloudPickHydration(account: Account | null, season: number, week: number): Status {
   const key = getCloudPickHydrationKey(account, season, week);
   return useSyncExternalStore(subscribe,
-    () => key && key === current.key ? current.status : "loading",
+    () => key ? states.get(key) ?? "loading" : "loading",
     () => "loading");
 }

@@ -1,3 +1,4 @@
+import { usePickerClickerCloudAuthority } from "../../services/pickerClickerCloudAuthorityService";
 import { readWithDeadline, refreshOnReturn } from "../../services/liveReadRefresh";
 import {
   useEffect,
@@ -20,6 +21,7 @@ import type {
 import type { WeekGame } from "../../engine/weekManager/WeekGameManager";
 import {
   synchronizeCloudLeagueGames,
+  loadCloudLeagueGames,
 } from "../../services/cloudLeagueGameService";
 import {
   clearCloudPlayerPickIntent,
@@ -397,7 +399,7 @@ function isLockedCloudWriteError(error: unknown): boolean {
   );
 }
 
-export default function CloudPlayerPickIntentSync() {
+export default function CloudPlayerPickIntentSync({ advance = false }: { advance?: boolean } = {}) {
   const {
     status,
     accountLink,
@@ -415,6 +417,7 @@ export default function CloudPlayerPickIntentSync() {
     week,
     snapshot,
   } = useNFL();
+  const authority = usePickerClickerCloudAuthority(season, week, accountLink?.leagueId);
   const [readyVersion, setReadyVersion] = useState(0);
   const [retryVersion, setRetryVersion] = useState(0);
   const baselineRef = useRef<SignatureMap>({});
@@ -471,7 +474,8 @@ export default function CloudPlayerPickIntentSync() {
       !weekState ||
       snapshot.season !== season ||
       snapshot.week !== week ||
-      week !== league.currentWeek ||
+      (!advance && week !== league.currentWeek) ||
+      (advance && (authority.status !== "ready" || authority.assignment?.sourcePlayerId !== weekState.assignment.sourcePlayerId)) ||
       accountLink.season !== season ||
       snapshot.nflGames.length === 0 ||
       snapshot.weekGames.length === 0
@@ -492,6 +496,8 @@ export default function CloudPlayerPickIntentSync() {
     accountLink,
     gameFingerprint,
     league.currentWeek,
+    advance,
+    authority,
     season,
     snapshot,
     week,
@@ -639,6 +645,14 @@ export default function CloudPlayerPickIntentSync() {
       });
 
       try {
+        if (advance) {
+          const published = await readWithDeadline(() => loadCloudLeagueGames(client, leagueId, season, week));
+          if (published.length !== snapshot.weekGames.length || snapshot.nflGames.some(game =>
+            !published.some(row => row.gameId === game.id && row.awayTeam === game.awayTeam.abbreviation &&
+              row.homeTeam === game.homeTeam.abbreviation && Date.parse(row.kickoffAt) === Date.parse(game.kickoff)))) {
+            throw new Error("This week's cloud schedule is not ready. A commissioner must synchronize it first.");
+          }
+        }
         const cloudIntents =
           await readWithDeadline(() => loadCloudPlayerPickIntents(
             client,
@@ -824,6 +838,7 @@ export default function CloudPlayerPickIntentSync() {
   // syncKey includes account, schedule identity and Picker Clicker source.
   // Score ticks and local pick edits must not cancel a pending cloud read.
   }, [
+    advance,
     access.canManageLeague,
     access.isLinked,
     season,

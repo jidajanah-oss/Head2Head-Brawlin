@@ -1,4 +1,5 @@
-﻿import {
+import AdvanceSchedulePreparation from "./features/picks/AdvanceSchedulePreparation";
+import {
   useEffect,
   useState,
 } from "react";
@@ -121,6 +122,7 @@ function AppRuntime() {
       <ObscureStatProvider>
         <SeasonAwardProvider>
           <CloudPickerClickerAssignmentSync />
+          <AdvanceSchedulePreparation />
           <PickerClickerSync />
           <CloudPlayerPickIntentSync />
           <CloudPayoutLedgerSync />

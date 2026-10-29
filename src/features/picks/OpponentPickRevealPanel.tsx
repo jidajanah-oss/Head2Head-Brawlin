@@ -143,7 +143,7 @@ export default function OpponentPickRevealPanel({ comparison = false, compact = 
   const { league, activePlayerId, picks, pickerClickerHistory } = useLeague();
   const { season, snapshot, loading: scheduleLoading } = useNFL();
   const hydration = useCloudPickHydration(accountLink, season, league.currentWeek);
-  const authority = usePickerClickerCloudAuthority();
+  const authority = usePickerClickerCloudAuthority(season, league.currentWeek, accountLink?.leagueId);
   const localWeekState = pickerClickerHistory[getPickerClickerWeekId(season, league.currentWeek)] ?? null;
   const weekState = authority.status === "ready" && authority.season === season &&
     authority.week === league.currentWeek && authority.assignment &&

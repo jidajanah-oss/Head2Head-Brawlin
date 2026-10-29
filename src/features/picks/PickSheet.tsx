@@ -255,7 +255,6 @@ function PickSheet() {
   const {
     season,
     week,
-    setWeek,
     snapshot,
     loading,
     error,
@@ -267,7 +266,7 @@ function PickSheet() {
     (authStatus !== "signed-in-linked" || hydration !== "ready"));
 
   const pickerClickerAuthority =
-    usePickerClickerCloudAuthority();
+    usePickerClickerCloudAuthority(season, week, accountLink?.leagueId);
 
   const [
     activeFilter,
@@ -280,20 +279,10 @@ function PickSheet() {
   ] = useState<string | null>(null);
 
   useEffect(() => {
-    if (week !== league.currentWeek) {
-      setWeek(league.currentWeek);
-    }
-  }, [
-    league.currentWeek,
-    setWeek,
-    week,
-  ]);
-
-  useEffect(() => {
     setPickerClickerMessage(null);
   }, [
     activePlayerId,
-    league.currentWeek,
+    week,
   ]);
 
   const games =
@@ -303,7 +292,7 @@ function PickSheet() {
     pickerClickerHistory[
       getPickerClickerWeekId(
         season,
-        league.currentWeek
+        week
       )
     ] ?? null;
 
@@ -311,7 +300,7 @@ function PickSheet() {
     pickerClickerAuthority.status === "ready" &&
     pickerClickerAuthority.season === season &&
     pickerClickerAuthority.week ===
-      league.currentWeek &&
+      week &&
     Boolean(
       pickerClickerAuthority.assignment
     );
@@ -680,7 +669,7 @@ function PickSheet() {
       <SteelHero
         eyebrow="Weekly Pick Card"
         title="Make Picks"
-        subtitle={`Week ${league.currentWeek} selections for Head2Head Brawlin' – Steel Edition.`}
+        subtitle={`Week ${week} selections for Head2Head Brawlin' – Steel Edition.`}
         primaryLabel="Game Center"
         primaryHref="/games"
         secondaryLabel="Standings"
@@ -718,7 +707,7 @@ function PickSheet() {
         as="section"
       >
         <SteelSectionHeader
-          eyebrow={`Week ${league.currentWeek} Picker Clicker`}
+          eyebrow={`Week ${week} Picker Clicker`}
           title={
             pickerClickerAssignment
               ? pickerClickerAssignment.sourcePlayerName
@@ -843,7 +832,7 @@ function PickSheet() {
               ? "..."
               : totalGames
           }
-          helper={`Week ${league.currentWeek} schedule`}
+          helper={`Week ${week} schedule`}
           icon=""
         />
 
