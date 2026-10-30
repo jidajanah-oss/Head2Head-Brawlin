@@ -5,7 +5,7 @@ import {
 } from "react";
 
 import { useAuth } from "../../context/AuthContext";
-import { useCloudPickHydration } from "../../services/cloudPickHydrationService";
+import { useCloudPickHydration, useCloudPickHydrationError } from "../../services/cloudPickHydrationService";
 import FranchiseLogo from "../../components/franchise/FranchiseLogo";
 import {
   SteelBadge,
@@ -262,6 +262,7 @@ function PickSheet() {
 
   const { status: authStatus, accountLink } = useAuth();
   const hydration = useCloudPickHydration(accountLink, season, week);
+  const hydrationError = useCloudPickHydrationError(accountLink, season, week);
   const waitingForSavedPicks = Boolean(accountLink &&
     (authStatus !== "signed-in-linked" || hydration !== "ready"));
 
@@ -661,6 +662,7 @@ function PickSheet() {
     return <section role="status" className="picks-state-card">
       <h2>{hydration === "error" ? "Saved picks could not be loaded" : "Loading your saved picks…"}</h2>
       <p>{hydration === "error" ? "Your cloud picks are unchanged. We will retry automatically; you can also reload this page." : "Your card will appear when your saved choices are restored."}</p>
+      {hydration === "error" && hydrationError ? <p role="alert">{hydrationError}</p> : null}
     </section>;
   }
 

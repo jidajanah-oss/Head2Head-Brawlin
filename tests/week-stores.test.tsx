@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { it, expect } from "vitest";
 import { renderHook, act, cleanup } from "@testing-library/react";
-import { publishCloudPickHydration, getCloudPickHydrationKey, useCloudPickHydration } from "../src/services/cloudPickHydrationService";
+import { publishCloudPickHydration, getCloudPickHydrationKey, useCloudPickHydration, useCloudPickHydrationError } from "../src/services/cloudPickHydrationService";
 import { publishPickerClickerCloudAuthority, usePickerClickerCloudAuthority } from "../src/services/pickerClickerCloudAuthorityService";
 it("hydrates current and future cards independently, isolating accounts", () => {
   const account = { userId: "u", leagueId: "l", playerId: "p" };
@@ -19,4 +19,19 @@ it("future source publication cannot replace the current-week authority", () => 
   act(() => publishPickerClickerCloudAuthority({ status: "ready", leagueId: "l", season: 2026, week: 8, assignment: null, message: "current" }));
   act(() => publishPickerClickerCloudAuthority({ status: "waiting", leagueId: "l", season: 2026, week: 10, assignment: null, message: "future" }));
   expect(current.result.current.message).toBe("current"); expect(future.result.current.message).toBe("future"); cleanup();
+});
+
+it("keeps the actual loading error isolated by account/week and clears it on recovery", () => {
+  const account = {userId: "diagnostic-user", leagueId: "l", playerId: "p"};
+  const target = renderHook(() => useCloudPickHydrationError(account, 2026, 9));
+  const current = renderHook(() => useCloudPickHydrationError(account, 2026, 8));
+  const other = renderHook(() => useCloudPickHydrationError({...account,userId:"other"}, 2026, 9));
+  const key = getCloudPickHydrationKey(account, 2026, 9);
+  act(() => publishCloudPickHydration(key, "error", "The published schedule is not visible."));
+  expect(target.result.current).toBe("The published schedule is not visible.");
+  expect(current.result.current).toBe(""); expect(other.result.current).toBe("");
+  act(() => publishCloudPickHydration(key, "error", "Data refresh timed out."));
+  expect(target.result.current).toBe("Data refresh timed out.");
+  act(() => publishCloudPickHydration(key, "ready"));
+  expect(target.result.current).toBe(""); cleanup();
 });

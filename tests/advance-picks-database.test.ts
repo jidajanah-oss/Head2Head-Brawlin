@@ -99,3 +99,45 @@ it("rejects missing future schedule and preserves the authenticated-only RPC gra
   const result = await db.query("select has_function_privilege('anon','public.submit_weekly_picks_with_intents(uuid,text,smallint,jsonb)','EXECUTE') as anon, has_function_privilege('authenticated','public.submit_weekly_picks_with_intents(uuid,text,smallint,jsonb)','EXECUTE') as member");
   expect(result.rows[0]).toEqual({ anon: false, member: true });
 });
+
+it("restores schedule reads for linked accounts missing legacy membership, without enabling writes or outsiders", async () => {
+  await db.exec(`reset role;
+    create table public.league_members(league_id uuid, user_id uuid);
+    create or replace function public.is_league_member(target_league_id uuid)
+    returns boolean language sql stable security definer set search_path = public as $$
+      select exists(select 1 from public.league_members where league_id=target_league_id and user_id=auth.uid());
+    $$;
+    select set_config('request.jwt.claim.sub','${user}',false);
+    set role authenticated;`);
+  const games = (week: number) => db.query("select game_id from league_games where league_id=$1 and week=$2", [league, week]);
+  expect((await games(9)).rows).toHaveLength(0);
+  expect((await db.query("select * from load_my_player_pick_intents($1::uuid,'p',9::smallint)",[league])).rows).toHaveLength(1);
+  await db.exec("reset role;");
+  await db.exec(migration("20261030010000_linked_player_schedule_read"));
+  await db.exec("set role authenticated;");
+  for (const week of [8,9,10]) expect((await games(week)).rows.length).toBeGreaterThan(0);
+  await db.exec("reset role;");
+  // The real production mismatch is reproduced above: saved intents are readable
+  // while the SELECT on league_games silently returns zero rows (HTTP 200).
+  for (let i=0;i<30;i++) {
+    const id = `00000000-0000-0000-0001-${String(i).padStart(12,"0")}`;
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);
+    await db.exec("set role authenticated;");
+    for (const week of [8,9,10]) expect((await games(week)).rows.length).toBeGreaterThan(0);
+    expect((await db.query("update league_games set away_team='KC' where game_id='g9' returning game_id")).rows).toHaveLength(0);
+    await expect(db.query("insert into league_games(league_id,game_id,season,week,away_team,home_team,kickoff_at,status) values($1,'forbidden',2026,9,'BUF','NYJ',now()+interval '20 days','scheduled')",[league])).rejects.toThrow(/row-level security/);
+    await expect(db.query("select * from load_my_player_pick_intents($1::uuid,'p',9::smallint)",[league])).rejects.toThrow(/linked active/);
+    await db.exec("reset role;");
+  }
+  await db.exec(`select set_config('request.jwt.claim.sub','${sourceUser}',false);
+    update league_players set role='backup_commissioner' where player_id='source'; set role authenticated;`);
+  expect((await games(9)).rows.length).toBeGreaterThan(0);
+  await db.exec(`reset role; select set_config('request.jwt.claim.sub','',false);
+    update account_links set active=false where user_id='00000000-0000-0000-0001-000000000000';
+    select set_config('request.jwt.claim.sub','00000000-0000-0000-0001-000000000000',false); set role authenticated;`);
+  expect((await games(9)).rows).toHaveLength(0);
+  await db.exec("reset role; select set_config('request.jwt.claim.sub','00000000-0000-0000-0009-000000000000',false); set role authenticated;");
+  expect((await games(9)).rows).toHaveLength(0);
+  await db.exec("reset role; set role anon;");
+  await expect(games(9)).rejects.toThrow(/permission denied/);
+});

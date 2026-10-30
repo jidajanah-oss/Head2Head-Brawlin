@@ -810,7 +810,7 @@ export default function CloudPlayerPickIntentSync({ advance = false }: { advance
         }
       } catch (error) {
         if (!canceled && activeSyncKeyRef.current === syncKey) {
-          publishCloudPickHydration(hydrationKey, "error");
+          publishCloudPickHydration(hydrationKey, "error", error instanceof Error ? error.message : "The cloud request failed. Please reload and try again.");
           console.error("Saved picks could not be loaded.", error);
           clearTimeout(retryTimer);
           retryTimer = setTimeout(() => { void reconcileCloudState(); }, 2_000);
