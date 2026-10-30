@@ -37,12 +37,23 @@ export function useCloudLeagueWeek(season: number, apply: (week: number) => void
     setSnapshot({ key, hydrated: false, saving: false, error: null });
     const refresh = () => { void sync.refresh(); };
     const visible = () => { if (document.visibilityState === "visible") refresh(); };
+    const visibilityChanged = () => {
+      if (document.visibilityState === "hidden") sync.invalidate();
+      else visible();
+    };
+    const pageHidden = () => sync.invalidate();
+    const pageShown = (event: PageTransitionEvent) => {
+      if (event.persisted) sync.invalidate();
+      visible();
+    };
     refresh();
     // Polling works even when leagues is not in the Supabase Realtime publication.
     const timer = window.setInterval(visible, 15_000);
     window.addEventListener("focus", refresh);
     window.addEventListener("online", refresh);
-    document.addEventListener("visibilitychange", visible);
+    document.addEventListener("visibilitychange", visibilityChanged);
+    window.addEventListener("pagehide", pageHidden);
+    window.addEventListener("pageshow", pageShown);
     return () => {
       sync.dispose();
       clearTimeout(retryTimer);
@@ -50,7 +61,9 @@ export function useCloudLeagueWeek(season: number, apply: (week: number) => void
       window.clearInterval(timer);
       window.removeEventListener("focus", refresh);
       window.removeEventListener("online", refresh);
-      document.removeEventListener("visibilitychange", visible);
+      document.removeEventListener("visibilitychange", visibilityChanged);
+      window.removeEventListener("pagehide", pageHidden);
+      window.removeEventListener("pageshow", pageShown);
     };
   }, [key, leagueId, season, canManage, apply]);
 
