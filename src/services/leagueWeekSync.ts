@@ -36,7 +36,7 @@ export function createLeagueWeekSync(options: {
     } catch (error) {
       if (!disposed && request === revision) publish({ error: message(error) });
     } finally {
-      reading = false;
+      if (request === revision) reading = false;
     }
   };
 
@@ -48,6 +48,7 @@ export function createLeagueWeekSync(options: {
     }
     if (week === currentWeek) return;
     revision += 1;
+    reading = false;
     publish({ saving: true, error: null });
     try {
       const savedWeek = await options.save(currentWeek, week);
@@ -68,5 +69,16 @@ export function createLeagueWeekSync(options: {
     }
   };
 
-  return { refresh, change, dispose: () => { disposed = true; revision += 1; } };
+  const invalidate = () => {
+    if (disposed || state.saving) return;
+    // A suspended request may finish after a fresh foreground request. It must
+    // neither apply an older week nor release that new request's in-flight guard.
+    revision += 1;
+    reading = false;
+    // Retain the confirmed card while rechecking. Unmounting the runtime on
+    // backgrounding would interrupt pick synchronization and discard page state.
+    publish({ error: null });
+  };
+
+  return { refresh, change, invalidate, dispose: () => { disposed = true; revision += 1; } };
 }
