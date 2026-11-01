@@ -403,7 +403,7 @@ export function canFinalizeWeeklyScoring(
   ).isComplete;
 }
 
-// The approved correction is limited to 2026 Week 7. Preserve historical
+// Use one credit per valid final from 2026 Week 7 onward. Preserve earlier
 // calculations and keep raw correct-pick/prize statistics separate from H2H wins.
 function getOpponentMissedPickWins(
   opponentId: string,
@@ -411,7 +411,7 @@ function getOpponentMissedPickWins(
   weekState: PickerClickerWeekState | null | undefined
 ): number {
   const missedGames = weekState?.fallbackPicks[opponentId] ?? {};
-  if (completion.season !== 2026 || completion.week !== 7) {
+  if (completion.season < 2026 || (completion.season === 2026 && completion.week < 7)) {
     return Object.keys(missedGames).length;
   }
   // Missing picks still lock normally; their wins appear only after valid finals.
@@ -421,14 +421,14 @@ function getOpponentMissedPickWins(
   ).length;
 }
 
-function getWeek7OverlappingWins(
+function getOverlappingMatchupWins(
   playerId: string,
   opponentId: string,
   picks: HeadToHeadPicks,
   completion: NFLWeekCompletionSummary,
   weekState: PickerClickerWeekState | null | undefined
 ): number {
-  if (completion.season !== 2026 || completion.week !== 7) return 0;
+  if (completion.season < 2026 || (completion.season === 2026 && completion.week < 7)) return 0;
   const opponentMisses = weekState?.fallbackPicks[opponentId] ?? {};
   return getPlayerPickScore(
     playerId,
@@ -463,7 +463,7 @@ export function buildLiveHeadToHeadScores({
         completion.gameResults, pickerClickerWeekState);
       const missedOpponentPicks = opponent
         ? getOpponentMissedPickWins(opponent.id, completion, pickerClickerWeekState) : 0;
-      const overlappingWins = opponent ? getWeek7OverlappingWins(
+      const overlappingWins = opponent ? getOverlappingMatchupWins(
         player.id, opponent.id, picks, completion, pickerClickerWeekState
       ) : 0;
       scores[player.id] = ownScore.correct + missedOpponentPicks - overlappingWins;
@@ -636,13 +636,13 @@ export function buildFinalizedWeeklyScoringRecord({
     const playerAHeadToHeadScore =
       playerAScore.correct +
       getOpponentMissedPickWins(matchup.playerB.id, completion, pickerClickerWeekState) -
-      getWeek7OverlappingWins(matchup.playerA.id, matchup.playerB.id,
+      getOverlappingMatchupWins(matchup.playerA.id, matchup.playerB.id,
         picks, completion, pickerClickerWeekState);
 
     const playerBHeadToHeadScore =
       playerBScore.correct +
       getOpponentMissedPickWins(matchup.playerA.id, completion, pickerClickerWeekState) -
-      getWeek7OverlappingWins(matchup.playerB.id, matchup.playerA.id,
+      getOverlappingMatchupWins(matchup.playerB.id, matchup.playerA.id,
         picks, completion, pickerClickerWeekState);
 
     const bothIneligible =
