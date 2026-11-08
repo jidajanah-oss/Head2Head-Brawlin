@@ -27,7 +27,7 @@ const REFRESH_INTERVAL_MS = 15_000;
 function compactPickLabel(label: string): string {
   const statusLabels: Record<string, string> = {
     "No pick recorded": "No pick", "Picker Clicker pending": "PC pending",
-    "Hidden until lock": "Hidden", "Waiting for both entries": "Waiting",
+    "Hidden until reveal": "Hidden", "Waiting for both entries": "Waiting",
     "Sign in to reveal": "Sign in", "Account protected": "Protected",
     "Opponent picks unavailable": "Unavailable", "Saved picks unavailable": "Unavailable",
     "Loading saved picks…": "Loading…", "Bye — no opponent": "Bye",
@@ -219,15 +219,15 @@ export default function OpponentPickRevealPanel({ comparison = false, compact = 
   ) : !canRequestReveal ? (
     <SteelBadge variant="neutral">Account protected</SteelBadge>
   ) : reveal?.canReveal && revealedPickCount > 0 ? (
-    <SteelBadge variant="success">Locked picks shown</SteelBadge>
+    <SteelBadge variant="success">Picks revealed</SteelBadge>
   ) : reveal?.canReveal ? (
-    <SteelBadge variant="gold">Waiting for lock</SteelBadge>
+    <SteelBadge variant="gold">Waiting for reveal</SteelBadge>
   ) : (
     <SteelBadge variant="gold">Waiting for entries</SteelBadge>
   );
 
   let description =
-    "Opponent selections stay hidden game-by-game until each game's five-minute lock.";
+    "Opponent selections stay hidden game-by-game until five minutes after each game's kickoff.";
   if (!isLinked) {
     description = "Sign in with a linked account to use protected opponent reveal.";
   } else if (!canRequestReveal) {
@@ -330,7 +330,7 @@ export default function OpponentPickRevealPanel({ comparison = false, compact = 
                 : !canRequestReveal ? "Account protected"
                 : message ? "Opponent picks unavailable"
                 : reveal && !reveal.canReveal ? "Waiting for both entries"
-                : "Hidden until lock";
+                : "Hidden until reveal";
               return (
                 <article className="pick-comparison-row" key={game.id}>
                   <div className="pick-comparison-game"><strong>{game.awayTeam} @ {game.homeTeam}</strong><small>{formatKickoff(game.kickoff)}</small></div>
@@ -356,14 +356,13 @@ export default function OpponentPickRevealPanel({ comparison = false, compact = 
           </p>
         ) : reveal?.canReveal && revealedPickCount === 0 ? (
           <p className="opponent-reveal-waiting">
-            Both entries are on file. Opponent selections will appear one game
-            at a time when that game's five-minute lock arrives.
+            Opponent selections will appear one game at a time, five minutes
+            after kickoff.
           </p>
         ) : reveal?.canReveal ? (
           <>
             <p className="opponent-reveal-waiting">
-              Only games whose five-minute lock has arrived are shown. Later
-              games remain hidden and may still be changed.
+              Only locked games at least five minutes past kickoff are shown.
             </p>
             <div className="opponent-reveal-games">
               {reveal.revealedPicks.map((pick) => (

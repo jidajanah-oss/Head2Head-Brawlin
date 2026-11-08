@@ -16,7 +16,7 @@ beforeAll(async () => {
     create table auth.users(id uuid primary key, email text, raw_user_meta_data jsonb);
     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
     create function extensions.gen_random_uuid() returns uuid language sql as $$select gen_random_uuid()$$;`);
-  const files = ["20260711010000_milestone_12_cloud_schema", "20260712010000_milestone_12_cloud_pick_intent_foundation", "20260712020000_milestone_12_cloud_picker_clicker_assignment_foundation", "20260713030000_milestone_12_cloud_weekly_pick_submission_runtime", "20260722010000_picker_clicker_authorization_submission_consistency", "20260727010000_picker_clicker_member_read_recovery", "20260727020000_global_cloud_pick_write_recovery", "20260727030000_atomic_weekly_pick_sync_submit", "20260728010000_opponent_picks_per_game_lock_reveal", "20260907040000_incremental_weekly_pick_submission", "20261029010000_advance_picks"];
+  const files = ["20260711010000_milestone_12_cloud_schema", "20260712010000_milestone_12_cloud_pick_intent_foundation", "20260712020000_milestone_12_cloud_picker_clicker_assignment_foundation", "20260713030000_milestone_12_cloud_weekly_pick_submission_runtime", "20260722010000_picker_clicker_authorization_submission_consistency", "20260727010000_picker_clicker_member_read_recovery", "20260727020000_global_cloud_pick_write_recovery", "20260727030000_atomic_weekly_pick_sync_submit", "20260728010000_opponent_picks_per_game_lock_reveal", "20260907040000_incremental_weekly_pick_submission", "20261029010000_advance_picks", "20261107010000_opponent_reveal_without_weekly_submission"];
   for (const file of files) await db.exec(migration(file).replace("create extension if not exists pgcrypto with schema extensions;", ""));
   await db.exec(`insert into auth.users(id,email) values ('${user}','p@example.test'),('${sourceUser}','s@example.test');
     insert into public.leagues(id,slug,name,season,current_week,created_by) values('${league}','test','Test',2026,8,'${user}');
@@ -57,18 +57,44 @@ it("rolls back invalid, duplicate, cross-week and locked choices atomically", as
     expect(result.rows[0]).toMatchObject({ game_id: "g9", selected_team: "NYJ" });
   }
 });
-it("keeps opponent choices private until each game's five-minute lock", async () => {
+it("reveals saved and fallback picks five minutes after kickoff without weekly submissions", async () => {
   await db.exec(`reset role; select set_config('request.jwt.claim.sub','${sourceUser}',false); set role authenticated;`);
   await submit(9,[manual("g9","BUF")],"source");
   await db.exec(`reset role; select set_config('request.jwt.claim.sub','${user}',false); set role authenticated;`);
-  const reveal = () => db.query<{ revealed_picks: Array<{gameId: string; selectedTeam: string}> }>("select * from get_opponent_pick_reveal($1::uuid,'p',9::smallint)",[league]);
-  expect((await reveal()).rows[0].revealed_picks.some(pick => pick.gameId === "g9")).toBe(false);
+  const reveal = async () => (await db.query<{
+    viewer_submission_status: string;
+    opponent_submission_status: string;
+    revealed_picks: Array<{ gameId: string; effectiveTeam: string | null; intentType: string }>;
+  }>("select * from get_opponent_pick_reveal($1::uuid,'p',9::smallint)", [league])).rows[0];
+
+  expect((await reveal()).revealed_picks).toEqual([]);
   await expect(db.query("select * from load_my_player_pick_intents($1::uuid,'source',9::smallint)",[league])).rejects.toThrow();
-  await db.exec("begin; reset role; update league_games set kickoff_at=now()+interval '5 minutes 1 second' where game_id='g9'; set role authenticated;");
-  expect((await reveal()).rows[0].revealed_picks.some(pick => pick.gameId === "g9")).toBe(false);
-  await db.exec("reset role; update league_games set kickoff_at=now()+interval '5 minutes' where game_id='g9'; set role authenticated;");
-  expect((await reveal()).rows[0].revealed_picks).toEqual(expect.arrayContaining([expect.objectContaining({ gameId: "g9", selectedTeam: "BUF" })]));
-  await expect(submit(9,[manual("g9","NYJ")])).rejects.toThrow();
+  await expect(db.query("select * from get_opponent_pick_reveal($1::uuid,'source',9::smallint)", [league])).rejects.toThrow(/cannot view/);
+
+  await db.exec(`begin; reset role;
+    set local time zone 'America/New_York';
+    delete from weekly_pick_submissions where week=9;
+    update league_games set kickoff_at=now()-interval '4 minutes 59 seconds' where game_id='g9';
+    update league_games set status='final' where game_id='locked';
+    set role authenticated;`);
+  expect((await reveal()).revealed_picks).toEqual([]);
+  await db.exec("reset role; update league_games set kickoff_at=now()-interval '5 minutes' where game_id='g9'; set role authenticated;");
+  expect(await reveal()).toMatchObject({
+    viewer_submission_status: "not-submitted",
+    opponent_submission_status: "not-submitted",
+    revealed_picks: [{ gameId: "g9", intentType: "manual", effectiveTeam: "BUF" }],
+  });
+  await db.exec("reset role; delete from player_picks where game_id='g9' and player_id='source'; set role authenticated;");
+  expect((await reveal()).revealed_picks).toMatchObject([{ gameId: "g9", intentType: "missing", effectiveTeam: null }]);
+
+  await db.exec(`reset role;
+    insert into picker_clicker_week_assignments
+      (league_id, season, week, source_player_id, source_player_name, source_nfl_team, cycle_number)
+      values ('${league}',2026,9,'p','Player','BUF',1);
+    set role authenticated;`);
+  expect((await reveal()).revealed_picks).toMatchObject([{ gameId: "g9", intentType: "picker-clicker-auto", effectiveTeam: "NYJ" }]);
+  await db.exec("reset role; update league_games set status='final' where game_id='g9'; set role authenticated;");
+  expect((await reveal()).revealed_picks).toMatchObject([{ gameId: "g9", intentType: "picker-clicker-auto", effectiveTeam: "NYJ" }]);
   await db.exec("rollback;");
 });
 it("allows every linked player in a full 32-player roster", async () => {
